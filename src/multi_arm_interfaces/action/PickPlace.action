@@ -1,0 +1,11 @@
+string object_id
+string target_zone
+string approach
+float64 duration
+---
+bool success
+string message
+string task_id
+---
+string status
+float32 progress

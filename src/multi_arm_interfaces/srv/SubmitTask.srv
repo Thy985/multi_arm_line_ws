@@ -1,0 +1,10 @@
+string task_id
+string task_type
+string description
+string[] required_resources
+string[] capability_constraints
+float64 deadline
+---
+bool accepted
+string message
+string assigned_arm

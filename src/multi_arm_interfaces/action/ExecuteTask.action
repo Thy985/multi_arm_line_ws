@@ -1,0 +1,10 @@
+string task_id
+string task_type
+string description
+---
+string status
+float32 progress
+string error_message
+---
+bool success
+string message

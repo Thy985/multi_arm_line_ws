@@ -1,0 +1,1 @@
+"""Coordination subpackage: ResourceManager, CapabilityMatcher, TimeManager."""

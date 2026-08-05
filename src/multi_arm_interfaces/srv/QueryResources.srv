@@ -1,0 +1,6 @@
+string[] resource_types
+---
+string[] resource_names
+string[] resource_types
+string[] states
+string[] allocated_to

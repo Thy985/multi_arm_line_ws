@@ -1,0 +1,1 @@
+"""Multi-arm coordination core package."""

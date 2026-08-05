@@ -1,0 +1,8 @@
+string[] arm_names
+string[] trajectory_joint_names
+float64[] trajectory_positions
+float64 trajectory_duration
+---
+bool approved
+float32 speed_scale
+string message

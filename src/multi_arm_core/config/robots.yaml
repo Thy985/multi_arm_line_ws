@@ -1,0 +1,38 @@
+robots:
+  - name: arm1
+    type: ur5e
+    namespace: /arm1
+    capabilities:
+      payload_kg: 5.0
+      gripper: robotiq_2f85
+      precision_mm: 0.1
+      reachable_zones: [zone_a, zone_b, home]
+    controllers:
+      joint_trajectory: /arm1/joint_trajectory_controller
+      joint_state_broadcaster: /arm1/joint_state_broadcaster
+      gripper: /arm1/gripper_controller
+    safety:
+      max_velocity_scale: 1.0
+      workspace_bounds: [[-0.8, 0.8], [-0.8, 0.8], [0.0, 1.2]]
+
+  - name: arm2
+    type: ur5e
+    namespace: /arm2
+    capabilities:
+      payload_kg: 5.0
+      gripper: robotiq_2f85
+      precision_mm: 0.02
+      reachable_zones: [zone_a, zone_c, home]
+    controllers:
+      joint_trajectory: /arm2/joint_trajectory_controller
+      joint_state_broadcaster: /arm2/joint_state_broadcaster
+      gripper: /arm2/gripper_controller
+    safety:
+      max_velocity_scale: 1.0
+      workspace_bounds: [[-0.8, 0.8], [-0.8, 0.8], [0.0, 1.2]]
+
+resources:
+  zones: [zone_a, zone_b, zone_c, home]
+  tools: []
+  sensors: []
+  fixtures: []

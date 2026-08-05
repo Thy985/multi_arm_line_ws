@@ -1,0 +1,5 @@
+string failure_type
+string task_id
+string strategy_used
+bool success
+string message
