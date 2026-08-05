@@ -1,0 +1,10 @@
+# 控制器类型定义文件（用于gz_ros2_control加载）
+# 注意：这个文件只包含控制器类型定义，不包含控制器参数
+
+joint_state_broadcaster:
+  ros__parameters:
+    type: joint_state_broadcaster/JointStateBroadcaster
+
+joint_trajectory_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController

@@ -1,0 +1,52 @@
+# dual_arm_controllers.yaml
+# 单 Robot + 双 Arm + 单 ControllerManager 架构的控制器配置
+#
+# 单一 /controller_manager 实例，下属：
+#   - joint_state_broadcaster：发布全部 12 个关节状态
+#   - left_arm_controller：控制左臂 6 个关节
+#   - right_arm_controller：控制右臂 6 个关节
+#
+# 使用 /** 格式（ADR-003），让 spawner 能正确解析 joints 参数
+
+/**:
+  joint_state_broadcaster:
+    ros__parameters:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+  left_arm_controller:
+    ros__parameters:
+      type: joint_trajectory_controller/JointTrajectoryController
+      joints:
+        - left_shoulder_pan_joint
+        - left_shoulder_lift_joint
+        - left_elbow_joint
+        - left_wrist_1_joint
+        - left_wrist_2_joint
+        - left_wrist_3_joint
+      command_interfaces:
+        - position
+      state_interfaces:
+        - position
+        - velocity
+      state_publish_rate: 100.0
+      action_monitor_rate: 20.0
+      allow_partial_joints_goal: false
+
+  right_arm_controller:
+    ros__parameters:
+      type: joint_trajectory_controller/JointTrajectoryController
+      joints:
+        - right_shoulder_pan_joint
+        - right_shoulder_lift_joint
+        - right_elbow_joint
+        - right_wrist_1_joint
+        - right_wrist_2_joint
+        - right_wrist_3_joint
+      command_interfaces:
+        - position
+      state_interfaces:
+        - position
+        - velocity
+      state_publish_rate: 100.0
+      action_monitor_rate: 20.0
+      allow_partial_joints_goal: false

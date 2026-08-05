@@ -1,0 +1,5 @@
+# Minimal config for GazeboSimROS2ControlPlugin initialization
+# Only contains update_rate - all other params come from spawner --param-file
+controller_manager:
+  ros__parameters:
+    update_rate: 500
