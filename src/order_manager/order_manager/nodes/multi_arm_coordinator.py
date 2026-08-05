@@ -23,6 +23,8 @@ from order_manager.nodes.arm_state import (
 )
 from order_manager.nodes.time_manager import TimeManager, WindowStatus, predict_duration
 from order_manager.nodes.task_scheduler import TaskScheduler, Task, TaskPriority, TaskStatus
+from order_manager.nodes.diagnostics_publisher import DiagnosticsPublisher
+from order_manager.nodes.structured_logger import StructuredLogger
 
 
 class EnhancedMultiArmCoordinator(Node):
@@ -83,6 +85,16 @@ class EnhancedMultiArmCoordinator(Node):
         
         # === Timer for state machine tick ===
         self.create_timer(0.1, self._tick, callback_group=cb_group)
+
+        # === Structured JSON logger ===
+        self.json_logger = StructuredLogger(self)
+        self.json_logger.info('Enhanced Multi-arm coordinator started', component='coordinator')
+        self.json_logger.info(f'Monitoring arms: {self.arm_names}', component='coordinator')
+        self.json_logger.info(f'Zones: {list(self.zones.keys())}', component='coordinator')
+
+        # === Diagnostics publisher ===
+        self._diagnostics = DiagnosticsPublisher(self, self.arm_status, self.zones, self.joint_states)
+        self.json_logger.info('Diagnostics publisher active on /diagnostics', component='diagnostics')
         
         self.get_logger().info('Enhanced Multi-arm coordinator started')
         self.get_logger().info(f'Monitoring arms: {self.arm_names}')
@@ -156,6 +168,7 @@ class EnhancedMultiArmCoordinator(Node):
         
         positions = PRESET_POSITIONS[position_name]
         self.get_logger().info(f'[{arm_name}] Commanding to position: {position_name} = {positions}')
+        self.json_logger.info(f'Commanding to position: {position_name}', arm=arm_name, component='coordinator', data={'position': position_name, 'joints': positions})
         
         status.state = ArmState.WORKING
         status.goal_start_time = time.time()
@@ -222,6 +235,7 @@ class EnhancedMultiArmCoordinator(Node):
             status.state = ArmState.QUEUED
             status.requested_zone = zone_name
             status.requested_position = position_name  # preserve for _trigger_queued_arm
+            self.json_logger.warn(f'Time conflict, arm queued', arm=arm_name, component='coordinator', data={'zone': zone_name, 'conflict_with': conflict.arm_b, 'overlap': conflict.overlap_duration})
             return False
         
         # Try to claim the zone (zone lock)
@@ -233,6 +247,7 @@ class EnhancedMultiArmCoordinator(Node):
                 f'[{arm_name}] Zone "{zone_name}" granted, '
                 f'scheduled for {predicted_duration:.1f}s'
             )
+            self.json_logger.info(f'Zone granted', arm=arm_name, component='coordinator', data={'zone': zone_name, 'duration': predicted_duration})
             status.state = ArmState.WORKING
             status.current_zone = zone_name
             status.goal_start_time = time.time()
@@ -247,6 +262,7 @@ class EnhancedMultiArmCoordinator(Node):
             # Zone occupied, cancel time schedule and queue
             self.time_manager.cancel(arm_name)
             self.get_logger().info(f'[{arm_name}] Zone "{zone_name}" occupied by {zone.occupied_by}, queuing')
+            self.json_logger.info(f'Zone occupied, arm queued', arm=arm_name, component='coordinator', data={'zone': zone_name, 'occupied_by': zone.occupied_by})
             status.state = ArmState.QUEUED
             status.requested_zone = zone_name
             status.requested_position = position_name  # preserve for _trigger_queued_arm
@@ -307,11 +323,13 @@ class EnhancedMultiArmCoordinator(Node):
             
             if result.error_code == JTC_SUCCESSFUL:
                 self.get_logger().info(f'[{arm_name}] Goal completed successfully')
+                self.json_logger.info('Goal completed successfully', arm=arm_name, component='trajectory')
                 # Mark time window as completed
                 self.time_manager.complete(arm_name)
                 self._release_arm(arm_name)
             else:
                 self.get_logger().error(f'[{arm_name}] Goal failed with code: {result.error_code} ({result.error_string})')
+                self.json_logger.error(f'Goal failed', arm=arm_name, component='trajectory', data={'error_code': result.error_code, 'error_string': result.error_string})
                 status.state = ArmState.ERROR
                 status.error_message = f'Goal failed: {result.error_code}'
                 # Release zone lock but keep arm in ERROR state (user must call reset_arm)
@@ -347,6 +365,7 @@ class EnhancedMultiArmCoordinator(Node):
         # Reset state
         status.reset()
         self.get_logger().info(f'[{arm_name}] Released, now IDLE')
+        self.json_logger.info('Arm released to IDLE', arm=arm_name, component='coordinator')
 
     def _release_zone_only(self, arm_name: str):
         """Release zone lock WITHOUT resetting arm state (for ERROR recovery)."""
@@ -414,6 +433,7 @@ class EnhancedMultiArmCoordinator(Node):
                 timeout = max(predicted * 2, 15.0)  # at least 15s
                 if elapsed > timeout:
                     self.get_logger().warn(f'[{arm_name}] Goal timeout ({elapsed:.1f}s > {timeout:.1f}s), cancelling and releasing')
+                    self.json_logger.warn('Goal timeout, cancelling', arm=arm_name, component='watchdog', data={'elapsed': elapsed, 'timeout': timeout})
                     self._cancel_and_release(arm_name)
         
         # Periodic cleanup of old time windows
@@ -453,6 +473,7 @@ class EnhancedMultiArmCoordinator(Node):
             return False
         
         self.get_logger().info(f'[{arm_name}] Manual reset from ERROR to IDLE')
+        self.json_logger.info('Manual reset from ERROR to IDLE', arm=arm_name, component='coordinator')
         self._release_arm(arm_name)
         return True
 

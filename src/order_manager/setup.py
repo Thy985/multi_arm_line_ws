@@ -27,6 +27,7 @@ setup(
             'enhanced_multi_arm_coordinator = order_manager.nodes.multi_arm_coordinator:main',
             'multi_arm_coordinator = order_manager.nodes.multi_arm_coordinator:main',
             'test_arm_control = order_manager.nodes.test_arm_control:main',
+            'diagnostics_monitor = order_manager.nodes.diagnostics_monitor:main',
         ],
     },
 )
