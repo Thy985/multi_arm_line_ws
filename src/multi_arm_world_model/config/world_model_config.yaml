@@ -1,0 +1,15 @@
+zones:
+  zone_a:
+    type: shared
+    description: "Central shared workspace"
+  zone_b:
+    type: shared
+    description: "Left workstation"
+  zone_c:
+    type: shared
+    description: "Right workstation"
+  home:
+    type: exclusive
+    description: "Safe home position"
+
+obstacles: []

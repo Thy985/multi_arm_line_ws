@@ -1,0 +1,62 @@
+# MoveIt2 OMPL planning configuration
+/**:
+  ros__parameters:
+    ompl:
+      planning_plugin: ompl_interface/OMPLPlanner
+      request_adapters: >-
+        default_planner_request_adapters/ResolveConstraintFrames
+        default_planner_request_adapters/FixWorkspaceBounds
+        default_planner_request_adapters/FixStartStateBounds
+        default_planner_request_adapters/FixStartStateCollision
+        default_planner_request_adapters/FixStartStatePathConstraints
+      start_state_max_bounds_error: 0.1
+
+    planning_groups:
+      arm1:
+        planner_configs:
+          - RRT
+          - RRTConnect
+          - PRM
+          - LBKPIECE
+        default_planner: RRTConnect
+        planning_time: 0.5
+        max_velocity_scaling_factor: 1.0
+        max_acceleration_scaling_factor: 1.0
+
+      arm2:
+        planner_configs:
+          - RRT
+          - RRTConnect
+          - PRM
+          - LBKPIECE
+        default_planner: RRTConnect
+        planning_time: 0.5
+        max_velocity_scaling_factor: 1.0
+        max_acceleration_scaling_factor: 1.0
+
+      dual_arm:
+        planner_configs:
+          - RRT
+          - RRTConnect
+          - PRM
+        default_planner: RRTConnect
+        planning_time: 2.0
+        max_velocity_scaling_factor: 1.0
+        max_acceleration_scaling_factor: 1.0
+
+    planner_configs:
+      RRT:
+        type: geometric::RRT
+        range: 0.0
+        goal_bias: 0.05
+      RRTConnect:
+        type: geometric::RRTConnect
+        range: 0.0
+      PRM:
+        type: geometric::PRM
+        max_nearest_neighbors: 10
+      LBKPIECE:
+        type: geometric::LBKPIECE
+        range: 0.0
+        border_fraction: 0.9
+        min_valid_path_fraction: 0.5

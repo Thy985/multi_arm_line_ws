@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+  inspection.xml
+  BehaviorTree for inspection operation.
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="Inspection">
+    <Sequence name="inspection_sequence">
+      <CheckSafety name="pre_safety_check"/>
+      <MoveTo goal="{inspection_point}" name="move_to_inspect"/>
+      <QueryWorld name="capture_scene"/>
+      <Retract name="retract"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <TreeNodesModel>
+    <Action ID="MoveTo">
+      <input_port name="goal">Target position</input_port>
+    </Action>
+    <Action ID="QueryWorld"/>
+    <Action ID="Retract"/>
+    <Condition ID="CheckSafety"/>
+  </TreeNodesModel>
+</root>

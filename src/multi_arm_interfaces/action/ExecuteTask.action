@@ -2,9 +2,9 @@ string task_id
 string task_type
 string description
 ---
+bool success
+string message
+---
 string status
 float32 progress
 string error_message
----
-bool success
-string message

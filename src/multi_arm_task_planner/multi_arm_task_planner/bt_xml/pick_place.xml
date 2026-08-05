@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!--
+  pick_place.xml
+  BehaviorTree for pick-and-place operation.
+  Compatible with BehaviorTree.CPP / Groot for visualization.
+
+  Subtrees used:
+  - grasp_strategy: Selector with top/side approach fallback
+  - place_sequence: Lift + MoveTo + Place + Retract
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="PickPlace">
+    <Sequence name="pick_place_sequence">
+      <CheckSafety name="pre_safety_check"/>
+      <QueryWorld name="query_object_state"/>
+      <SubTree ID="grasp_strategy"/>
+      <SubTree ID="place_sequence"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Grasp strategy subtree: try top approach, fall back to side -->
+  <BehaviorTree ID="grasp_strategy">
+    <Selector name="grasp_strategy">
+      <Sequence name="top_grasp">
+        <MoveTo goal="{approach_top}" name="move_to_top"/>
+        <Grasp approach="top" name="grasp_top"/>
+      </Sequence>
+      <Sequence name="side_grasp">
+        <MoveTo goal="{approach_side}" name="move_to_side"/>
+        <Grasp approach="side" name="grasp_side"/>
+      </Sequence>
+    </Selector>
+  </BehaviorTree>
+
+  <!-- Place sequence subtree -->
+  <BehaviorTree ID="place_sequence">
+    <Sequence name="place_sequence">
+      <Lift height="0.1" name="lift_object"/>
+      <MoveTo goal="{place_approach}" name="move_to_place"/>
+      <Place name="place_object"/>
+      <Retract name="retract_arm"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Node model for Groot visualization -->
+  <TreeNodesModel>
+    <Action ID="MoveTo">
+      <input_port name="goal">Target position or zone</input_port>
+    </Action>
+    <Action ID="Grasp">
+      <input_port name="approach">Grasp approach: top or side</input_port>
+    </Action>
+    <Action ID="Place"/>
+    <Action ID="Lift">
+      <input_port name="height">Lift height in meters</input_port>
+    </Action>
+    <Action ID="Retract"/>
+    <Condition ID="CheckSafety"/>
+    <Action ID="QueryWorld"/>
+    <Action ID="Recover"/>
+  </TreeNodesModel>
+</root>

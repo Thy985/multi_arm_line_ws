@@ -6,7 +6,9 @@
 
 ## 项目概述
 
-双UR5e多机械臂ROS2仿真与协调控制系统。ROS2 Jazzy + Gazebo Harmonic，运行在WSL2 (Ubuntu 24.04) 环境。目标架构为7层功能层 + Safety横切平面，当前处于Phase 1（基础重构阶段）。
+双UR5e多机械臂ROS2仿真与协调控制系统。ROS2 Jazzy + Gazebo Harmonic，运行在WSL2 (Ubuntu 24.04) 环境。目标架构为7层功能层 + Safety横切平面。
+
+**当前阶段**: M1-M3 + E2E已通过（软件架构闭环验证完成），进入M4 Simulation E2E Validation。
 
 ---
 
@@ -51,14 +53,23 @@ L1  硬件层        Gazebo / UR Driver / Sensors
 
 ## 目录结构
 
-### 当前（Phase 1 过渡期）
+### 当前（M1-M3 + E2E 已通过）
 
 ```
 multi_arm_line_ws/
 ├── src/
-│   ├── order_manager/              # [遗留] 过渡期保留，逐步迁移到multi_arm_core
-│   ├── ur_simulation_gz/           # Gazebo仿真包 (ament_cmake)
-│   └── README_MULTI_ARM.md
+│   ├── multi_arm_interfaces/       # 接口定义包 (ament_cmake) - msg/srv/action
+│   ├── multi_arm_core/             # 协调控制包 (ament_python)
+│   ├── multi_arm_safety/           # 安全监督包 (SafetySupervisor独立)
+│   ├── multi_arm_world_model/      # 环境模型包
+│   ├── multi_arm_task_planner/     # 任务规划包 (BehaviorTree)
+│   ├── multi_arm_moveit_config/    # MoveIt2配置包
+│   ├── order_manager/              # [遗留] 过渡期保留
+│   └── ur_simulation_gz/           # Gazebo仿真包 (ament_cmake)
+├── docs/
+│   ├── architecture/               # 架构验证文档
+│   ├── validation/                 # M1-M3 + E2E 验证报告
+│   └── benchmark/                  # 基准测试报告
 ├── output/                         # 设计文档
 └── AGENTS.md
 ```
@@ -85,6 +96,10 @@ multi_arm_line_ws/
 │   ├── multi_arm_benchmark/        # 基准测试包
 │   ├── order_manager/              # [遗留] 过渡期
 │   └── ur_simulation_gz/           # Gazebo仿真包
+├── docs/
+│   ├── architecture/
+│   ├── validation/
+│   └── benchmark/
 ├── output/
 └── AGENTS.md
 ```
@@ -103,8 +118,14 @@ colcon build --packages-select order_manager ur_simulation_gz
 # 构建含接口包（Phase 1+）
 colcon build --packages-select multi_arm_interfaces multi_arm_core ur_simulation_gz
 
+# 构建所有multi_arm包
+colcon build --packages-select multi_arm_interfaces multi_arm_core multi_arm_safety multi_arm_world_model multi_arm_task_planner multi_arm_moveit_config
+
 # 运行测试
 colcon test --packages-select order_manager
+
+# 运行E2E测试
+python3 -m pytest src/multi_arm_core/test/test_e2e_integration.py -v
 
 # 查看测试结果
 colcon test-result --verbose
@@ -278,17 +299,189 @@ python3 -m pytest src/order_manager/order_manager/nodes/test_time_manager.py -v
 
 ---
 
+## 里程碑定义
+
+### 已完成
+
+| 里程碑 | 内容 | 测试 | 状态 |
+|--------|------|------|------|
+| M1 | Interface + Core Coordination | 109 | ✅ |
+| M2 | Safety Plane + MoveIt2 Planning | 36 | ✅ |
+| M3 | WorldModel + TaskPlanner + BT | 54 | ✅ |
+| E2E | 跨包集成端到端 | 28 | ✅ |
+
+**软件架构闭环验证完成**：Task → TaskPlanner → Coordinator → ResourceManager → WorldModel → SafetySupervisor → Motion Interface → Mock Controller 链路已证明可工作。
+
+### M4: Simulation E2E Validation（当前阶段）
+
+**目标**: 将Mock替换为真实仿真组件，证明架构在真实机器人运行约束下成立。
+
+**完整链路**:
+```
+TaskPlanner → Coordinator → SafetySupervisor → MoveIt2
+    → JointTrajectoryController → ros2_control → Gazebo UR5e
+    → Joint States → WorldModel update
+```
+
+#### M4.1 单臂闭环
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| UR5e Gazebo单臂启动 | Gazebo加载UR5e模型+ros2_control |
+| MoveIt2单臂规划执行 | home → target_pose → home 规划+执行成功 |
+| JointState反馈 | 500Hz joint_states正确发布 |
+| WorldModel同步 | WorldModel从joint_states更新Robot State |
+| Safety批准 | SafetyCheck通过后执行运动 |
+
+#### M4.2 双臂资源协调
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| 双臂Gazebo启动 | arm1 + arm2同时加载 |
+| Zone资源竞争 | arm1占用zone_a时arm2排队 |
+| 协调调度 | arm1完成后arm2自动分配执行 |
+| MoveIt2双臂规划 | 双臂无碰撞轨迹规划成功 |
+
+#### M4.3 安全闭环
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| 速度限制生效 | velocity_scale>1.0 → Safety限制到0.5 |
+| E-Stop停止 | 运动中触发E-Stop → JTC halt → Robot ERROR |
+| 碰撞检测 | 接近碰撞 → CollisionEvent → 轨迹停止 |
+| Safety独立验证 | Coordinator crash后Safety仍可用 |
+
+#### M4 Exit Criteria
+
+| 项目 | 状态 |
+|------|------|
+| UR5e Gazebo启动 | ✅ 双臂arm1+arm2启动，JSB+JTC active |
+| MoveIt2规划执行 | ✅ move_group启动，OMPL+KDL IK，arm1/arm2/dual_arm规划成功 |
+| 单臂任务闭环 | ✅ MoveIt规划→JTC→Gazebo执行→关节位置验证 |
+| 双臂资源竞争 | ✅ 双臂独立CM+命名空间架构验证 |
+| Safety拦截 | ✅ E-Stop→JTC inactive，SafetyCheck approved |
+| WorldModel同步真实状态 | ✅ /joint_states→WorldModel缓存 |
+| Benchmark记录真实执行数据 | ⬜ |
+| E2E报告 | ✅ docs/validation/M4_validation_report.md |
+
+#### M4.5 Motion + Coordination Validation ✅
+
+**目标**: 验证MoveIt2运动规划→JTC→Gazebo仿真闭环，以及双臂planning group。
+
+| 验收项 | 状态 |
+|--------|------|
+| 合并URDF双臂启动 | ✅ multi_arm_robot.xacro，单CM 12关节 |
+| MoveIt2 move_group启动 | ✅ OMPL planner + KDL IK + all adapters |
+| arm1单臂规划执行 | ✅ home→ready规划+执行+位置验证 |
+| arm2单臂规划执行 | ✅ home→ready规划+执行+位置验证 |
+| dual_arm规划组 | ✅ 12关节同时规划，13轨迹点 |
+| M4.5验证报告 | ✅ docs/validation/M4_5_validation_report.md |
+
+#### M4.6 Autonomous Task Loop ✅
+
+**目标**: 证明一个任务能够自主完成——closed-loop autonomy。
+
+**核心缺口**: M4/M4.5验证了"组件存在且能工作"，但未证明"系统作为一个整体自主完成任务"。
+
+**完整链路**:
+```
+用户任务(PickPlace)
+ ↓ TaskPlanner生成BT
+ ↓ BehaviorTree执行
+ ↓ Coordinator调度
+ ↓ ResourceManager分配
+ ↓ WorldModel查询目标
+ ↓ MoveIt规划
+ ↓ Safety审批
+ ↓ JTC执行
+ ↓ Gazebo动作
+ ↓ WorldModel更新
+ ↓ BT状态更新
+ ↓ 任务完成(Success/Failure)
+```
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| PickPlace任务BT生成 | TaskPlanner输出Sequence(CheckSafety→QueryWorld→Grasp→Place) | ✅ |
+| Coordinator调度执行 | Coordinator接收Task→分配arm→调用MoveIt | ✅ E2E验证 |
+| Safety审批链路 | SafetyCheck approved→执行，rejected→abort | ✅ E2E验证 |
+| Robot执行+WorldModel更新 | JTC执行后WorldModel同步真实关节状态 | ✅ |
+| BT状态反馈 | Execute节点收到SUCCESS/Failure | ✅ E2E验证 |
+| 双臂资源冲突 | arm1占用zone→arm2等待→arm1完成→arm2继续 | ✅ |
+| M4.6验证报告 | docs/validation/M4_6_validation_report.md | ✅ |
+
+**E2E测试结果**: 8/8 ALL PASS + 双臂冲突 8/8 ALL PASS（单元131 + 代码验证11 + E2E 8 + 双臂冲突8 = 158 total）
+
+**架构注意**: M4.5暴露了Gazebo架构≠MoveIt架构问题（ADR-004）。
+
+**已知限制**: ROS2 BT插件在async callback中创建临时节点会导致executor死锁，当前默认使用mock插件。M5需重构为共享Node的async插件。
+
+### M5: Reliability Engineering（后续）
+
+**目标**: 从"能跑"到"跑得稳"。Recovery+Benchmark+CI/CD三位一体。
+
+#### M5.1 Recovery
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| PlanningFailure→Replan | 规划失败→放宽约束重规划 |
+| CollisionRecovery | 碰撞→退回安全位→重规划 |
+| ResourceTimeout→Release | 资源等待超时→释放→重新分配 |
+| ControllerFailure→Fallback | JTC inactive→切换控制器/abort |
+| GraspRetry | 抓取失败→重试(最多3次) |
+
+#### M5.2 Benchmark
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| benchmark.db | SQLite记录每次任务执行数据 |
+| 场景YAML | 定义benchmark场景(单臂/双臂/冲突/恢复) |
+| 指标采集 | planning_time, execution_time, success_rate, collision_count, recovery_count, resource_wait_time |
+| 自动运行 | `ros2 launch multi_arm_benchmark benchmark.launch.py scenario:=pick_place` |
+| 回归检测 | 修改后自动跑benchmark，检测性能退化 |
+
+#### M5.3 CI/CD
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| colcon build自动化 | GitHub Action: build all packages |
+| Interface兼容性检查 | multi_arm_interfaces变更触发全量测试 |
+| Launch smoke test | ros2 launch + node alive check |
+| E2E smoke test | 提交任务→验证成功/失败 |
+| Performance regression | benchmark对比上次结果 |
+
+### M6: Sim2Real（远期）
+
+**前置依赖**: 控制接口稳定 + 参数化完成 + Recovery存在 + Benchmark存在
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| UR Driver集成 | ur_robot_driver连接真实UR5e |
+| 参数统一 | 仿真/实体配置同一YAML(仅hardware_interface不同) |
+| Safety实体验证 | 真实E-Stop按钮→控制器停止 |
+| Sim2Real gap测量 | benchmark对比仿真vs实体执行数据 |
+
+---
+
 ## 设计文档索引
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
 | 架构设计 | `output/Architecture-MultiArm-202608051018.md` | 8层架构+模块划分+数据流+通信+部署+演进 |
+| 架构验证 | `docs/architecture/system_architecture_v2.md` | v2.0架构验证总结 |
 | PRD | `output/PRD-MultiArm-Dev-202608051004.md` | 产品需求，10项功能需求 |
 | HLD | `output/HLD-MultiArm-Dev-202608051004.md` | 高层架构（待更新对齐8层） |
 | LLD-1 | `output/LLD-MoveIt2-Safety-202608051004.md` | MoveIt2+安全模块详细设计 |
 | LLD-2 | `output/LLD-PickPlace-Scheduler-202608051018.md` | 抓取+调度详细设计 |
 | TDD | `output/TDD-SimRealSwitch-CICD-202608051004.md` | 虚实同步+CI/CD技术设计 |
 | 验收 | `output/Verification-MultiArm-202608051018.md` | 验收标准，44项增量验收 |
+| M1验证 | `docs/validation/M1_validation_report.md` | M1验证报告 (109 tests) |
+| M2验证 | `docs/validation/M2_validation_report.md` | M2验证报告 (36 tests) |
+| M3验证 | `docs/validation/M3_validation_report.md` | M3验证报告 (54 tests) |
+| E2E验证 | `docs/validation/E2E_validation_report.md` | E2E集成验证报告 (28 tests) |
+| 基准 | `docs/benchmark/baseline_report.md` | 性能基线模板 (待M4填充) |
+| M4验证 | `docs/validation/M4_validation_report.md` | M4验证报告 |
+| M4.5验证 | `docs/validation/M4_5_validation_report.md` | M4.5 Motion+Coordination验证报告 |
 
 ---
 

@@ -1,0 +1,30 @@
+# MoveIt2 move_group parameters for multi_arm robot
+# Used by m4_5_motion.launch.py
+
+move_group:
+  ros__parameters:
+    planning_pipelines:
+      - ompl
+    default_planning_pipeline: ompl
+
+    ompl:
+      planning_plugin: ompl_interface/OMPLPlanner
+      request_adapters: >-
+        default_planner_request_adapters/ResolveConstraintFrames
+        default_planner_request_adapters/FixWorkspaceBounds
+        default_planner_request_adapters/FixStartStateBounds
+        default_planner_request_adapters/FixStartStateCollision
+        default_planner_request_adapters/FixStartStatePathConstraints
+      start_state_max_bounds_error: 0.1
+
+    trajectory_execution:
+      execution_duration_scaling: 1.2
+      allowed_execution_duration_scaling: 1.5
+
+    publish_planning_scene: true
+    publish_geometry_updates: true
+    publish_state_updates: true
+    publish_transforms_updates: true
+    publish_robot_description_semantic: true
+    allow_trajectory_execution: true
+    moveit_manage_controllers: false

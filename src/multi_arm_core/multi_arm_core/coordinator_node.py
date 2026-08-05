@@ -8,14 +8,16 @@ is delegated to sub-modules:
 - Scheduler: task scheduling and arm assignment
 - TaskManager: task lifecycle management
 - SafetyInterface: safety plane communication
+- MoveItInterface: MoveIt2 planning and execution
 """
 
 import os
+
 import time as _time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import rclpy
-from rclpy.action import ActionClient
+from rclpy.action import ActionClient, ActionServer
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -45,34 +47,9 @@ from multi_arm_core.scheduler.scheduler import (
 )
 from multi_arm_core.task.task_manager import TaskManager
 from multi_arm_core.safety.safety_interface import SafetyInterface
+from multi_arm_core.moveit_interface import MoveItInterface
+from multi_arm_core.robot_constants import ARM_JOINT_NAMES, PRESET_POSITIONS
 
-
-ARM_JOINT_NAMES = {
-    "arm1": [
-        "arm1_shoulder_pan_joint",
-        "arm1_shoulder_lift_joint",
-        "arm1_elbow_joint",
-        "arm1_wrist_1_joint",
-        "arm1_wrist_2_joint",
-        "arm1_wrist_3_joint",
-    ],
-    "arm2": [
-        "arm2_shoulder_pan_joint",
-        "arm2_shoulder_lift_joint",
-        "arm2_elbow_joint",
-        "arm2_wrist_1_joint",
-        "arm2_wrist_2_joint",
-        "arm2_wrist_3_joint",
-    ],
-}
-
-PRESET_POSITIONS = {
-    "home": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    "ready": [0.0, -1.57, 1.57, 0.0, 0.0, 0.0],
-    "extended": [0.0, -0.5, 2.5, 0.5, 0.5, 0.0],
-    "left": [-1.57, -1.0, 1.5, 0.0, 0.5, 0.0],
-    "right": [1.57, -1.0, 1.5, 0.0, 0.5, 0.0],
-}
 
 
 class ArmState:
@@ -109,6 +86,8 @@ class CoordinatorNode(Node):
         self._goal_handles: Dict[str, Dict] = {}
         self._joint_states: Dict[str, JointState] = {}
 
+        self._moveit_interface = MoveItInterface(self, cb_group)
+
         for robot in self._resource_manager.get_robots():
             arm_name = robot.name
             self._arm_status[arm_name] = {
@@ -120,20 +99,22 @@ class CoordinatorNode(Node):
                 "error_message": None,
             }
 
-            action_topic = f"/{arm_name}/joint_trajectory_controller/follow_joint_trajectory"
+            action_topic = f"/{arm_name}_joint_trajectory_controller/follow_joint_trajectory"
             client = ActionClient(
                 self, FollowJointTrajectory, action_topic, callback_group=cb_group
             )
             self._action_clients[arm_name] = client
             self._goal_handles[arm_name] = None
 
-            self.create_subscription(
-                JointState,
-                f"/{arm_name}/joint_states",
-                lambda msg, an=arm_name: self._on_joint_state(msg, an),
-                10,
-                callback_group=cb_group,
-            )
+        self.create_subscription(
+            JointState,
+            "/joint_states",
+            self._on_joint_state_all,
+            10,
+            callback_group=cb_group,
+        )
+
+        self._init_action_server(cb_group)
 
         self.create_timer(0.1, self._tick, callback_group=cb_group)
 
@@ -151,6 +132,252 @@ class CoordinatorNode(Node):
             self.get_logger().info(f"{arm_name} action server ready")
 
         self.get_logger().info("All action servers available")
+
+    def _init_action_server(self, cb_group: ReentrantCallbackGroup) -> None:
+        """Initialize ExecuteTask action server."""
+        try:
+            from multi_arm_interfaces.action import ExecuteTask
+
+            self._execute_task_server = ActionServer(
+                self,
+                ExecuteTask,
+                "/coordinator/execute_task",
+                self._on_execute_task,
+                callback_group=cb_group,
+            )
+            self.get_logger().info("ExecuteTask action server started at /coordinator/execute_task")
+        except ImportError:
+            self.get_logger().warn(
+                "multi_arm_interfaces not available, ExecuteTask action server disabled"
+            )
+            self._execute_task_server = None
+
+    async def _on_execute_task(self, goal_handle) -> object:
+        """Handle ExecuteTask action goal.
+
+        Executes a task by:
+        1. Parsing task_type to determine arm + zone + position
+        2. Allocating zone via ResourceManager
+        3. Safety check via SafetyInterface
+        4. MoveIt2 planning and execution
+        5. Releasing zone on completion
+
+        Args:
+            goal_handle: The action goal handle.
+
+        Returns:
+            ExecuteTask.Result with success and message.
+        """
+        from multi_arm_interfaces.action import ExecuteTask
+
+        goal = goal_handle.request
+        task_id = goal.task_id
+        task_type = goal.task_type
+        description = goal.description
+
+        self.get_logger().info(
+            f"ExecuteTask received: id={task_id} type={task_type} desc={description}"
+        )
+
+        arm_name, zone_name, position_name = self._parse_task(task_type, description)
+
+        if arm_name is None:
+            goal_handle.abort()
+            result = ExecuteTask.Result()
+            result.success = False
+            result.message = f"Cannot parse task: {task_type}/{description}"
+            return result
+
+        if arm_name not in self._arm_status:
+            goal_handle.abort()
+            result = ExecuteTask.Result()
+            result.success = False
+            result.message = f"Unknown arm: {arm_name}"
+            return result
+
+        status = self._arm_status[arm_name]
+        if status["state"] != ArmState.IDLE:
+            goal_handle.abort()
+            result = ExecuteTask.Result()
+            result.success = False
+            result.message = f"Arm {arm_name} is {status['state']}, not IDLE"
+            return result
+
+        if self._safety_interface.e_stop_active:
+            goal_handle.abort()
+            result = ExecuteTask.Result()
+            result.success = False
+            result.message = "E-Stop active, rejecting task"
+            return result
+
+        task_internal_id = f"task_{arm_name}_{_time.time():.0f}"
+        if zone_name:
+            granted = self._resource_manager.allocate(zone_name, task_internal_id)
+            self.get_logger().info(
+                f"[ZONE] allocate({zone_name}, {task_internal_id}) = {granted}"
+            )
+            if not granted:
+                zone = self._resource_manager.get(zone_name)
+                if zone and task_internal_id in zone.waiting_queue:
+                    zone.waiting_queue.remove(task_internal_id)
+                    self.get_logger().info(
+                        f"[ZONE] removed {task_internal_id} from {zone_name} waiting_queue"
+                    )
+                goal_handle.abort()
+                result = ExecuteTask.Result()
+                result.success = False
+                result.message = f"Zone {zone_name} occupied"
+                return result
+            status["current_zone"] = zone_name
+
+        status["state"] = ArmState.WORKING
+        status["goal_start_time"] = _time.time()
+
+        positions = PRESET_POSITIONS.get(position_name, PRESET_POSITIONS["ready"])
+        joint_names = ARM_JOINT_NAMES.get(arm_name, [])
+
+        approved, speed_scale = self._safety_interface.check_safety_sync(
+            [arm_name], joint_names, positions, 3.0,
+        )
+
+        if not approved:
+            self.get_logger().warn(f"[{arm_name}] Safety check rejected for task {task_id}")
+            if zone_name:
+                self._resource_manager.release(zone_name, task_internal_id)
+                status["current_zone"] = None
+            status["state"] = ArmState.IDLE
+            goal_handle.abort()
+            result = ExecuteTask.Result()
+            result.success = False
+            result.message = "Safety check rejected"
+            return result
+
+        use_moveit = self._moveit_interface.is_available()
+
+        if use_moveit:
+            self.get_logger().info(
+                f"[{arm_name}] Using MoveIt2 for task {task_id} -> {position_name}"
+            )
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name, position_name, timeout=60.0,
+            )
+        else:
+            self.get_logger().info(
+                f"[{arm_name}] MoveIt2 unavailable, using JTC direct for task {task_id}"
+            )
+            duration = 3.0
+            if speed_scale < 1.0:
+                duration = duration / speed_scale
+            trajectory = self.create_trajectory(arm_name, positions, duration)
+            success = self._send_trajectory_sync(arm_name, trajectory, timeout=15.0)
+            msg = "jtc_success" if success else "jtc_failed"
+
+        if zone_name:
+            release_result = self._resource_manager.release(zone_name, task_internal_id)
+            self.get_logger().info(
+                f"[ZONE] release({zone_name}, {task_internal_id}) = {release_result}"
+            )
+            status["current_zone"] = None
+
+        status["state"] = ArmState.IDLE
+        status["goal_start_time"] = None
+
+        if success:
+            goal_handle.succeed()
+        else:
+            goal_handle.abort()
+
+        result = ExecuteTask.Result()
+        result.success = success
+        result.message = msg
+        return result
+
+
+    def _parse_task(
+        self, task_type: str, description: str
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """Parse task_type and description into arm, zone, position.
+
+        Args:
+            task_type: Task type string (e.g. 'pick_place', 'move').
+            description: Description string (e.g. 'arm1:zone_a:ready').
+
+        Returns:
+            Tuple of (arm_name, zone_name, position_name).
+        """
+        if description and ":" in description:
+            parts = description.split(":")
+            arm_name = parts[0] if len(parts) > 0 else None
+            zone_name = parts[1] if len(parts) > 1 else None
+            position_name = parts[2] if len(parts) > 2 else "ready"
+            return arm_name, zone_name, position_name
+
+        arm_name = "arm1"
+        zone_name = "zone_a"
+        position_name = "ready"
+
+        if task_type == "pick_place":
+            position_name = "ready"
+        elif task_type == "move":
+            position_name = "ready"
+
+        return arm_name, zone_name, position_name
+
+    def _send_trajectory_sync(
+        self, arm_name: str, trajectory: JointTrajectory, timeout: float = 15.0
+    ) -> bool:
+        """Send trajectory and wait for completion synchronously.
+
+        Args:
+            arm_name: Name of the arm.
+            trajectory: Joint trajectory to send.
+            timeout: Maximum wait time in seconds.
+
+        Returns:
+            True if execution succeeded.
+        """
+        client = self._action_clients.get(arm_name)
+        if client is None or not client.wait_for_server(timeout_sec=3.0):
+            self.get_logger().error(f"[{arm_name}] JTC action server not available")
+            return False
+
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory = trajectory
+
+        self.get_logger().info(f"[{arm_name}] Sending JTC trajectory (sync)")
+        future = client.send_goal_async(goal)
+
+        deadline = _time.time() + timeout
+        while not future.done() and _time.time() < deadline:
+            _time.sleep(0.05)
+
+        if not future.done() or future.result() is None:
+            self.get_logger().error(f"[{arm_name}] JTC goal send failed")
+            return False
+
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().warn(f"[{arm_name}] JTC goal rejected")
+            return False
+
+        result_future = goal_handle.get_result_async()
+        while not result_future.done() and _time.time() < deadline:
+            _time.sleep(0.05)
+
+        if not result_future.done():
+            self.get_logger().warn(f"[{arm_name}] JTC execution timeout")
+            return False
+
+        result = result_future.result().result
+        if result.error_code == 0:
+            self.get_logger().info(f"[{arm_name}] JTC execution succeeded")
+            return True
+
+        self.get_logger().error(
+            f"[{arm_name}] JTC execution failed: error_code={result.error_code}"
+        )
+        return False
+
 
     def _load_resources(self) -> ResourceManager:
         """Load resources from YAML configuration."""
@@ -191,9 +418,22 @@ class CoordinatorNode(Node):
             )
         return manager
 
+    def _on_joint_state_all(self, msg: JointState) -> None:
+        """Callback for joint state updates from /joint_states (merged URDF)."""
+        js_dict = {}
+        for i, name in enumerate(msg.name):
+            js_dict[name] = msg.position[i]
+        self._moveit_interface.update_joint_states(js_dict)
+        for arm_name in self._arm_status:
+            self._joint_states[arm_name] = msg
+
     def _on_joint_state(self, msg: JointState, arm_name: str) -> None:
-        """Callback for joint state updates."""
+        """Callback for joint state updates (per-arm namespace)."""
         self._joint_states[arm_name] = msg
+        js_dict = {}
+        for i, name in enumerate(msg.name):
+            js_dict[name] = msg.position[i]
+        self._moveit_interface.update_joint_states(js_dict)
 
     def create_trajectory(
         self, arm_name: str, positions: List[float], duration_sec: float = 3.0

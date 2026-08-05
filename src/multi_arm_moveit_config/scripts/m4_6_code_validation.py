@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""M4.6 Autonomous Task Loop Test - Standalone (no Gazebo dependency).
+
+Tests the M4.6 code changes using pure Python + ROS2 node mocking.
+This validates the architecture without requiring Gazebo simulation.
+
+Test categories:
+1. MoveItInterface - construction and method signatures
+2. Coordinator ExecuteTask action server - parse_task logic
+3. ROS2 BT plugins - registry and class structure
+4. TaskPlanner task_type mapping - XML resolution
+5. robot_constants - shared constants
+"""
+
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+
+results = {}
+
+
+def test_robot_constants():
+    """Test shared robot constants module."""
+    from multi_arm_core.robot_constants import ARM_JOINT_NAMES, PRESET_POSITIONS
+
+    assert "arm1" in ARM_JOINT_NAMES, "arm1 not in ARM_JOINT_NAMES"
+    assert "arm2" in ARM_JOINT_NAMES, "arm2 not in ARM_JOINT_NAMES"
+    assert len(ARM_JOINT_NAMES["arm1"]) == 6, "arm1 should have 6 joints"
+    assert "home" in PRESET_POSITIONS, "home not in PRESET_POSITIONS"
+    assert "ready" in PRESET_POSITIONS, "ready not in PRESET_POSITIONS"
+    assert len(PRESET_POSITIONS["home"]) == 6, "home should have 6 positions"
+    results["1.1_robot_constants"] = "PASS"
+
+
+def test_moveit_interface_import():
+    """Test MoveItInterface can be imported and constructed."""
+    from multi_arm_core.moveit_interface import MoveItInterface
+
+    assert hasattr(MoveItInterface, "plan_and_execute"), "Missing plan_and_execute"
+    assert hasattr(MoveItInterface, "move_to_preset"), "Missing move_to_preset"
+    assert hasattr(MoveItInterface, "is_available"), "Missing is_available"
+    assert hasattr(MoveItInterface, "update_joint_states"), "Missing update_joint_states"
+    results["2.1_moveit_interface_import"] = "PASS"
+
+
+def test_coordinator_parse_task():
+    """Test Coordinator._parse_task logic."""
+    from multi_arm_core.coordinator_node import CoordinatorNode
+
+    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "arm1:zone_a:ready")
+    assert arm == "arm1", f"Expected arm1, got {arm}"
+    assert zone == "zone_a", f"Expected zone_a, got {zone}"
+    assert pos == "ready", f"Expected ready, got {pos}"
+
+    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "arm2:zone_b:home")
+    assert arm == "arm2", f"Expected arm2, got {arm}"
+    assert zone == "zone_b", f"Expected zone_b, got {zone}"
+    assert pos == "home", f"Expected home, got {pos}"
+
+    arm, zone, pos = CoordinatorNode._parse_task(None, "pick_place", "")
+    assert arm == "arm1", f"Default arm should be arm1, got {arm}"
+
+    results["3.1_coordinator_parse_task"] = "PASS"
+
+
+def test_ros2_plugin_registry():
+    """Test ROS2 BT plugin registry."""
+    from multi_arm_task_planner.bt_plugins.ros2_plugins import ROS2_PLUGIN_REGISTRY
+
+    expected = ["MoveTo", "Grasp", "Place", "Lift", "Retract", "CheckSafety", "QueryWorld", "Recover"]
+    for name in expected:
+        assert name in ROS2_PLUGIN_REGISTRY, f"Missing plugin: {name}"
+
+    results["4.1_ros2_plugin_registry"] = "PASS"
+
+
+def test_ros2_plugin_classes():
+    """Test ROS2 BT plugin classes are correct types."""
+    from multi_arm_task_planner.bt_plugins.ros2_plugins import (
+        ROS2MoveToNode,
+        ROS2GraspNode,
+        ROS2PlaceNode,
+        ROS2LiftNode,
+        ROS2RetractNode,
+        ROS2CheckSafetyNode,
+        ROS2QueryWorldNode,
+        ROS2RecoverNode,
+    )
+    from multi_arm_task_planner.behavior_tree import ActionNode, ConditionNode
+
+    assert issubclass(ROS2MoveToNode, ActionNode), "MoveTo should be ActionNode"
+    assert issubclass(ROS2CheckSafetyNode, ConditionNode), "CheckSafety should be ConditionNode"
+    assert issubclass(ROS2QueryWorldNode, ActionNode), "QueryWorld should be ActionNode"
+
+    results["4.2_ros2_plugin_classes"] = "PASS"
+
+
+def test_ros2_plugins_tick():
+    """Test ROS2 BT plugins can tick (with blackboard only, no ROS2 calls)."""
+    from multi_arm_task_planner.behavior_tree import Blackboard, NodeStatus
+    from multi_arm_task_planner.bt_plugins.ros2_plugins import (
+        ROS2GraspNode,
+        ROS2PlaceNode,
+        ROS2LiftNode,
+        ROS2RecoverNode,
+        ROS2QueryWorldNode,
+    )
+
+    bb = Blackboard()
+    bb.set("arm_name", "arm1")
+    bb.set("object_id", "red_cube")
+    bb.set("target_zone", "zone_a")
+
+    grasp = ROS2GraspNode(name="test_grasp", blackboard=bb)
+    status = grasp.tick()
+    assert status == NodeStatus.SUCCESS, f"Grasp should succeed, got {status}"
+
+    place = ROS2PlaceNode(name="test_place", blackboard=bb)
+    status = place.tick()
+    assert status == NodeStatus.SUCCESS, f"Place should succeed, got {status}"
+
+    lift = ROS2LiftNode(name="test_lift", blackboard=bb)
+    status = lift.tick()
+    assert status == NodeStatus.SUCCESS, f"Lift should succeed, got {status}"
+
+    recover = ROS2RecoverNode(name="test_recover", blackboard=bb)
+    status = recover.tick()
+    assert status == NodeStatus.SUCCESS, f"Recover should succeed, got {status}"
+
+    query = ROS2QueryWorldNode(name="test_query", blackboard=bb)
+    status = query.tick()
+    assert status == NodeStatus.SUCCESS, f"QueryWorld should succeed, got {status}"
+
+    results["4.3_ros2_plugins_tick"] = "PASS"
+
+
+def test_task_xml_map():
+    """Test TASK_XML_MAP in task_planner_node."""
+    from multi_arm_task_planner.task_planner_node import TASK_XML_MAP
+
+    assert "pick_place" in TASK_XML_MAP, "pick_place not in TASK_XML_MAP"
+    assert "pick_place_ros2" in TASK_XML_MAP, "pick_place_ros2 not in TASK_XML_MAP"
+    assert TASK_XML_MAP["pick_place"] == "pick_place.xml"
+    assert TASK_XML_MAP["pick_place_ros2"] == "pick_place_ros2.xml"
+
+    results["5.1_task_xml_map"] = "PASS"
+
+
+def test_pick_place_ros2_xml_exists():
+    """Test pick_place_ros2.xml file exists and is valid."""
+    xml_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "..", "src", "multi_arm_task_planner",
+        "multi_arm_task_planner", "bt_xml", "pick_place_ros2.xml",
+    )
+    xml_path = os.path.abspath(xml_path)
+    assert os.path.exists(xml_path), f"XML not found: {xml_path}"
+
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+    bt_elements = root.findall("BehaviorTree")
+    assert len(bt_elements) >= 1, "No BehaviorTree elements found"
+
+    results["5.2_pick_place_ros2_xml"] = "PASS"
+
+
+def test_pick_place_ros2_xml_loadable():
+    """Test pick_place_ros2.xml can be loaded by BehaviorTree."""
+    from multi_arm_task_planner.behavior_tree import BehaviorTree, Blackboard
+    from multi_arm_task_planner.bt_plugins.ros2_plugins import ROS2_PLUGIN_REGISTRY
+
+    xml_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "..", "src", "multi_arm_task_planner",
+        "multi_arm_task_planner", "bt_xml", "pick_place_ros2.xml",
+    )
+    xml_path = os.path.abspath(xml_path)
+
+    bt = BehaviorTree(blackboard=Blackboard())
+    bt.register_plugins(ROS2_PLUGIN_REGISTRY)
+    bt.load_xml(xml_path)
+
+    assert bt.root is not None, "BT root is None after loading"
+
+    results["5.3_pick_place_ros2_xml_loadable"] = "PASS"
+
+
+def test_coordinator_has_execute_task():
+    """Test CoordinatorNode has ExecuteTask-related methods."""
+    from multi_arm_core.coordinator_node import CoordinatorNode
+
+    assert hasattr(CoordinatorNode, "_on_execute_task"), "Missing _on_execute_task"
+    assert hasattr(CoordinatorNode, "_parse_task"), "Missing _parse_task"
+    assert hasattr(CoordinatorNode, "_send_trajectory_sync"), "Missing _send_trajectory_sync"
+    assert hasattr(CoordinatorNode, "_init_action_server"), "Missing _init_action_server"
+
+    results["6.1_coordinator_execute_task"] = "PASS"
+
+
+def test_no_circular_import():
+    """Test no circular import between coordinator_node and moveit_interface."""
+    import importlib
+    import multi_arm_core.coordinator_node
+    import multi_arm_core.moveit_interface
+    import multi_arm_core.robot_constants
+
+    importlib.reload(multi_arm_core.robot_constants)
+    importlib.reload(multi_arm_core.moveit_interface)
+    importlib.reload(multi_arm_core.coordinator_node)
+
+    results["7.1_no_circular_import"] = "PASS"
+
+
+def main():
+    tests = [
+        test_robot_constants,
+        test_moveit_interface_import,
+        test_coordinator_parse_task,
+        test_ros2_plugin_registry,
+        test_ros2_plugin_classes,
+        test_ros2_plugins_tick,
+        test_task_xml_map,
+        test_pick_place_ros2_xml_exists,
+        test_pick_place_ros2_xml_loadable,
+        test_coordinator_has_execute_task,
+        test_no_circular_import,
+    ]
+
+    for test_fn in tests:
+        try:
+            test_fn()
+        except Exception as e:
+            name = test_fn.__name__
+            results[name] = f"FAIL: {e}"
+            print(f"  FAIL {name}: {e}")
+
+    print("\n=== M4.6 Code Validation Results ===")
+    all_pass = True
+    for k, v in sorted(results.items()):
+        status = "PASS" if v == "PASS" else v
+        print(f"  {k}: {status}")
+        if v != "PASS":
+            all_pass = False
+
+    print(f"\nOverall: {'ALL PASS' if all_pass else 'SOME FAILED'}")
+    return 0 if all_pass else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<!--
+  multi_arm.srdf
+  SRDF for dual UR5e robot (multi_arm namespace architecture).
+  Joint prefixes: arm1_ / arm2_ (matching ur_simulation_gz multi_arm_sim.launch.py)
+-->
+<robot name="multi_arm">
+
+  <!-- arm1 planning group -->
+  <group name="arm1">
+    <chain base_link="arm1_base_link" tip_link="arm1_wrist_3_link"/>
+  </group>
+
+  <!-- arm2 planning group -->
+  <group name="arm2">
+    <chain base_link="arm2_base_link" tip_link="arm2_wrist_3_link"/>
+  </group>
+
+  <!-- Dual arm planning group (both arms together) -->
+  <group name="dual_arm">
+    <group name="arm1"/>
+    <group name="arm2"/>
+  </group>
+
+  <!-- arm1 end-effector -->
+  <end_effector name="arm1_ee" parent_link="arm1_wrist_3_link" group="arm1"/>
+
+  <!-- arm2 end-effector -->
+  <end_effector name="arm2_ee" parent_link="arm2_wrist_3_link" group="arm2"/>
+
+  <!-- Named positions -->
+  <group_state name="home" group="arm1">
+    <joint name="arm1_shoulder_pan_joint" value="0"/>
+    <joint name="arm1_shoulder_lift_joint" value="0"/>
+    <joint name="arm1_elbow_joint" value="0"/>
+    <joint name="arm1_wrist_1_joint" value="0"/>
+    <joint name="arm1_wrist_2_joint" value="0"/>
+    <joint name="arm1_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="home" group="arm2">
+    <joint name="arm2_shoulder_pan_joint" value="0"/>
+    <joint name="arm2_shoulder_lift_joint" value="0"/>
+    <joint name="arm2_elbow_joint" value="0"/>
+    <joint name="arm2_wrist_1_joint" value="0"/>
+    <joint name="arm2_wrist_2_joint" value="0"/>
+    <joint name="arm2_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="arm1">
+    <joint name="arm1_shoulder_pan_joint" value="0"/>
+    <joint name="arm1_shoulder_lift_joint" value="-1.57"/>
+    <joint name="arm1_elbow_joint" value="1.57"/>
+    <joint name="arm1_wrist_1_joint" value="0"/>
+    <joint name="arm1_wrist_2_joint" value="0"/>
+    <joint name="arm1_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="arm2">
+    <joint name="arm2_shoulder_pan_joint" value="0"/>
+    <joint name="arm2_shoulder_lift_joint" value="-1.57"/>
+    <joint name="arm2_elbow_joint" value="1.57"/>
+    <joint name="arm2_wrist_1_joint" value="0"/>
+    <joint name="arm2_wrist_2_joint" value="0"/>
+    <joint name="arm2_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="home" group="dual_arm">
+    <joint name="arm1_shoulder_pan_joint" value="0"/>
+    <joint name="arm1_shoulder_lift_joint" value="0"/>
+    <joint name="arm1_elbow_joint" value="0"/>
+    <joint name="arm1_wrist_1_joint" value="0"/>
+    <joint name="arm1_wrist_2_joint" value="0"/>
+    <joint name="arm1_wrist_3_joint" value="0"/>
+    <joint name="arm2_shoulder_pan_joint" value="0"/>
+    <joint name="arm2_shoulder_lift_joint" value="0"/>
+    <joint name="arm2_elbow_joint" value="0"/>
+    <joint name="arm2_wrist_1_joint" value="0"/>
+    <joint name="arm2_wrist_2_joint" value="0"/>
+    <joint name="arm2_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="dual_arm">
+    <joint name="arm1_shoulder_pan_joint" value="0"/>
+    <joint name="arm1_shoulder_lift_joint" value="-1.57"/>
+    <joint name="arm1_elbow_joint" value="1.57"/>
+    <joint name="arm1_wrist_1_joint" value="0"/>
+    <joint name="arm1_wrist_2_joint" value="0"/>
+    <joint name="arm1_wrist_3_joint" value="0"/>
+    <joint name="arm2_shoulder_pan_joint" value="0"/>
+    <joint name="arm2_shoulder_lift_joint" value="-1.57"/>
+    <joint name="arm2_elbow_joint" value="1.57"/>
+    <joint name="arm2_wrist_1_joint" value="0"/>
+    <joint name="arm2_wrist_2_joint" value="0"/>
+    <joint name="arm2_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <!-- Disable collisions for fixed joints -->
+  <disable_collisions link1="world" link2="base_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="arm1_base_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="arm2_base_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_base_link" link2="arm1_base_link_inertia" reason="Adjacent"/>
+  <disable_collisions link1="arm1_base_link_inertia" link2="arm1_shoulder_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_shoulder_link" link2="arm1_upper_arm_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_upper_arm_link" link2="arm1_forearm_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_forearm_link" link2="arm1_wrist_1_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_wrist_1_link" link2="arm1_wrist_2_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_wrist_2_link" link2="arm1_wrist_3_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_wrist_3_link" link2="arm1_ft_frame" reason="Adjacent"/>
+  <disable_collisions link1="arm1_ft_frame" link2="arm1_flange" reason="Adjacent"/>
+  <disable_collisions link1="arm1_flange" link2="arm1_tool0" reason="Adjacent"/>
+  <disable_collisions link1="arm1_base_link" link2="arm1_base" reason="Adjacent"/>
+  <disable_collisions link1="arm2_base_link" link2="arm2_base_link_inertia" reason="Adjacent"/>
+  <disable_collisions link1="arm2_base_link_inertia" link2="arm2_shoulder_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_shoulder_link" link2="arm2_upper_arm_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_upper_arm_link" link2="arm2_forearm_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_forearm_link" link2="arm2_wrist_1_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_wrist_1_link" link2="arm2_wrist_2_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_wrist_2_link" link2="arm2_wrist_3_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_wrist_3_link" link2="arm2_ft_frame" reason="Adjacent"/>
+  <disable_collisions link1="arm2_ft_frame" link2="arm2_flange" reason="Adjacent"/>
+  <disable_collisions link1="arm2_flange" link2="arm2_tool0" reason="Adjacent"/>
+  <disable_collisions link1="arm2_base_link" link2="arm2_base" reason="Adjacent"/>
+
+</robot>

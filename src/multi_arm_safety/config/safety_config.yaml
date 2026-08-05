@@ -1,0 +1,31 @@
+robots:
+  - name: arm1
+    type: ur5e
+    safety:
+      max_velocity_scale: 1.0
+      workspace_bounds: [[-1.5, 1.5], [-1.5, 1.5], [0.0, 1.5]]
+      max_joint_velocities:
+        shoulder_pan_joint: 3.14
+        shoulder_lift_joint: 3.14
+        elbow_joint: 3.14
+        wrist_1_joint: 3.14
+        wrist_2_joint: 3.14
+        wrist_3_joint: 3.14
+
+  - name: arm2
+    type: ur5e
+    safety:
+      max_velocity_scale: 1.0
+      workspace_bounds: [[-1.5, 1.5], [-1.5, 1.5], [0.0, 1.5]]
+      max_joint_velocities:
+        shoulder_pan_joint: 3.14
+        shoulder_lift_joint: 3.14
+        elbow_joint: 3.14
+        wrist_1_joint: 3.14
+        wrist_2_joint: 3.14
+        wrist_3_joint: 3.14
+
+collision_monitor:
+  min_clearance: 0.10
+  critical_clearance: 0.03
+  check_interval_s: 0.05

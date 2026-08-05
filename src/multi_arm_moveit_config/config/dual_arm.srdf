@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!--
+  dual_arm.srdf
+  SRDF for dual UR5e robot: defines planning groups for single-arm
+  and dual-arm motion planning.
+-->
+<robot name="dual_arm">
+
+  <!-- Left arm planning group -->
+  <group name="left_arm">
+    <chain name="left_shoulder_pan_joint" tip_name="left_wrist_3_joint"/>
+  </group>
+
+  <!-- Right arm planning group -->
+  <group name="right_arm">
+    <chain name="right_shoulder_pan_joint" tip_name="right_wrist_3_joint"/>
+  </group>
+
+  <!-- Dual arm planning group (both arms together) -->
+  <group name="dual_arm">
+    <group name="left_arm"/>
+    <group name="right_arm"/>
+  </group>
+
+  <!-- Left arm end-effector -->
+  <end_effector name="left_ee" parent_link="left_wrist_3_joint" group="left_arm"/>
+
+  <!-- Right arm end-effector -->
+  <end_effector name="right_ee" parent_link="right_wrist_3_joint" group="right_arm"/>
+
+  <!-- Named positions -->
+  <group_state name="home" group="left_arm">
+    <joint name="left_shoulder_pan_joint" value="0"/>
+    <joint name="left_shoulder_lift_joint" value="0"/>
+    <joint name="left_elbow_joint" value="0"/>
+    <joint name="left_wrist_1_joint" value="0"/>
+    <joint name="left_wrist_2_joint" value="0"/>
+    <joint name="left_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="home" group="right_arm">
+    <joint name="right_shoulder_pan_joint" value="0"/>
+    <joint name="right_shoulder_lift_joint" value="0"/>
+    <joint name="right_elbow_joint" value="0"/>
+    <joint name="right_wrist_1_joint" value="0"/>
+    <joint name="right_wrist_2_joint" value="0"/>
+    <joint name="right_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="left_arm">
+    <joint name="left_shoulder_pan_joint" value="0"/>
+    <joint name="left_shoulder_lift_joint" value="-1.57"/>
+    <joint name="left_elbow_joint" value="1.57"/>
+    <joint name="left_wrist_1_joint" value="0"/>
+    <joint name="left_wrist_2_joint" value="0"/>
+    <joint name="left_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="right_arm">
+    <joint name="right_shoulder_pan_joint" value="0"/>
+    <joint name="right_shoulder_lift_joint" value="-1.57"/>
+    <joint name="right_elbow_joint" value="1.57"/>
+    <joint name="right_wrist_1_joint" value="0"/>
+    <joint name="right_wrist_2_joint" value="0"/>
+    <joint name="right_wrist_3_joint" value="0"/>
+  </group_state>
+
+  <!-- Disable collisions for fixed joints -->
+  <disable_collisions link1="world" link2="base_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="left_arm_base" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="right_arm_base" reason="Adjacent"/>
+
+</robot>

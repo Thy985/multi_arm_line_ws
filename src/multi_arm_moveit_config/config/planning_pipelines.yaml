@@ -1,0 +1,6 @@
+# MoveIt2 planning pipelines configuration
+/**:
+  ros__parameters:
+    planning_pipelines:
+      - ompl
+    default_planning_pipeline: ompl

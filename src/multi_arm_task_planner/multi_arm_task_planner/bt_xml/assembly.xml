@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  assembly.xml
+  BehaviorTree for assembly operation (subtree composition example).
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="Assembly">
+    <Sequence name="assembly_sequence">
+      <CheckSafety name="pre_safety_check"/>
+      <SubTree ID="grasp_strategy"/>
+      <MoveTo goal="{assembly_position}" name="move_to_assembly"/>
+      <Place name="place_part"/>
+      <Retract name="retract"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <TreeNodesModel>
+    <Action ID="MoveTo">
+      <input_port name="goal">Target position</input_port>
+    </Action>
+    <Action ID="Place"/>
+    <Action ID="Retract"/>
+    <Condition ID="CheckSafety"/>
+  </TreeNodesModel>
+</root>

@@ -1,0 +1,15 @@
+# Gripper controller configuration for Robotiq 2F-85
+# Added to dual_arm_controllers.yaml for gripper control
+
+/**:
+  left_gripper_controller:
+    ros__parameters:
+      type: position_controllers/GripperActionController
+      joint: left_robotiq_85_left_knuckle_joint
+      action_monitor_rate: 20.0
+
+  right_gripper_controller:
+    ros__parameters:
+      type: position_controllers/GripperActionController
+      joint: right_robotiq_85_left_knuckle_joint
+      action_monitor_rate: 20.0
