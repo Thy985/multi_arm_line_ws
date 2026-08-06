@@ -1,0 +1,155 @@
+name: Multi-Arm CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ROS_DISTRO: jazzy
+  ROS_WS: /home/lenovo/multi_arm_line_ws
+
+jobs:
+  layer1-build:
+    name: Layer 1 - Build
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/multi_arm_line_ws
+
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            python3-pip python3-colcon-common-extensions \
+            ros-jazzy-ros2control ros-jazzy-ros2controllers \
+            ros-jazzy-moveit ros-jazzy-gazebo-ros-pkgs
+
+      - name: Build all packages
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd src/multi_arm_line_ws
+          colcon build --packages-select \
+            multi_arm_interfaces multi_arm_core multi_arm_safety \
+            multi_arm_world_model multi_arm_task_planner \
+            multi_arm_recovery multi_arm_benchmark \
+            order_manager ur_simulation_gz
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: src/multi_arm_line_ws/install/
+
+  layer2-test:
+    name: Layer 2 - Unit Tests
+    needs: layer1-build
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/multi_arm_line_ws
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: src/multi_arm_line_ws/install/
+
+      - name: Run unit tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source src/multi_arm_line_ws/install/setup.bash
+          cd src/multi_arm_line_ws
+          export ROS_HOME=/tmp/ros_home
+          export ROS_LOG_DIR=/tmp/ros_home/log
+          colcon test --packages-select \
+            multi_arm_interfaces multi_arm_core multi_arm_safety \
+            multi_arm_world_model multi_arm_task_planner \
+            multi_arm_recovery multi_arm_benchmark
+          colcon test-result --verbose
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: src/multi_arm_line_ws/log/
+
+  interface-compat:
+    name: Interface Compatibility Check
+    needs: layer1-build
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/multi_arm_line_ws
+
+      - name: Check interface changes
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd src/multi_arm_line_ws
+          # If multi_arm_interfaces changed, rebuild all dependent packages
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- src/multi_arm_interfaces/ | head -1)
+          if [ -n "$CHANGED" ]; then
+            echo "Interface changes detected — running full rebuild + test"
+            colcon build --packages-select multi_arm_interfaces
+            source install/setup.bash
+            colcon build --packages-select \
+              multi_arm_core multi_arm_safety multi_arm_world_model \
+              multi_arm_task_planner multi_arm_recovery multi_arm_benchmark
+            colcon test --packages-select \
+              multi_arm_core multi_arm_safety multi_arm_world_model \
+              multi_arm_task_planner multi_arm_recovery multi_arm_benchmark
+          else
+            echo "No interface changes — skipping full test"
+          fi
+
+  performance-regression:
+    name: Performance Regression Check
+    needs: layer2-test
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/multi_arm_line_ws
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: src/multi_arm_line_ws/install/
+
+      - name: Run benchmark regression check
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source src/multi_arm_line_ws/install/setup.bash
+          cd src/multi_arm_line_ws
+          export ROS_HOME=/tmp/ros_home
+          python3 -c "
+          from multi_arm_benchmark.benchmark_recorder import BenchmarkRecorder
+          from multi_arm_benchmark.regression_detector import RegressionDetector
+          recorder = BenchmarkRecorder()
+          history = recorder.get_scenario_history('single_arm', limit=5)
+          if len(history) >= 2:
+              detector = RegressionDetector()
+              result = detector.compare_runs(history[0], history[1])
+              if result['regressed']:
+                  print(f'REGRESSION DETECTED: {result[\"regressions\"]}')
+                  exit(1)
+              else:
+                  print('No regression detected')
+          else:
+              print('Insufficient history for regression check (need >=2 runs)')
+          recorder.close()
+          "

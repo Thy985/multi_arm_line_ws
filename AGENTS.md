@@ -8,7 +8,7 @@
 
 双UR5e多机械臂ROS2仿真与协调控制系统。ROS2 Jazzy + Gazebo Harmonic，运行在WSL2 (Ubuntu 24.04) 环境。目标架构为7层功能层 + Safety横切平面。
 
-**当前阶段**: M5.4 Benchmark System已完成，进入M5.5 CI/CD Pipeline。
+**当前阶段**: M5 Reliability & Intelligence全部完成！M5.1-M5.5全部通过，进入M6 Sim2Real（远期）。
 
 ---
 
@@ -578,7 +578,7 @@ collision_count, safety_rejections
 
 **测试**: 341 tests ALL PASS (含34个benchmark测试)
 
-#### M5.5 CI/CD Pipeline
+#### M5.5 CI/CD Pipeline ✅
 
 **四层质量保障**:
 
@@ -586,16 +586,22 @@ collision_count, safety_rejections
 Layer 1: colcon build (所有包编译通过)
 Layer 2: unit test (pytest + colcon test)
 Layer 3: launch test (ros2 launch + node alive check)
-Layer 4: simulation smoke test (Gazebo启动→提交任务→验证成功/失败→关闭)
+Layer 4: E2E smoke test (提交任务→验证成功/失败)
 ```
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| colcon build自动化 | GitHub Action: build all packages |
-| Interface兼容性检查 | multi_arm_interfaces变更触发全量测试 |
-| Launch smoke test | ros2 launch + node alive check |
-| E2E smoke test | 提交任务→验证成功/失败 |
-| Performance regression | benchmark对比上次结果 |
+**CI脚本**: `ci/run_ci.sh` — 支持`--layer`选择和`--skip-4`跳过Gazebo层
+
+**GitHub Actions**: `.github/workflows/ci.yml` — 4个job（build→test→interface-compat→performance-regression）
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| colcon build自动化 | GitHub Action: build all packages | ✅ |
+| Interface兼容性检查 | multi_arm_interfaces变更触发全量测试 | ✅ |
+| Launch smoke test | ros2 launch + node alive check | ✅ |
+| E2E smoke test | 提交任务→验证成功/失败 | ✅ |
+| Performance regression | benchmark对比上次结果 | ✅ |
+
+**测试**: 355 tests ALL PASS (含14个CI pipeline测试)
 
 ### M6: Sim2Real（远期）
 
@@ -622,7 +628,7 @@ Layer 4: simulation smoke test (Gazebo启动→提交任务→验证成功/失�
 | M4 Gazebo Integration | ✅ | 7/8 (缺Benchmark数据) |
 | M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
-| M5 Reliability & Intelligence | 🔄 进行中 | M5.1 Recovery ✅, M5.2 BT Plugin ✅ (286), M5.3 TaskMsg ✅ (307), M5.4 Benchmark ✅ (341), M5.5 CI/CD待开始 |
+| M5 Reliability & Intelligence | ✅ 全部完成 | M5.1 Recovery ✅, M5.2 BT Plugin ✅ (286), M5.3 TaskMsg ✅ (307), M5.4 Benchmark ✅ (341), M5.5 CI/CD ✅ (355) |
 | M6 Sim2Real | ⬜ 远期 | 依赖M5完成 |
 
 ---
@@ -651,6 +657,7 @@ Layer 4: simulation smoke test (Gazebo启动→提交任务→验证成功/失�
 | M5.2验证 | `docs/validation/M5_2_validation_report.md` | M5.2 BT Plugin Architecture验证报告 |
 | M5.3验证 | `docs/validation/M5_3_validation_report.md` | M5.3 Task Message Upgrade验证报告 |
 | M5.4验证 | `docs/validation/M5_4_validation_report.md` | M5.4 Benchmark System验证报告 |
+| M5.5验证 | `docs/validation/M5_5_validation_report.md` | M5.5 CI/CD Pipeline验证报告 |
 
 ---
 
