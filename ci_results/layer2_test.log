@@ -1,0 +1,16 @@
+Starting >>> multi_arm_interfaces
+Finished <<< multi_arm_interfaces [0.03s]
+Starting >>> multi_arm_recovery
+Starting >>> multi_arm_benchmark
+Starting >>> multi_arm_safety
+Starting >>> multi_arm_task_planner
+Starting >>> multi_arm_world_model
+Finished <<< multi_arm_recovery [1.70s]
+Starting >>> multi_arm_core
+Finished <<< multi_arm_safety [2.35s]
+Finished <<< multi_arm_task_planner [2.64s]
+Finished <<< multi_arm_world_model [3.03s]
+Finished <<< multi_arm_core [2.11s]
+Finished <<< multi_arm_benchmark [3.88s]
+
+Summary: 7 packages finished [4.20s]
