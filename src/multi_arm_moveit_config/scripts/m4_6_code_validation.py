@@ -64,47 +64,47 @@ def test_coordinator_parse_task():
     results["3.1_coordinator_parse_task"] = "PASS"
 
 
-def test_ros2_plugin_registry():
-    """Test ROS2 BT plugin registry."""
-    from multi_arm_task_planner.bt_plugins.ros2_plugins import ROS2_PLUGIN_REGISTRY
+def test_async_plugin_registry():
+    """Test Async ROS2 BT plugin registry."""
+    from multi_arm_task_planner.bt_plugins.async_ros2_plugins import ASYNC_PLUGIN_REGISTRY
 
     expected = ["MoveTo", "Grasp", "Place", "Lift", "Retract", "CheckSafety", "QueryWorld", "Recover"]
     for name in expected:
-        assert name in ROS2_PLUGIN_REGISTRY, f"Missing plugin: {name}"
+        assert name in ASYNC_PLUGIN_REGISTRY, f"Missing plugin: {name}"
 
-    results["4.1_ros2_plugin_registry"] = "PASS"
+    results["4.1_async_plugin_registry"] = "PASS"
 
 
-def test_ros2_plugin_classes():
-    """Test ROS2 BT plugin classes are correct types."""
-    from multi_arm_task_planner.bt_plugins.ros2_plugins import (
-        ROS2MoveToNode,
-        ROS2GraspNode,
-        ROS2PlaceNode,
-        ROS2LiftNode,
-        ROS2RetractNode,
-        ROS2CheckSafetyNode,
-        ROS2QueryWorldNode,
-        ROS2RecoverNode,
+def test_async_plugin_classes():
+    """Test Async ROS2 BT plugin classes are correct types."""
+    from multi_arm_task_planner.bt_plugins.async_ros2_plugins import (
+        AsyncMoveToNode,
+        AsyncGraspNode,
+        AsyncPlaceNode,
+        AsyncLiftNode,
+        AsyncRetractNode,
+        AsyncCheckSafetyNode,
+        AsyncQueryWorldNode,
+        AsyncRecoverNode,
     )
-    from multi_arm_task_planner.behavior_tree import ActionNode, ConditionNode
+    from multi_arm_task_planner.behavior_tree import AsyncActionNode, ConditionNode
 
-    assert issubclass(ROS2MoveToNode, ActionNode), "MoveTo should be ActionNode"
-    assert issubclass(ROS2CheckSafetyNode, ConditionNode), "CheckSafety should be ConditionNode"
-    assert issubclass(ROS2QueryWorldNode, ActionNode), "QueryWorld should be ActionNode"
+    assert issubclass(AsyncMoveToNode, AsyncActionNode), "MoveTo should be AsyncActionNode"
+    assert issubclass(AsyncCheckSafetyNode, ConditionNode), "CheckSafety should be ConditionNode"
+    assert issubclass(AsyncQueryWorldNode, AsyncActionNode), "QueryWorld should be AsyncActionNode"
 
-    results["4.2_ros2_plugin_classes"] = "PASS"
+    results["4.2_async_plugin_classes"] = "PASS"
 
 
-def test_ros2_plugins_tick():
-    """Test ROS2 BT plugins can tick (with blackboard only, no ROS2 calls)."""
+def test_async_plugins_tick():
+    """Test Async ROS2 BT plugins can tick (with blackboard only, no ROS2 calls)."""
     from multi_arm_task_planner.behavior_tree import Blackboard, NodeStatus
-    from multi_arm_task_planner.bt_plugins.ros2_plugins import (
-        ROS2GraspNode,
-        ROS2PlaceNode,
-        ROS2LiftNode,
-        ROS2RecoverNode,
-        ROS2QueryWorldNode,
+    from multi_arm_task_planner.bt_plugins.async_ros2_plugins import (
+        AsyncGraspNode,
+        AsyncPlaceNode,
+        AsyncLiftNode,
+        AsyncRecoverNode,
+        AsyncQueryWorldNode,
     )
 
     bb = Blackboard()
@@ -112,27 +112,33 @@ def test_ros2_plugins_tick():
     bb.set("object_id", "red_cube")
     bb.set("target_zone", "zone_a")
 
-    grasp = ROS2GraspNode(name="test_grasp", blackboard=bb)
+    grasp = AsyncGraspNode(name="test_grasp", blackboard=bb)
     status = grasp.tick()
-    assert status == NodeStatus.SUCCESS, f"Grasp should succeed, got {status}"
+    assert status == NodeStatus.RUNNING, f"Grasp 1st tick should be RUNNING, got {status}"
+    status = grasp.tick()
+    assert status == NodeStatus.SUCCESS, f"Grasp 2nd tick should succeed, got {status}"
 
-    place = ROS2PlaceNode(name="test_place", blackboard=bb)
+    place = AsyncPlaceNode(name="test_place", blackboard=bb)
+    place.tick()
     status = place.tick()
     assert status == NodeStatus.SUCCESS, f"Place should succeed, got {status}"
 
-    lift = ROS2LiftNode(name="test_lift", blackboard=bb)
+    lift = AsyncLiftNode(name="test_lift", blackboard=bb)
+    lift.tick()
     status = lift.tick()
     assert status == NodeStatus.SUCCESS, f"Lift should succeed, got {status}"
 
-    recover = ROS2RecoverNode(name="test_recover", blackboard=bb)
+    recover = AsyncRecoverNode(name="test_recover", blackboard=bb)
+    recover.tick()
     status = recover.tick()
     assert status == NodeStatus.SUCCESS, f"Recover should succeed, got {status}"
 
-    query = ROS2QueryWorldNode(name="test_query", blackboard=bb)
+    query = AsyncQueryWorldNode(name="test_query", blackboard=bb)
+    query.tick()
     status = query.tick()
     assert status == NodeStatus.SUCCESS, f"QueryWorld should succeed, got {status}"
 
-    results["4.3_ros2_plugins_tick"] = "PASS"
+    results["4.3_async_plugins_tick"] = "PASS"
 
 
 def test_task_xml_map():
@@ -169,7 +175,7 @@ def test_pick_place_ros2_xml_exists():
 def test_pick_place_ros2_xml_loadable():
     """Test pick_place_ros2.xml can be loaded by BehaviorTree."""
     from multi_arm_task_planner.behavior_tree import BehaviorTree, Blackboard
-    from multi_arm_task_planner.bt_plugins.ros2_plugins import ROS2_PLUGIN_REGISTRY
+    from multi_arm_task_planner.bt_plugins.async_ros2_plugins import ASYNC_PLUGIN_REGISTRY
 
     xml_path = os.path.join(
         os.path.dirname(__file__),
@@ -179,7 +185,7 @@ def test_pick_place_ros2_xml_loadable():
     xml_path = os.path.abspath(xml_path)
 
     bt = BehaviorTree(blackboard=Blackboard())
-    bt.register_plugins(ROS2_PLUGIN_REGISTRY)
+    bt.register_plugins(ASYNC_PLUGIN_REGISTRY)
     bt.load_xml(xml_path)
 
     assert bt.root is not None, "BT root is None after loading"
@@ -193,10 +199,84 @@ def test_coordinator_has_execute_task():
 
     assert hasattr(CoordinatorNode, "_on_execute_task"), "Missing _on_execute_task"
     assert hasattr(CoordinatorNode, "_parse_task"), "Missing _parse_task"
+    assert hasattr(CoordinatorNode, "_parse_task_goal"), "Missing _parse_task_goal"
     assert hasattr(CoordinatorNode, "_send_trajectory_sync"), "Missing _send_trajectory_sync"
     assert hasattr(CoordinatorNode, "_init_action_server"), "Missing _init_action_server"
 
     results["6.1_coordinator_execute_task"] = "PASS"
+
+
+def test_task_goal_msg():
+    """Test TaskGoal message can be constructed."""
+    from multi_arm_interfaces.msg import TaskGoal, TaskConstraint
+
+    goal = TaskGoal()
+    goal.action_type = "move"
+    goal.arm_name = "arm1"
+    goal.zone_name = "zone_a"
+    goal.position_name = "ready"
+    goal.object_id = "red_cube"
+    goal.approach = "top"
+    goal.constraints = TaskConstraint()
+    goal.constraints.priority = 1
+    goal.constraints.allow_recovery = True
+    goal.constraints.max_retries = 3
+    assert goal.arm_name == "arm1"
+    assert goal.constraints.priority == 1
+
+    results["8.1_task_goal_msg"] = "PASS"
+
+
+def test_motion_request_msg():
+    """Test MotionRequest message can be constructed."""
+    from multi_arm_interfaces.msg import MotionRequest
+
+    req = MotionRequest()
+    req.arm_name = "arm1"
+    req.target_position = "ready"
+    req.use_named_target = True
+    req.speed_scale = 0.5
+    req.collision_check = True
+    assert req.arm_name == "arm1"
+    assert req.use_named_target is True
+
+    results["8.2_motion_request_msg"] = "PASS"
+
+
+def test_execute_task_with_goal():
+    """Test ExecuteTask.Goal has goal field for TaskGoal."""
+    from multi_arm_interfaces.action import ExecuteTask
+    from multi_arm_interfaces.msg import TaskGoal
+
+    goal = ExecuteTask.Goal()
+    goal.task_id = "test_m53"
+    goal.task_type = "move"
+    goal.description = "arm1:zone_a:ready"
+    task_goal = TaskGoal()
+    task_goal.arm_name = "arm1"
+    task_goal.zone_name = "zone_a"
+    task_goal.position_name = "ready"
+    goal.goal = task_goal
+    assert goal.goal.arm_name == "arm1"
+
+    results["8.3_execute_task_with_goal"] = "PASS"
+
+
+def test_coordinator_parse_task_goal():
+    """Test Coordinator._parse_task_goal with structured TaskGoal."""
+    from multi_arm_core.coordinator_node import CoordinatorNode
+    from multi_arm_interfaces.msg import TaskGoal
+
+    task_goal = TaskGoal()
+    task_goal.arm_name = "arm2"
+    task_goal.zone_name = "zone_b"
+    task_goal.position_name = "home"
+    arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
+    assert arm == "arm2", f"Expected arm2, got {arm}"
+    assert zone == "zone_b", f"Expected zone_b, got {zone}"
+    assert pos == "home", f"Expected home, got {pos}"
+
+    results["8.4_coordinator_parse_task_goal"] = "PASS"
 
 
 def test_no_circular_import():
@@ -218,13 +298,17 @@ def main():
         test_robot_constants,
         test_moveit_interface_import,
         test_coordinator_parse_task,
-        test_ros2_plugin_registry,
-        test_ros2_plugin_classes,
-        test_ros2_plugins_tick,
+        test_async_plugin_registry,
+        test_async_plugin_classes,
+        test_async_plugins_tick,
         test_task_xml_map,
         test_pick_place_ros2_xml_exists,
         test_pick_place_ros2_xml_loadable,
         test_coordinator_has_execute_task,
+        test_task_goal_msg,
+        test_motion_request_msg,
+        test_execute_task_with_goal,
+        test_coordinator_parse_task_goal,
         test_no_circular_import,
     ]
 

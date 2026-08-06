@@ -1,6 +1,10 @@
+# ExecuteTask action — structured goal + backward-compatible description.
+# Prefer using TaskGoal for new code; description is kept for legacy fallback.
+
 string task_id
 string task_type
-string description
+string description                # Legacy: "arm1:zone_a:ready" format (backward compatible)
+multi_arm_interfaces/TaskGoal goal # Structured task goal (preferred)
 ---
 bool success
 string message

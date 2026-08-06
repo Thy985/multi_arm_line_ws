@@ -1,0 +1,23 @@
+name: single_arm
+description: Single arm pick-and-place benchmark
+tasks:
+  - task_id: single_move_ready
+    arm_name: arm1
+    action_type: move
+    zone_name: zone_a
+    position_name: ready
+    timeout: 30.0
+  - task_id: single_move_home
+    arm_name: arm1
+    action_type: move
+    zone_name: zone_a
+    position_name: home
+    timeout: 30.0
+  - task_id: single_pick_place
+    arm_name: arm1
+    action_type: pick_place
+    zone_name: zone_a
+    position_name: ready
+    object_id: red_cube
+    approach: top
+    timeout: 60.0

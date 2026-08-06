@@ -10,8 +10,13 @@ Tests zone resource conflict between two arms:
 Prerequisite: m4_6_task_loop.launch.py must be running.
 """
 
+import os
 import sys
 import time
+
+os.environ.setdefault("ROS_HOME", "/tmp/ros_home")
+os.environ.setdefault("ROS_LOG_DIR", "/tmp/ros_home/log")
+
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient

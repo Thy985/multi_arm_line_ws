@@ -1,21 +1,14 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>multi_arm_core</name>
+  <name>multi_arm_recovery</name>
   <version>0.1.0</version>
-  <description>Multi-arm coordination core package</description>
+  <description>Recovery framework for multi-arm system — failure classification and recovery strategies</description>
   <maintainer email="lenovo@todo.todo">lenovo</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>control_msgs</depend>
-  <depend>trajectory_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>builtin_interfaces</depend>
-  <depend>action_msgs</depend>
   <depend>multi_arm_interfaces</depend>
-  <depend>moveit_msgs</depend>
-  <depend>multi_arm_recovery</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -8,7 +8,7 @@
 
 双UR5e多机械臂ROS2仿真与协调控制系统。ROS2 Jazzy + Gazebo Harmonic，运行在WSL2 (Ubuntu 24.04) 环境。目标架构为7层功能层 + Safety横切平面。
 
-**当前阶段**: M1-M3 + E2E已通过（软件架构闭环验证完成），进入M4 Simulation E2E Validation。
+**当前阶段**: M5.4 Benchmark System已完成，进入M5.5 CI/CD Pipeline。
 
 ---
 
@@ -93,6 +93,7 @@ multi_arm_line_ws/
 │   ├── multi_arm_moveit_config/    # MoveIt2配置包
 │   ├── multi_arm_manipulation/     # 抓取操作包
 │   ├── multi_arm_perception/       # 视觉感知包
+│   ├── multi_arm_recovery/         # 恢复框架包
 │   ├── multi_arm_benchmark/        # 基准测试包
 │   ├── order_manager/              # [遗留] 过渡期
 │   └── ur_simulation_gz/           # Gazebo仿真包
@@ -416,31 +417,177 @@ TaskPlanner → Coordinator → SafetySupervisor → MoveIt2
 
 **已知限制**: ROS2 BT插件在async callback中创建临时节点会导致executor死锁，当前默认使用mock插件。M5需重构为共享Node的async插件。
 
-### M5: Reliability Engineering（后续）
+**M4.6关键发现**: ResourceManager.allocate()在zone被占用时将请求者加入waiting_queue，release()时自动分配给队列下一个。但ExecuteTask是同步请求-响应模式，被拒绝的请求不会重试，导致zone被已放弃的请求者占用。修复：allocate失败后从waiting_queue移除task_id。
 
-**目标**: 从"能跑"到"跑得稳"。Recovery+Benchmark+CI/CD三位一体。
+### M5: Reliability & Intelligence Layer（下一阶段）
 
-#### M5.1 Recovery
+**核心转变**: 从"能完成任务"进化到"任务失败时仍然可靠"。
+
+**目标**: 系统面对失败不是退出，而是恢复。同时建立可量化的性能基线和自动化质量保障。
+
+#### M5.1 Recovery Framework
+
+**新增包**: `multi_arm_recovery`
+
+```
+multi_arm_recovery/
+├── recovery_manager.py          # 恢复编排器
+├── failure_classifier.py        # 失败分类器
+└── handlers/
+    ├── planning_failure.py      # 规划失败→放宽约束重规划
+    ├── collision_handler.py     # 碰撞→退回安全位→重规划
+    ├── resource_timeout.py      # 资源等待超时→释放→重新分配
+    ├── controller_failure.py    # JTC inactive→切换控制器/abort
+    └── grasp_retry.py           # 抓取失败→重试(最多3次)
+```
+
+**恢复链路**:
+```
+MoveIt失败
+ ↓ RecoveryManager
+ ↓ FailureClassifier → PlanningFailure
+ ↓ PlanningFailureHandler → 放宽约束重规划
+ ↓ 失败
+ ↓ Strategy 2: 换grasp姿态
+ ↓ 失败
+ ↓ Strategy 3: 释放资源
+ ↓ 失败
+ ↓ SafeAbort
+```
 
 | 验收项 | 通过条件 |
 |--------|----------|
-| PlanningFailure→Replan | 规划失败→放宽约束重规划 |
-| CollisionRecovery | 碰撞→退回安全位→重规划 |
+| PlanningFailure→Replan | 规划失败→放宽约束重规划→成功 |
+| CollisionRecovery | 碰撞→退回安全位→重规划→成功 |
 | ResourceTimeout→Release | 资源等待超时→释放→重新分配 |
 | ControllerFailure→Fallback | JTC inactive→切换控制器/abort |
 | GraspRetry | 抓取失败→重试(最多3次) |
+| Recovery集成到BT | BT Recover节点调用RecoveryManager |
 
-#### M5.2 Benchmark
+#### M5.2 BT Plugin Architecture Refactor ✅
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| benchmark.db | SQLite记录每次任务执行数据 |
-| 场景YAML | 定义benchmark场景(单臂/双臂/冲突/恢复) |
-| 指标采集 | planning_time, execution_time, success_rate, collision_count, recovery_count, resource_wait_time |
-| 自动运行 | `ros2 launch multi_arm_benchmark benchmark.launch.py scenario:=pick_place` |
-| 回归检测 | 修改后自动跑benchmark，检测性能退化 |
+**问题**: 当前ROS2 BT插件在async callback中创建临时节点导致executor死锁。
 
-#### M5.3 CI/CD
+**解决方案**: 共享Node + AsyncTick模式
+
+```
+TaskPlanner ROS2 Node (唯一)
+    |
+    +-- BT Plugin
+          |
+          async service/action client (共享Node)
+          |
+          tick → RUNNING (future pending)
+          |
+          next tick → check future → SUCCESS/FAILURE
+```
+
+类似BehaviorTree.CPP的`AsyncActionNode`模式：BT tick返回RUNNING直到ROS2 future完成。
+
+**关键实现**:
+- `AsyncActionNode`基类：`_make_completed_future()` + `_check_result()` 模板方法
+- Sequence/Selector添加`_running_child_idx`记忆RUNNING子节点位置
+- 8个async ROS2插件：AsyncMoveToNode, AsyncRetractNode, AsyncCheckSafetyNode, AsyncQueryWorldNode, AsyncGraspNode, AsyncPlaceNode, AsyncLiftNode, AsyncRecoverNode
+- ActionClient非阻塞模式：`wait_for_server(timeout_sec=0.1)` + waiting retry
+- TaskPlanner默认`use_ros2_plugins=True`，mock插件仅用于单元测试
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| 共享Node插件 | BT插件使用TaskPlanner的Node，不创建临时节点 | ✅ |
+| AsyncTick模式 | tick返回RUNNING→下次tick检查future→SUCCESS/FAILURE | ✅ |
+| 无executor死锁 | 双臂并发BT执行无死锁 | ✅ E2E 8/8 + 双臂冲突 8/8 |
+| 替换mock插件 | pick_place_ros2.xml成为默认，mock仅用于单元测试 | ✅ |
+
+**M5.2关键发现**:
+- BT XML中`{blackboard_key}`引用不被`_build_node()`解析，需使用扁平Sequence结构
+- Sequence/Selector必须记忆RUNNING子节点位置，否则async节点被反复重置
+- `wait_for_server()`在BT tick内部会阻塞executor，必须用非阻塞检查+retry
+- `create_client`不能用于Action类型，必须用`rclpy.action.ActionClient`
+- 服务不可用时AsyncQueryWorldNode返回SUCCESS（fallback），AsyncCheckSafetyNode返回FAILURE（安全优先）
+
+**测试**: 286 tests ALL PASS (含27个async插件测试)
+
+#### M5.3 Task Message Upgrade ✅
+
+**问题**: 当前`description="arm1:zone_a:ready"`是字符串协议，不够灵活。
+
+**方案**: 扩展multi_arm_interfaces，从字符串协议升级为领域模型。
+
+新增msg:
+```
+TaskGoal.msg       # 任务目标（action_type, arm_name, zone_name, position_name, object_id, approach, constraints）
+TaskConstraint.msg # 约束（max_time, safety_level, priority, allow_recovery, max_retries）
+MotionRequest.msg  # 运动请求（arm_name, target_position, joint_positions, speed_scale, collision_check, max_velocity）
+```
+
+**ExecuteTask.action扩展**: 新增`TaskGoal goal`字段，保留`description`用于向后兼容。
+
+**Coordinator解析优先级**: TaskGoal.arm_name非空 → 使用`_parse_task_goal()`；否则fallback到`_parse_task()`解析字符串。
+
+**BT插件更新**: AsyncMoveToNode/AsyncRetractNode构造ExecuteTask.Goal时同时填充`description`和`goal`字段。
+
+**TaskPlanner更新**: 从TaskGoal字段覆盖blackboard默认值（arm_name, zone_name, position_name, object_id, approach）。
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| TaskGoal.msg定义 | 包含action_type, target, constraints字段 | ✅ |
+| Coordinator解析TaskGoal | 替代_parse_task字符串解析 | ✅ _parse_task_goal() |
+| 向后兼容 | 旧字符串格式仍可解析（fallback） | ✅ _parse_task()保留 |
+| BT插件使用TaskGoal | MoveTo/Retract构造结构化goal | ✅ |
+| MotionRequest.msg | 运动请求消息定义 | ✅ |
+
+**测试**: 307 tests ALL PASS (含21个TaskGoal测试)
+
+#### M5.4 Benchmark System ✅
+
+**新增包**: `multi_arm_benchmark`
+
+```
+multi_arm_benchmark/
+├── benchmark_node.py        # ROS2节点（场景执行+数据采集）
+├── benchmark_recorder.py    # 采集执行数据→SQLite
+├── scenario_runner.py       # 场景YAML→自动执行
+├── regression_detector.py   # 性能退化检测
+└── scenarios/
+    ├── single_arm.yaml      # 单臂场景
+    ├── dual_arm.yaml        # 双臂场景
+    ├── conflict.yaml        # 资源冲突场景
+    └── recovery.yaml        # 恢复场景
+```
+
+**采集指标**:
+```
+task_start, planning_time, execution_time, success,
+failure_reason, resource_wait_time, recovery_count,
+collision_count, safety_rejections
+```
+
+**SQLite Schema**:
+- `runs`表：run_id, scenario_name, start_time, end_time, total_duration, success_count, failure_count, git_hash, metadata
+- `task_records`表：record_id, run_id, task_id, arm_name, action_type, description, planning_time, execution_time, total_time, success, failure_reason, resource_wait_time, recovery_count, collision_count, safety_rejections
+
+**RegressionDetector**: 可配置阈值，支持success_rate/planning_time/execution_time/total_time退化检测，趋势分析。
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| benchmark.db | SQLite记录每次任务执行数据 | ✅ |
+| 场景YAML | 定义benchmark场景(单臂/双臂/冲突/恢复) | ✅ 4个场景 |
+| 指标采集 | planning_time, execution_time, success_rate, collision_count, recovery_count, resource_wait_time | ✅ |
+| 自动运行 | BenchmarkNode + ScenarioRunner | ✅ |
+| 回归检测 | RegressionDetector比较历史运行 | ✅ |
+
+**测试**: 341 tests ALL PASS (含34个benchmark测试)
+
+#### M5.5 CI/CD Pipeline
+
+**四层质量保障**:
+
+```
+Layer 1: colcon build (所有包编译通过)
+Layer 2: unit test (pytest + colcon test)
+Layer 3: launch test (ros2 launch + node alive check)
+Layer 4: simulation smoke test (Gazebo启动→提交任务→验证成功/失败→关闭)
+```
 
 | 验收项 | 通过条件 |
 |--------|----------|
@@ -452,7 +599,9 @@ TaskPlanner → Coordinator → SafetySupervisor → MoveIt2
 
 ### M6: Sim2Real（远期）
 
-**前置依赖**: 控制接口稳定 + 参数化完成 + Recovery存在 + Benchmark存在
+**前置依赖**: Recovery存在 + Benchmark存在 + 参数化完成
+
+**不进入M5的原因**: 实体机器人还缺calibration、safety limits、network latency、hardware fault、controller behavior等，这些依赖M5的可靠性基础设施。
 
 | 验收项 | 通过条件 |
 |--------|----------|
@@ -460,6 +609,21 @@ TaskPlanner → Coordinator → SafetySupervisor → MoveIt2
 | 参数统一 | 仿真/实体配置同一YAML(仅hardware_interface不同) |
 | Safety实体验证 | 真实E-Stop按钮→控制器停止 |
 | Sim2Real gap测量 | benchmark对比仿真vs实体执行数据 |
+
+---
+
+## 项目成熟度
+
+| 里程碑 | 状态 | 说明 |
+|--------|------|------|
+| M1 Interface Architecture | ✅ | 109 tests |
+| M2 Safety + Motion Foundation | ✅ | 36 tests |
+| M3 WorldModel + TaskPlanner | ✅ | 54 tests |
+| M4 Gazebo Integration | ✅ | 7/8 (缺Benchmark数据) |
+| M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
+| M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
+| M5 Reliability & Intelligence | 🔄 进行中 | M5.1 Recovery ✅, M5.2 BT Plugin ✅ (286), M5.3 TaskMsg ✅ (307), M5.4 Benchmark ✅ (341), M5.5 CI/CD待开始 |
+| M6 Sim2Real | ⬜ 远期 | 依赖M5完成 |
 
 ---
 
@@ -482,6 +646,11 @@ TaskPlanner → Coordinator → SafetySupervisor → MoveIt2
 | 基准 | `docs/benchmark/baseline_report.md` | 性能基线模板 (待M4填充) |
 | M4验证 | `docs/validation/M4_validation_report.md` | M4验证报告 |
 | M4.5验证 | `docs/validation/M4_5_validation_report.md` | M4.5 Motion+Coordination验证报告 |
+| M4.6验证 | `docs/validation/M4_6_validation_report.md` | M4.6 Autonomous Task Loop验证报告 |
+| M5.1验证 | `docs/validation/M5_1_validation_report.md` | M5.1 Recovery Framework验证报告 |
+| M5.2验证 | `docs/validation/M5_2_validation_report.md` | M5.2 BT Plugin Architecture验证报告 |
+| M5.3验证 | `docs/validation/M5_3_validation_report.md` | M5.3 Task Message Upgrade验证报告 |
+| M5.4验证 | `docs/validation/M5_4_validation_report.md` | M5.4 Benchmark System验证报告 |
 
 ---
 

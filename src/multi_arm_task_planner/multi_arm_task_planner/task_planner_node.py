@@ -1,7 +1,8 @@
 """TaskPlannerNode - ROS2 node for behavior tree-based task planning (L6)."""
 
 import os
-from typing import Dict, Optional
+import time as _time
+from typing import Any, Dict, Optional
 
 import rclpy
 from rclpy.action import ActionServer
@@ -9,9 +10,14 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
-from multi_arm_task_planner.behavior_tree import BehaviorTree, Blackboard, NodeStatus
+from multi_arm_task_planner.behavior_tree import (
+    AsyncActionNode,
+    BehaviorTree,
+    Blackboard,
+    NodeStatus,
+)
 from multi_arm_task_planner.bt_plugins.pick_place_plugins import PLUGIN_REGISTRY
-from multi_arm_task_planner.bt_plugins.ros2_plugins import ROS2_PLUGIN_REGISTRY
+from multi_arm_task_planner.bt_plugins.async_ros2_plugins import ASYNC_PLUGIN_REGISTRY
 
 TASK_XML_MAP: Dict[str, str] = {
     "pick_place": "pick_place.xml",
@@ -27,9 +33,10 @@ class TaskPlannerNode(Node):
     Loads BT XML definitions and executes them using registered Python plugins.
     XML format is compatible with BehaviorTree.CPP / Groot for visualization.
 
-    Supports both mock plugins (for unit testing) and ROS2 plugins
-    (for real service calls). The plugin set is selected based on
-    the 'use_ros2_plugins' parameter.
+    Supports three plugin sets:
+    - Mock plugins (for unit testing): use_ros2_plugins=False
+    - Async ROS2 plugins (default): use_ros2_plugins=True
+      Uses shared Node + AsyncTick pattern — no executor deadlocks.
     """
 
     def __init__(self) -> None:
@@ -37,11 +44,11 @@ class TaskPlannerNode(Node):
 
         cb_group = ReentrantCallbackGroup()
 
-        use_ros2 = self.declare_parameter("use_ros2_plugins", False).value
+        use_ros2 = self.declare_parameter("use_ros2_plugins", True).value
 
         if use_ros2:
-            merged_registry = {**PLUGIN_REGISTRY, **ROS2_PLUGIN_REGISTRY}
-            self.get_logger().info("Using ROS2-enabled BT plugins")
+            merged_registry = {**PLUGIN_REGISTRY, **ASYNC_PLUGIN_REGISTRY}
+            self.get_logger().info("Using async ROS2 BT plugins (shared Node)")
         else:
             merged_registry = dict(PLUGIN_REGISTRY)
             self.get_logger().info("Using mock BT plugins")
@@ -49,11 +56,52 @@ class TaskPlannerNode(Node):
         self._bt = BehaviorTree(blackboard=Blackboard())
         self._bt.register_plugins(merged_registry)
         self._current_tree_name: Optional[str] = None
+        self._use_ros2 = use_ros2
 
         self._init_services(cb_group)
 
         self.get_logger().info("TaskPlanner node started")
         self.get_logger().info(f"Registered plugins: {list(merged_registry.keys())}")
+
+    def _inject_shared_node(self) -> None:
+        """Inject this node into all AsyncActionNode instances in the tree.
+
+        This allows BT plugins to use the TaskPlanner's ROS2 Node
+        for creating service/action clients, avoiding the need to
+        create temporary nodes (which causes executor deadlocks).
+        """
+        if not self._use_ros2:
+            return
+
+        count = 0
+        self._inject_node_to_tree(self._bt.root, self, count_ref=[0])
+
+    def _inject_node_to_tree(self, node: Optional[Any], ros2_node: Node, count_ref: Optional[list] = None) -> None:
+        """Recursively inject shared ROS2 node into async BT nodes.
+
+        Args:
+            node: Current BT node to inject into.
+            ros2_node: The shared ROS2 node.
+            count_ref: Mutable reference to count injected nodes.
+        """
+        if node is None:
+            return
+
+        if isinstance(node, AsyncActionNode):
+            node.set_ros2_node(ros2_node)
+            if count_ref is not None:
+                count_ref[0] += 1
+
+        if hasattr(node, 'set_ros2_node') and not isinstance(node, AsyncActionNode):
+            node.set_ros2_node(ros2_node)
+            if count_ref is not None:
+                count_ref[0] += 1
+
+        for child in getattr(node, '_children', []):
+            self._inject_node_to_tree(child, ros2_node, count_ref)
+
+        if count_ref is not None and count_ref[0] > 0 and node == self._bt.root:
+            self.get_logger().info(f"Injected shared node into {count_ref[0]} BT nodes")
 
     def _init_services(self, cb_group: ReentrantCallbackGroup) -> None:
         """Initialize action servers."""
@@ -156,11 +204,36 @@ class TaskPlannerNode(Node):
         self._bt.blackboard.set("target_zone", "zone_a")
         self._bt.blackboard.set("target_position", "ready")
         self._bt.blackboard.set("object_id", "red_cube")
+        self._bt.blackboard.set("target_goal", "arm1:zone_a:ready")
+        self._bt.blackboard.set("place_goal", "arm1:zone_b:ready")
+
+        task_goal = getattr(goal, 'goal', None)
+        if task_goal is not None and task_goal.arm_name:
+            self._bt.blackboard.set("arm_name", task_goal.arm_name)
+            if task_goal.zone_name:
+                self._bt.blackboard.set("target_zone", task_goal.zone_name)
+            if task_goal.position_name:
+                self._bt.blackboard.set("target_position", task_goal.position_name)
+            if task_goal.object_id:
+                self._bt.blackboard.set("object_id", task_goal.object_id)
+            if task_goal.approach:
+                self._bt.blackboard.set("approach", task_goal.approach)
+            self._bt.blackboard.set("target_goal",
+                f"{task_goal.arm_name}:{task_goal.zone_name or 'zone_a'}:{task_goal.position_name or 'ready'}")
+            self._bt.blackboard.set("place_goal",
+                f"{task_goal.arm_name}:{task_goal.zone_name or 'zone_b'}:{task_goal.position_name or 'ready'}")
+            self._bt.blackboard.set("task_goal", task_goal)
+            self.get_logger().info(
+                f"TaskGoal parsed: arm={task_goal.arm_name} zone={task_goal.zone_name} "
+                f"pos={task_goal.position_name} obj={task_goal.object_id}"
+            )
 
         self._bt.reset()
-        max_ticks = 100
+        self._inject_shared_node()
+        max_ticks = 500
         for i in range(max_ticks):
             status = self._bt.tick()
+
 
             if goal_handle.is_cancel_requested:
                 goal_handle.abort()
@@ -176,11 +249,16 @@ class TaskPlannerNode(Node):
                 result.message = "Task completed successfully"
                 return result
             if status == NodeStatus.FAILURE:
+                last_action = self._bt.blackboard.get("last_action", "unknown")
+                self.get_logger().error(f"BT FAILED at tick {i}, last_action={last_action}")
                 goal_handle.abort()
                 result = ExecuteTask.Result()
                 result.success = False
-                result.message = "Task failed"
+                result.message = f"Task failed (tick {i}, last: {last_action})"
                 return result
+
+            if status == NodeStatus.RUNNING:
+                _time.sleep(0.05)
 
         goal_handle.abort()
         result = ExecuteTask.Result()

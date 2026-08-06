@@ -1,0 +1,21 @@
+name: recovery
+description: Recovery scenario — tasks that may trigger recovery mechanisms
+tasks:
+  - task_id: recovery_arm1_move
+    arm_name: arm1
+    action_type: move
+    zone_name: zone_a
+    position_name: ready
+    timeout: 30.0
+  - task_id: recovery_arm1_invalid
+    arm_name: arm1
+    action_type: move
+    zone_name: zone_invalid
+    position_name: invalid_pos
+    timeout: 15.0
+  - task_id: recovery_arm1_retry
+    arm_name: arm1
+    action_type: move
+    zone_name: zone_a
+    position_name: home
+    timeout: 30.0

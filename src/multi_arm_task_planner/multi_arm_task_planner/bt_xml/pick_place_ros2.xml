@@ -19,30 +19,9 @@
     <Sequence name="pick_place_ros2_sequence">
       <CheckSafety name="pre_safety_check"/>
       <QueryWorld name="query_object_state"/>
-      <SubTree ID="grasp_strategy"/>
-      <SubTree ID="place_sequence"/>
-    </Sequence>
-  </BehaviorTree>
-
-  <!-- Grasp strategy subtree: try top approach, fall back to side -->
-  <BehaviorTree ID="grasp_strategy">
-    <Selector name="grasp_strategy">
-      <Sequence name="top_grasp">
-        <MoveTo goal="{approach_top}" name="move_to_top"/>
-        <Grasp approach="top" name="grasp_top"/>
-      </Sequence>
-      <Sequence name="side_grasp">
-        <MoveTo goal="{approach_side}" name="move_to_side"/>
-        <Grasp approach="side" name="grasp_side"/>
-      </Sequence>
-    </Selector>
-  </BehaviorTree>
-
-  <!-- Place sequence subtree -->
-  <BehaviorTree ID="place_sequence">
-    <Sequence name="place_sequence">
+      <MoveTo name="move_to_target"/>
+      <Grasp approach="top" name="grasp_object"/>
       <Lift height="0.1" name="lift_object"/>
-      <MoveTo goal="{place_approach}" name="move_to_place"/>
       <Place name="place_object"/>
       <Retract name="retract_arm"/>
     </Sequence>

@@ -84,35 +84,65 @@ class BTNode:
 
 
 class Sequence(BTNode):
-    """Execute children in order. Succeeds if all succeed. Fails on first failure."""
+    """Execute children in order. Succeeds if all succeed. Fails on first failure.
+
+    Remembers the last RUNNING child and resumes from it on next tick.
+    """
+
+    def __init__(self, name: str = "", blackboard: Optional[Blackboard] = None) -> None:
+        super().__init__(name=name, blackboard=blackboard)
+        self._running_child_idx: int = 0
 
     def tick(self) -> NodeStatus:
         self._status = NodeStatus.RUNNING
-        for child in self._children:
+        while self._running_child_idx < len(self._children):
+            child = self._children[self._running_child_idx]
             child_status = child.tick()
             if child_status == NodeStatus.RUNNING:
                 return NodeStatus.RUNNING
             if child_status == NodeStatus.FAILURE:
                 self._status = NodeStatus.FAILURE
+                self._running_child_idx = 0
                 return NodeStatus.FAILURE
+            self._running_child_idx += 1
         self._status = NodeStatus.SUCCESS
+        self._running_child_idx = 0
         return NodeStatus.SUCCESS
+
+    def reset(self) -> None:
+        self._running_child_idx = 0
+        super().reset()
 
 
 class Selector(BTNode):
-    """Execute children in order. Succeeds on first success. Fails if all fail."""
+    """Execute children in order. Succeeds on first success. Fails if all fail.
+
+    Remembers the last RUNNING child and resumes from it on next tick.
+    """
+
+    def __init__(self, name: str = "", blackboard: Optional[Blackboard] = None) -> None:
+        super().__init__(name=name, blackboard=blackboard)
+        self._running_child_idx: int = 0
 
     def tick(self) -> NodeStatus:
         self._status = NodeStatus.RUNNING
-        for child in self._children:
+        while self._running_child_idx < len(self._children):
+            child = self._children[self._running_child_idx]
             child_status = child.tick()
             if child_status == NodeStatus.RUNNING:
                 return NodeStatus.RUNNING
             if child_status == NodeStatus.SUCCESS:
                 self._status = NodeStatus.SUCCESS
+                self._running_child_idx = 0
                 return NodeStatus.SUCCESS
+            self._running_child_idx += 1
         self._status = NodeStatus.FAILURE
+        self._running_child_idx = 0
         return NodeStatus.FAILURE
+
+    def reset(self) -> None:
+        self._running_child_idx = 0
+        super().reset()
 
 
 class ActionNode(BTNode):
@@ -130,6 +160,106 @@ class ActionNode(BTNode):
     def tick(self) -> NodeStatus:
         self._status = self._action_fn()
         return self._status
+
+
+class AsyncActionNode(ActionNode):
+    """Base class for async BT nodes that use shared ROS2 Node.
+
+    Implements the AsyncTick pattern:
+    - First tick: send ROS2 request, return RUNNING
+    - Subsequent ticks: check if future completed, return SUCCESS/FAILURE
+    - Never blocks the executor — no _time.sleep() polling
+
+    Subclasses must implement:
+    - _send_request(): Send the ROS2 service/action request
+    - _check_result(): Check if the request completed and return status
+
+    The shared ROS2 Node is injected via set_ros2_node() before
+    the tree is ticked, typically by the TaskPlannerNode.
+    """
+
+    def __init__(
+        self,
+        name: str = "",
+        blackboard: Optional[Blackboard] = None,
+    ) -> None:
+        super().__init__(name=name, blackboard=blackboard)
+        self._ros2_node: Optional[Any] = None
+        self._pending_future: Optional[Any] = None
+        self._request_sent: bool = False
+        self._result_checked: bool = False
+
+    def set_ros2_node(self, node: Any) -> None:
+        """Inject the shared ROS2 node for creating clients.
+
+        Args:
+            node: The rclpy Node instance to share.
+        """
+        self._ros2_node = node
+
+    def _make_completed_future(self, result: Any = None) -> Any:
+        """Create an already-completed future for synchronous actions.
+
+        Used by simplified plugins (Grasp, Place, Lift, Recover) that
+        don't need actual ROS2 calls but still need to follow the
+        AsyncTick pattern.
+
+        Args:
+            result: The result value to set on the future.
+
+        Returns:
+            A completed Future object.
+        """
+        from concurrent.futures import Future
+        f = Future()
+        f.set_result(result)
+        return f
+
+    def tick(self) -> NodeStatus:
+        """Execute async tick: send request on first call, check result on subsequent.
+
+        Returns:
+            RUNNING if request is pending, SUCCESS/FAILURE when complete.
+        """
+        if not self._request_sent:
+            self._pending_future = self._send_request()
+            self._request_sent = True
+            if self._pending_future is None:
+                self._status = NodeStatus.FAILURE
+                return NodeStatus.FAILURE
+            return NodeStatus.RUNNING
+
+        if self._pending_future is not None and self._pending_future.done():
+            self._status = self._check_result(self._pending_future)
+            return self._status
+
+        return NodeStatus.RUNNING
+
+    def _send_request(self) -> Optional[Any]:
+        """Send the ROS2 request. Override in subclass.
+
+        Returns:
+            The future object to track, or None on error.
+        """
+        return None
+
+    def _check_result(self, future: Any) -> NodeStatus:
+        """Check the completed future and return final status. Override in subclass.
+
+        Args:
+            future: The completed future from _send_request.
+
+        Returns:
+            SUCCESS or FAILURE.
+        """
+        return NodeStatus.FAILURE
+
+    def reset(self) -> None:
+        """Reset async state for re-execution."""
+        self._request_sent = False
+        self._result_checked = False
+        self._pending_future = None
+        super().reset()
 
 
 class ConditionNode(BTNode):

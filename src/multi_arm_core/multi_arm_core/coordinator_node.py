@@ -14,7 +14,7 @@ is delegated to sub-modules:
 import os
 
 import time as _time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import rclpy
 from rclpy.action import ActionClient, ActionServer
@@ -49,6 +49,8 @@ from multi_arm_core.task.task_manager import TaskManager
 from multi_arm_core.safety.safety_interface import SafetyInterface
 from multi_arm_core.moveit_interface import MoveItInterface
 from multi_arm_core.robot_constants import ARM_JOINT_NAMES, PRESET_POSITIONS
+from multi_arm_recovery.recovery_manager import RecoveryManager
+from multi_arm_recovery.failure_classifier import FailureEvent, FailureType
 
 
 
@@ -87,6 +89,7 @@ class CoordinatorNode(Node):
         self._joint_states: Dict[str, JointState] = {}
 
         self._moveit_interface = MoveItInterface(self, cb_group)
+        self._recovery_manager = RecoveryManager()
 
         for robot in self._resource_manager.get_robots():
             arm_name = robot.name
@@ -175,11 +178,19 @@ class CoordinatorNode(Node):
         task_type = goal.task_type
         description = goal.description
 
+        task_goal = getattr(goal, 'goal', None)
+
         self.get_logger().info(
             f"ExecuteTask received: id={task_id} type={task_type} desc={description}"
         )
 
-        arm_name, zone_name, position_name = self._parse_task(task_type, description)
+        if task_goal is not None and task_goal.arm_name:
+            arm_name, zone_name, position_name = self._parse_task_goal(task_goal)
+            self.get_logger().info(
+                f"Parsed from TaskGoal: arm={arm_name} zone={zone_name} pos={position_name}"
+            )
+        else:
+            arm_name, zone_name, position_name = self._parse_task(task_type, description)
 
         if arm_name is None:
             goal_handle.abort()
@@ -272,6 +283,14 @@ class CoordinatorNode(Node):
             success = self._send_trajectory_sync(arm_name, trajectory, timeout=15.0)
             msg = "jtc_success" if success else "jtc_failed"
 
+        if not success:
+            self.get_logger().warn(
+                f"[{arm_name}] Execution failed for task {task_id}: {msg}"
+            )
+            success, msg = self._attempt_recovery(
+                task_id, arm_name, msg, zone_name, position_name, task_internal_id
+            )
+
         if zone_name:
             release_result = self._resource_manager.release(zone_name, task_internal_id)
             self.get_logger().info(
@@ -292,6 +311,148 @@ class CoordinatorNode(Node):
         result.message = msg
         return result
 
+    def _attempt_recovery(
+        self,
+        task_id: str,
+        arm_name: str,
+        error_msg: str,
+        zone_name: Optional[str],
+        position_name: str,
+        task_internal_id: str,
+    ) -> Tuple[bool, str]:
+        """Attempt recovery after a motion execution failure.
+
+        Uses RecoveryManager to classify the failure and execute
+        progressive recovery strategies.
+
+        Args:
+            task_id: External task ID.
+            arm_name: Name of the arm that failed.
+            error_msg: Error message from the failed execution.
+            zone_name: Zone that was allocated (if any).
+            position_name: Target position name.
+            task_internal_id: Internal task ID for resource management.
+
+        Returns:
+            Tuple of (success, message).
+        """
+        from multi_arm_recovery.recovery_manager import RecoveryStatus
+
+        event = self._recovery_manager.classify_failure(
+            message=error_msg,
+            arm_name=arm_name,
+            context={"zone": zone_name, "position": position_name},
+            task_id=task_id,
+        )
+
+        self.get_logger().info(
+            f"[RECOVERY] Classified failure: type={event.failure_type.name} "
+            f"recoverable={event.recoverable} arm={arm_name}"
+        )
+
+        if not event.recoverable:
+            self.get_logger().warn(
+                f"[RECOVERY] Non-recoverable failure: {event.failure_type.name}"
+            )
+            return False, f"non_recoverable:{event.failure_type.name}"
+
+        record = self._recovery_manager.handle_failure(
+            event, executor=self._execute_recovery_strategy
+        )
+
+        if record.status == RecoveryStatus.RECOVERED:
+            self.get_logger().info(
+                f"[RECOVERY] Recovered task {task_id} via "
+                f"strategy={record.current_strategy} "
+                f"attempts={record.recovery_count}"
+            )
+            return True, f"recovered:{record.current_strategy}"
+
+        self.get_logger().warn(
+            f"[RECOVERY] Failed to recover task {task_id} after "
+            f"{record.recovery_count} attempts, "
+            f"strategies={record.strategies_tried}"
+        )
+        return False, f"recovery_failed:{record.strategies_tried}"
+
+    def _execute_recovery_strategy(
+        self,
+        strategy_name: str,
+        strategy_params: Dict,
+        event: FailureEvent,
+    ) -> bool:
+        """Execute a recovery strategy determined by RecoveryManager.
+
+        Args:
+            strategy_name: Name of the recovery strategy.
+            strategy_params: Parameters for the strategy.
+            event: The failure event being recovered.
+
+        Returns:
+            True if the strategy succeeded.
+        """
+        arm_name = event.arm_name
+        self.get_logger().info(
+            f"[RECOVERY] Executing strategy: {strategy_name} "
+            f"for arm={arm_name} params={strategy_params}"
+        )
+
+        if strategy_name == "relax_constraints":
+            position_name = event.context.get("position", "ready")
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name,
+                position_name,
+                timeout=strategy_params.get("planning_time", 60.0),
+            )
+            return success
+
+        if strategy_name == "change_grasp_pose":
+            position_name = event.context.get("position", "ready")
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name, position_name, timeout=60.0,
+            )
+            return success
+
+        if strategy_name == "retreat_to_safe":
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name, "home", timeout=30.0,
+            )
+            return success
+
+        if strategy_name == "replan_with_avoidance":
+            position_name = event.context.get("position", "ready")
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name, position_name, timeout=60.0,
+            )
+            return success
+
+        if strategy_name == "wait_and_retry":
+            _time.sleep(strategy_params.get("wait_seconds", 2.0))
+            position_name = event.context.get("position", "ready")
+            positions = PRESET_POSITIONS.get(position_name, PRESET_POSITIONS["ready"])
+            trajectory = self.create_trajectory(arm_name, positions, 3.0)
+            return self._send_trajectory_sync(arm_name, trajectory, timeout=15.0)
+
+        if strategy_name == "retry_grasp":
+            position_name = event.context.get("position", "ready")
+            success, msg = self._moveit_interface.move_to_preset(
+                arm_name, position_name, timeout=30.0,
+            )
+            return success
+
+        if strategy_name in ("release_and_abort", "safe_abort"):
+            return False
+
+        if strategy_name == "release_and_requeue":
+            return False
+
+        if strategy_name == "switch_controller":
+            return False
+
+        self.get_logger().warn(
+            f"[RECOVERY] Unknown strategy: {strategy_name}"
+        )
+        return False
 
     def _parse_task(
         self, task_type: str, description: str
@@ -320,6 +481,26 @@ class CoordinatorNode(Node):
             position_name = "ready"
         elif task_type == "move":
             position_name = "ready"
+
+        return arm_name, zone_name, position_name
+
+    def _parse_task_goal(
+        self, task_goal: object
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """Parse structured TaskGoal into arm, zone, position.
+
+        Args:
+            task_goal: TaskGoal message with structured fields.
+
+        Returns:
+            Tuple of (arm_name, zone_name, position_name).
+        """
+        arm_name = task_goal.arm_name or None
+        zone_name = task_goal.zone_name or None
+        position_name = task_goal.position_name or "ready"
+
+        if not arm_name:
+            return None, None, None
 
         return arm_name, zone_name, position_name
 

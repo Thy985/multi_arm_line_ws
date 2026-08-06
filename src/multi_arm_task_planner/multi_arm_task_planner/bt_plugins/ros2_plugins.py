@@ -1,5 +1,12 @@
 """ROS2-enabled BT plugins for multi-arm task planning.
 
+DEPRECATED: This module has known executor deadlock issues when used in
+async callback contexts. Use async_ros2_plugins.py instead, which implements
+the shared-Node + AsyncTick pattern that avoids deadlock.
+
+This file is kept for reference only. All new code should use
+async_ros2_plugins.ASYNC_PLUGIN_REGISTRY.
+
 Unlike the mock plugins in pick_place_plugins.py, these plugins
 call real ROS2 services and actions:
 - MoveTo/Grasp/Place/Lift/Retract: Call /coordinator/execute_task action

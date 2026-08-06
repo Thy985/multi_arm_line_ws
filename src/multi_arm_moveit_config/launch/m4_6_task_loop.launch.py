@@ -235,7 +235,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             {"use_sim_time": True},
-            {"use_ros2_plugins": False},
+            {"use_ros2_plugins": True},
         ],
     )
     nodes.append(TimerAction(period=10.0, actions=[task_planner_node]))
