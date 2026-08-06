@@ -18,40 +18,36 @@ jobs:
       image: ros:jazzy
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: src/multi_arm_line_ws
 
-      - name: Install dependencies
+      - name: Install colcon
         run: |
-          apt-get update && apt-get install -y \
-            python3-pip python3-colcon-common-extensions \
-            ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
-            ros-jazzy-moveit ros-jazzy-ros-gz-sim
+          apt-get update -qq
+          apt-get install -y -qq python3-colcon-common-extensions
 
-      - name: Build core packages (no Gazebo dependency)
+      - name: Install optional ROS2 packages
+        run: |
+          apt-get install -y -qq \
+            ros-jazzy-ros2-control \
+            ros-jazzy-ros2-controllers \
+            ros-jazzy-moveit \
+            2>/dev/null || echo "WARN: Some optional packages unavailable"
+        continue-on-error: true
+
+      - name: Build multi_arm packages
         run: |
           source /opt/ros/jazzy/setup.bash
-          cd src/multi_arm_line_ws
           colcon build --packages-select \
             multi_arm_interfaces multi_arm_core multi_arm_safety \
             multi_arm_world_model multi_arm_task_planner \
             multi_arm_recovery multi_arm_benchmark
 
-      - name: Build simulation packages (may fail without Gazebo)
+      - name: Build simulation packages (optional)
         run: |
           source /opt/ros/jazzy/setup.bash
-          source src/multi_arm_line_ws/install/setup.bash
-          cd src/multi_arm_line_ws
-          colcon build --packages-select \
-            order_manager ur_simulation_gz || \
-            echo "WARN: Simulation packages build skipped (Gazebo deps missing)"
+          source install/setup.bash
+          colcon build --packages-select order_manager ur_simulation_gz || \
+            echo "WARN: Simulation packages skipped (missing deps)"
         continue-on-error: true
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: src/multi_arm_line_ws/install/
 
   layer2-test:
     name: Layer 2 - Unit Tests
@@ -61,20 +57,24 @@ jobs:
       image: ros:jazzy
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: src/multi_arm_line_ws
 
-      - name: Install test dependencies
+      - name: Install colcon
         run: |
-          apt-get update && apt-get install -y \
-            python3-pip python3-colcon-common-extensions \
-            ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
-            ros-jazzy-moveit
+          apt-get update -qq
+          apt-get install -y -qq python3-colcon-common-extensions
+
+      - name: Install optional ROS2 packages
+        run: |
+          apt-get install -y -qq \
+            ros-jazzy-ros2-control \
+            ros-jazzy-ros2-controllers \
+            ros-jazzy-moveit \
+            2>/dev/null || echo "WARN: Some optional packages unavailable"
+        continue-on-error: true
 
       - name: Build core packages
         run: |
           source /opt/ros/jazzy/setup.bash
-          cd src/multi_arm_line_ws
           colcon build --packages-select \
             multi_arm_interfaces multi_arm_core multi_arm_safety \
             multi_arm_world_model multi_arm_task_planner \
@@ -83,8 +83,7 @@ jobs:
       - name: Run unit tests
         run: |
           source /opt/ros/jazzy/setup.bash
-          source src/multi_arm_line_ws/install/setup.bash
-          cd src/multi_arm_line_ws
+          source install/setup.bash
           export ROS_HOME=/tmp/ros_home
           export ROS_LOG_DIR=/tmp/ros_home/log
           colcon test --packages-select \
@@ -98,7 +97,7 @@ jobs:
         if: always()
         with:
           name: test-results
-          path: src/multi_arm_line_ws/log/
+          path: log/
 
   interface-compat:
     name: Interface Compatibility Check
@@ -109,20 +108,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          path: src/multi_arm_line_ws
           fetch-depth: 2
 
-      - name: Install dependencies
+      - name: Install colcon
         run: |
-          apt-get update && apt-get install -y \
-            python3-pip python3-colcon-common-extensions \
-            ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
-            ros-jazzy-moveit
+          apt-get update -qq
+          apt-get install -y -qq python3-colcon-common-extensions
+
+      - name: Install optional ROS2 packages
+        run: |
+          apt-get install -y -qq \
+            ros-jazzy-ros2-control \
+            ros-jazzy-ros2-controllers \
+            ros-jazzy-moveit \
+            2>/dev/null || echo "WARN: Some optional packages unavailable"
+        continue-on-error: true
 
       - name: Check interface changes
         run: |
           source /opt/ros/jazzy/setup.bash
-          cd src/multi_arm_line_ws
           CHANGED=$(git diff --name-only HEAD~1 HEAD -- src/multi_arm_interfaces/ | head -1 || true)
           if [ -n "$CHANGED" ]; then
             echo "Interface changes detected — running full rebuild + test"
@@ -149,20 +153,24 @@ jobs:
       image: ros:jazzy
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: src/multi_arm_line_ws
 
-      - name: Install dependencies
+      - name: Install colcon
         run: |
-          apt-get update && apt-get install -y \
-            python3-pip python3-colcon-common-extensions \
-            ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
-            ros-jazzy-moveit
+          apt-get update -qq
+          apt-get install -y -qq python3-colcon-common-extensions
+
+      - name: Install optional ROS2 packages
+        run: |
+          apt-get install -y -qq \
+            ros-jazzy-ros2-control \
+            ros-jazzy-ros2-controllers \
+            ros-jazzy-moveit \
+            2>/dev/null || echo "WARN: Some optional packages unavailable"
+        continue-on-error: true
 
       - name: Build and check regression
         run: |
           source /opt/ros/jazzy/setup.bash
-          cd src/multi_arm_line_ws
           colcon build --packages-select \
             multi_arm_interfaces multi_arm_core multi_arm_safety \
             multi_arm_world_model multi_arm_task_planner \
