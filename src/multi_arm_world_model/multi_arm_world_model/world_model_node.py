@@ -23,6 +23,9 @@ from multi_arm_world_model.state_database import (
     TaskContext,
 )
 from multi_arm_world_model.object_tracker import ObjectTracker
+from multi_arm_world_model.relation_layer import RelationLayer
+from multi_arm_world_model.history_layer import HistoryLayer
+from multi_arm_world_model.prediction_layer import PredictionLayer
 
 
 class WorldModelNode(Node):
@@ -49,6 +52,9 @@ class WorldModelNode(Node):
         cb_group = ReentrantCallbackGroup()
         self._db = StateDatabase()
         self._tracker = ObjectTracker()
+        self._relations = RelationLayer()
+        self._history = HistoryLayer(max_length=100)
+        self._prediction = PredictionLayer(history=self._history)
 
         self._arm_names = self.declare_parameter(
             "arm_names", ["arm1", "arm2"]
@@ -123,6 +129,26 @@ class WorldModelNode(Node):
             self.get_logger().warn("multi_arm_interfaces not available, query services disabled")
             self._query_objects_srv = None
 
+        try:
+            from multi_arm_interfaces.srv import QueryWorld, QueryRelation
+
+            self._query_world_srv = self.create_service(
+                QueryWorld,
+                "/world_model/query_world",
+                self._on_query_world,
+                callback_group=cb_group,
+            )
+            self._query_relation_srv = self.create_service(
+                QueryRelation,
+                "/world_model/query_relation",
+                self._on_query_relation,
+                callback_group=cb_group,
+            )
+        except ImportError:
+            self.get_logger().warn("QueryWorld/QueryRelation services not available")
+            self._query_world_srv = None
+            self._query_relation_srv = None
+
     def _init_default_environment(self) -> None:
         """Initialize default environment from config."""
         config_path = os.path.join(
@@ -179,6 +205,15 @@ class WorldModelNode(Node):
         }
         self._tracker.update(self._db, [detection])
 
+        self._history.record(
+            msg.object_id,
+            {
+                "position": list(msg.position),
+                "orientation": list(msg.orientation),
+                "confidence": msg.confidence,
+            },
+        )
+
     def _on_query_objects(self, request, response) -> None:
         """Handle query objects service."""
         objects = self._db.get_all_objects()
@@ -186,6 +221,91 @@ class WorldModelNode(Node):
         response.resource_types = [o.object_type for o in objects]
         response.states = ["active" if not o.is_stale() else "stale" for o in objects]
         response.allocated_to = [f"{o.confidence:.2f}" for o in objects]
+        return response
+
+    def _on_query_world(self, request, response) -> None:
+        """Handle QueryWorld service — return complete world state."""
+        try:
+            from multi_arm_interfaces.msg import (
+                ObjectState, SceneState, TaskState, Relation as RelationMsg,
+                ObjectPose,
+            )
+
+            query_type = request.query_type
+
+            if query_type in ("object", "all", ""):
+                for obj in self._db.get_all_objects():
+                    pose = ObjectPose()
+                    pose.object_id = obj.object_id
+                    pose.object_type = obj.object_type
+                    pose.position = list(obj.position)
+                    pose.orientation = list(obj.orientation) if obj.orientation else [0, 0, 0, 1]
+                    pose.confidence = obj.confidence
+
+                    state = ObjectState()
+                    state.object_id = obj.object_id
+                    state.object_type = obj.object_type
+                    state.pose = pose
+                    state.velocity = list(obj.velocity) if obj.velocity else [0.0, 0.0, 0.0]
+                    state.confidence = obj.confidence
+                    state.attached_to = ""
+                    state.grasp_state = "FREE"
+
+                    attached_rels = self._relations.query(
+                        subject=obj.object_id, predicate="attached_to"
+                    )
+                    if attached_rels:
+                        state.attached_to = attached_rels[0].object
+                        state.grasp_state = "ATTACHED"
+
+                    response.object_states.append(state)
+
+            if query_type in ("relation", "all", ""):
+                for rel in self._relations.get_all_relations():
+                    msg = RelationMsg()
+                    msg.subject = rel.subject
+                    msg.predicate = rel.predicate
+                    msg.object = rel.object
+                    msg.confidence = rel.confidence
+                    msg.distance = rel.distance
+                    response.relations.append(msg)
+
+            if query_type in ("scene", "all", ""):
+                env = self._db.environment
+                scene = SceneState()
+                scene.timestamp = float(self.get_clock().now().nanoseconds / 1e9)
+                response.scene_state = scene
+
+        except Exception as e:
+            self.get_logger().warn(f"QueryWorld error: {e}")
+
+        return response
+
+    def _on_query_relation(self, request, response) -> None:
+        """Handle QueryRelation service — query entity relations."""
+        try:
+            from multi_arm_interfaces.msg import Relation as RelationMsg
+
+            rels = self._relations.query(
+                subject=request.subject,
+                predicate=request.predicate,
+                object=request.object,
+            )
+
+            for rel in rels:
+                msg = RelationMsg()
+                msg.subject = rel.subject
+                msg.predicate = rel.predicate
+                msg.object = rel.object
+                msg.confidence = rel.confidence
+                msg.distance = rel.distance
+                response.relations.append(msg)
+
+            response.exists = len(rels) > 0
+
+        except Exception as e:
+            self.get_logger().warn(f"QueryRelation error: {e}")
+
         return response
 
     def _publish_state(self) -> None:

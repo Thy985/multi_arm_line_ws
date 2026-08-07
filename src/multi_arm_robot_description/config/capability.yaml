@@ -1,0 +1,58 @@
+capabilities:
+  manipulation:
+    type: joint_position
+    dof: 6
+    payload_kg: 5.0
+    available: true
+    precision_mm: 0.1
+
+  force_control:
+    available: false
+    reason: "UR5e simulation has no force control"
+
+  gripper:
+    type: parallel_jaw
+    max_opening_mm: 85
+    available: false
+    reason: "M6.2 not yet implemented"
+
+  vision:
+    types: ["rgb", "depth"]
+    available: false
+    reason: "M6.1 not yet implemented"
+
+  mobile:
+    available: false
+    reason: "M6.6 not yet implemented"
+
+  skills:
+    available: false
+    list: []
+    reason: "M6.3 not yet implemented"
+
+dynamic_capabilities:
+  payload_remaining:
+    compute: "max_payload - current_load"
+    default: 5.0
+
+  gripper_temperature:
+    compute: "gripper_sensor_temperature"
+    default: 25.0
+    threshold_overheat: 80.0
+
+  arm_reachable:
+    compute: "workspace_check(current_pose)"
+    default: true
+
+context_capabilities:
+  can_reach:
+    compute: "workspace_intersection(zone)"
+    depends_on: world_model
+
+  can_grasp:
+    compute: "object_size < max_opening"
+    depends_on: world_model
+
+  path_clear:
+    compute: "collision_check(target)"
+    depends_on: world_model

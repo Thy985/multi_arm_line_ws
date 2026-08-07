@@ -1,0 +1,7 @@
+string arm_name
+string command
+string object_id
+float64 force
+---
+bool success
+string message

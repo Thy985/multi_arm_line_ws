@@ -1,0 +1,17 @@
+lighting:
+  intensity: [0.5, 1.5]
+  direction: random
+
+texture:
+  pool: ["wood", "metal", "plastic", "default"]
+
+object_position:
+  jitter: 0.05
+
+physics:
+  friction: [0.3, 0.8]
+  mass: [0.1, 2.0]
+
+camera:
+  position_jitter: 0.1
+  angle_jitter: 0.1

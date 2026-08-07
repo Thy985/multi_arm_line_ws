@@ -1,0 +1,10 @@
+string name
+string version
+string description
+string[] required_capabilities
+string[] preconditions
+string[] postconditions
+string[] parameters
+float64 cost_time
+float64 cost_risk
+float64 success_rate

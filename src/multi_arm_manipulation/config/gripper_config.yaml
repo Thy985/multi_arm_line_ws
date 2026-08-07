@@ -1,0 +1,16 @@
+grippers:
+  arm1:
+    type: robotiq_2f_85
+    max_opening_mm: 85
+    max_force_n: 100.0
+    close_threshold: 0.01
+  arm2:
+    type: robotiq_2f_85
+    max_opening_mm: 85
+    max_force_n: 100.0
+    close_threshold: 0.01
+
+grasp_planner:
+  approach_distance: 0.10
+  retreat_distance: 0.15
+  default_approach: top

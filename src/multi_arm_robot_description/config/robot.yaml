@@ -1,0 +1,49 @@
+robot:
+  name: dual_ur5e_platform
+  version: "1.0"
+  description: "Dual UR5e multi-arm platform"
+
+components:
+  arms:
+    - name: arm1
+      type: ur5e
+      urdf: ur5e_macro.xacro
+      prefix: arm1_
+      controller: arm1_joint_trajectory_controller
+      joint_state_broadcaster: arm1_joint_state_broadcaster
+      initial_position: ready
+      workspace_bounds: [[-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14],
+                         [-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14]]
+      safety:
+        max_velocity_scale: 1.0
+        max_acceleration_scale: 1.0
+    - name: arm2
+      type: ur5e
+      urdf: ur5e_macro.xacro
+      prefix: arm2_
+      controller: arm2_joint_trajectory_controller
+      joint_state_broadcaster: arm2_joint_state_broadcaster
+      initial_position: ready
+      origin: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      workspace_bounds: [[-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14],
+                         [-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14]]
+      safety:
+        max_velocity_scale: 1.0
+        max_acceleration_scale: 1.0
+
+  sensors: []
+
+  end_effectors: []
+
+  body:
+    type: fixed
+
+generation:
+  urdf_template: multi_arm_robot.xacro
+  srdf_template: multi_arm.srdf
+  controllers_template: multi_arm_controllers.yaml
+  output_dir: generated
+
+hardware:
+  adapter: simulation
+  mode: gazebo

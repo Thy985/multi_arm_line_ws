@@ -1,0 +1,14 @@
+scene:
+  name: conflict
+  num_objects: 4
+  workspace: [[-0.3, 0.3], [-0.3, 0.3], [0.05, 0.3]]
+  object_types: ["cube"]
+
+robot:
+  arms: ["arm1", "arm2"]
+  initial_position: ready
+  shared_zones: ["zone_a"]
+
+randomization:
+  enabled: true
+  seed: 123

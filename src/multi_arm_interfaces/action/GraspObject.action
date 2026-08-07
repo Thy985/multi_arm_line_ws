@@ -1,0 +1,10 @@
+string arm_name
+string object_id
+string approach
+---
+bool success
+string message
+bool attached
+---
+string status
+float32 progress

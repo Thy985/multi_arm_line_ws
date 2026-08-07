@@ -1,0 +1,10 @@
+string skill_name
+string[] parameters
+multi_arm_interfaces/TaskGoal task_goal
+---
+bool success
+string message
+bool[] postcondition_results
+---
+string status
+float32 progress

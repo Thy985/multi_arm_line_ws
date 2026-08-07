@@ -1,0 +1,6 @@
+string subject
+string predicate
+string object
+---
+multi_arm_interfaces/Relation[] relations
+bool exists

@@ -1,0 +1,35 @@
+skill:
+  name: move_object
+  version: "1.0.0"
+  description: "Move an object (already grasped) to a new location"
+
+  required_capabilities:
+    manipulation: true
+
+  input:
+    object_id: string
+    arm_name: string
+    target_position: string
+
+  output:
+    final_position: string
+
+  cost:
+    time: 3.0
+    risk: 0.05
+    success_rate: 0.98
+
+  preconditions:
+    - "object attached_to gripper"
+    - "arm is idle"
+
+  execute:
+    - plan_trajectory
+    - execute_trajectory
+
+  postconditions:
+    - "object at target_position"
+
+  recovery:
+    planning_failed: "relax_constraints → replan → abort"
+    collision: "retreat → replan → abort"

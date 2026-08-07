@@ -1,0 +1,8 @@
+string action
+string skill_package
+string skill_id
+string version
+---
+bool success
+multi_arm_interfaces/SkillStatus skill_status
+string message

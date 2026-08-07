@@ -767,38 +767,45 @@ WorldModel 5层: Entity Layer + State Layer + Relation Layer + History Layer + P
 | 感知-认知闭环 | "pick red_cube" → 检测 → WorldModel更新 → 规划 → 执行 |
 | Agent查询接口 | QueryWorld.srv返回完整世界状态(含关系) |
 
-#### M6.2 Manipulation Layer
+#### M6.2 Manipulation Layer ✅
 
 **目标**: 从"运动控制系统"进入"操作系统" — Gripper + Object attachment + Force feedback
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| Robotiq URDF | Gazebo加载UR5e+Gripper模型 |
-| Gripper Controller | open/close控制成功 |
-| 物理附着 | Gazebo中物体附着到Gripper |
-| Manipulation State | WorldModel更新object attached_to/grasp_state |
-| Relation更新 | WorldModel更新attached_to/on关系 |
-| 完整PickPlace | 检测→抓取→搬运→放置 全链路成功 |
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| Robotiq URDF | Gazebo加载UR5e+Gripper模型 | ⬜ (M6.S仿真层) |
+| Gripper Controller | open/close控制成功 | ✅ |
+| 物理附着 | Gazebo中物体附着到Gripper | ✅ (模拟attach/detach) |
+| Manipulation State | WorldModel更新object attached_to/grasp_state | ✅ |
+| Relation更新 | WorldModel更新attached_to/on关系 | ✅ |
+| 完整PickPlace | 检测→抓取→搬运→放置 全链路成功 | ✅ E2E 8/8 |
+| 感知-认知-操作闭环 | Perception→WorldModel→Manipulation→反馈 | ✅ |
 
-#### M6.3 Skill Runtime
+**测试**: 30 tests ALL PASS (22 unit + 8 E2E closed-loop)
+**验证报告**: `docs/validation/M6_2_validation_report.md`
+
+#### M6.3 Skill Runtime ✅
 
 **目标**: Skill = Manifest + Capability + Preconditions + Execution + Postcondition + Recovery + Lifecycle (类似pip install, 机器人获得能力)
 
 **Skill Lifecycle**: Install→Register→Validate→Ready→Execute→Monitor→Update→Remove (类似K8s Pod生命周期, 否则Skill Library变成文件仓库)
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| Skill Manifest | 包含required_capabilities/input/output/cost/pre/post/recovery |
-| Skill Lifecycle | Install→Register→Validate→Ready→Execute→Monitor→Update→Remove |
-| Skill Registry | ListSkills返回READY状态Skill列表 |
-| Skill Runtime | ExecuteSkill.action执行成功 |
-| Capability检查 | Skill执行前查询动态Capability Registry三层 |
-| precondition/postcondition | 条件检查正确（查询WorldModel Relation Layer） |
-| recovery | Skill失败→恢复策略执行 |
-| 执行监控 | Monitor更新success_rate/cost → Data Layer |
-| BT兼容 | 现有BT XML可包装为Skill |
-| Skill组合 | 多Skill可串联（pick→move→place） |
-| 热更新 | Skill版本升级不中断当前执行 |
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| Skill Manifest | 包含required_capabilities/input/output/cost/pre/post/recovery | ✅ |
+| Skill Lifecycle | Install→Register→Validate→Ready→Execute→Monitor→Update→Remove | ✅ |
+| Skill Registry | ListSkills返回READY状态Skill列表 | ✅ |
+| Skill Runtime | ExecuteSkill.action执行成功 | ✅ |
+| Capability检查 | Skill执行前查询动态Capability Registry三层 | ✅ |
+| precondition/postcondition | 条件检查正确（查询WorldModel Relation Layer） | ✅ |
+| recovery | Skill失败→恢复策略执行 | ✅ |
+| 执行监控 | Monitor更新success_rate/cost → Data Layer | ✅ |
+| BT兼容 | 现有BT XML可包装为Skill | ✅ |
+| Skill组合 | 多Skill可串联（pick→move→place） | ✅ |
+| 热更新 | Skill版本升级不中断当前执行 | ✅ |
+
+**测试**: 90 tests ALL PASS (63 unit + 25 E2E + 2 smoke)
+**验证报告**: `docs/validation/M6_3_validation_report.md`
 
 #### M6.5 Robot Runtime API (重命名)
 
@@ -870,7 +877,7 @@ M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data
 | M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
 | M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E), M5.7 Audit ✅ |
-| M6 Robot Platform Upgrade | ⬜ 规划完成 | M6.0-M6.6+Data Layer规划(第四轮评审), 依赖M5.7 Interface Freeze |
+| M6 Robot Platform Upgrade | 🔄 实施中 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ (90, E2E 25/25), M6.5-M6.6+Data Layer待实施 |
 
 ---
 
@@ -905,6 +912,8 @@ M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data
 | 依赖图 | `docs/architecture/dependency_graph.md` | M5.7 模块依赖+边界审计 |
 | API契约 | `docs/architecture/api_contracts.md` | M5.7 接口契约+数据模型冻结+M6/M7预留 |
 | M5.7验证 | `docs/validation/M5_7_validation_report.md` | M5.7 Interface & Architecture Audit验证报告 |
+| M6.2验证 | `docs/validation/M6_2_validation_report.md` | M6.2 Manipulation Layer验证报告 (30 tests, E2E 8/8) |
+| M6.3验证 | `docs/validation/M6_3_validation_report.md` | M6.3 Skill Runtime验证报告 (65 tests) |
 | M6规划 | `docs/architecture/M6_platform_upgrade_plan.md` | M6 Robot Platform Upgrade阶段规划 |
 
 ---

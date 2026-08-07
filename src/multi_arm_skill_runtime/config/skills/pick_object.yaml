@@ -1,0 +1,44 @@
+skill:
+  name: pick_object
+  version: "1.0.0"
+  description: "Pick up an object from a specified location"
+
+  required_capabilities:
+    manipulation: true
+    gripper: true
+    vision: true
+
+  input:
+    object_id: string
+    arm_name: string
+    approach: string
+
+  output:
+    object_state: string
+
+  cost:
+    time: 5.0
+    risk: 0.1
+    success_rate: 0.95
+
+  preconditions:
+    - "object exists in WorldModel"
+    - "arm is idle"
+    - "gripper is open"
+    - "NOT (object attached_to any_gripper)"
+
+  execute:
+    - perceive_object
+    - plan_grasp
+    - move_to_grasp_approach
+    - grasp_object
+    - lift_object
+
+  postconditions:
+    - "object attached_to gripper"
+    - "object above table"
+
+  recovery:
+    grasp_failed: "retry(3) → change_approach → abort"
+    planning_failed: "relax_constraints → replan → abort"
+    object_lost: "re_perceive → re_plan → abort"

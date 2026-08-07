@@ -1,0 +1,8 @@
+string query_type
+string entity_id
+string relation_predicate
+---
+multi_arm_interfaces/ObjectState[] object_states
+multi_arm_interfaces/SceneState scene_state
+multi_arm_interfaces/TaskState task_state
+multi_arm_interfaces/Relation[] relations

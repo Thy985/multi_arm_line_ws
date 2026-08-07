@@ -1,0 +1,13 @@
+scene:
+  name: single_arm
+  num_objects: 3
+  workspace: [[-0.5, 0.5], [-0.5, 0.5], [0.05, 0.3]]
+  object_types: ["cube", "cylinder"]
+
+robot:
+  arms: ["arm1"]
+  initial_position: ready
+
+randomization:
+  enabled: true
+  seed: 42

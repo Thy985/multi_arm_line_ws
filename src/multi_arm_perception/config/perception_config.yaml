@@ -1,0 +1,18 @@
+objects:
+  - id: red_cube
+    type: cube
+    position: [0.3, 0.0, 0.05]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+  - id: blue_cylinder
+    type: cylinder
+    position: [-0.3, 0.2, 0.05]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+  - id: green_box
+    type: box
+    position: [0.0, -0.3, 0.05]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+
+detection:
+  publish_rate: 10.0
+  position_noise: 0.0
+  confidence: 0.95

@@ -1,0 +1,14 @@
+active: simulation
+
+adapters:
+  simulation:
+    adapter: gazebo
+    hardware_interface: gz_ros2_control/GazeboSimSystem
+    controllers_file: multi_arm_controllers.yaml
+    urdf_file: multi_arm_robot.xacro
+
+  real:
+    adapter: ur_driver
+    hardware_interface: ur_robot_driver/URPositionHardwareInterface
+    controllers_file: multi_arm_controllers_real.yaml
+    urdf_file: multi_arm_robot.xacro

@@ -1,0 +1,39 @@
+skill:
+  name: place_object
+  version: "1.0.0"
+  description: "Place an object at a specified location"
+
+  required_capabilities:
+    manipulation: true
+    gripper: true
+
+  input:
+    object_id: string
+    arm_name: string
+    target_location: string
+
+  output:
+    object_state: string
+
+  cost:
+    time: 4.0
+    risk: 0.08
+    success_rate: 0.96
+
+  preconditions:
+    - "object attached_to gripper"
+    - "arm is idle"
+
+  execute:
+    - move_to_place_position
+    - lower_object
+    - release_gripper
+    - retract_arm
+
+  postconditions:
+    - "object on target_location"
+    - "NOT (object attached_to gripper)"
+
+  recovery:
+    place_failed: "retry(2) → adjust_position → abort"
+    planning_failed: "relax_constraints → replan → abort"

@@ -1,0 +1,5 @@
+string capability_name
+bool include_dynamic
+string context
+---
+multi_arm_interfaces/CapabilityInfo[] capabilities

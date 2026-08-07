@@ -1,0 +1,7 @@
+string skill_id
+string name
+string version
+string lifecycle_state
+float64 last_executed
+int32 total_executions
+int32 success_count
