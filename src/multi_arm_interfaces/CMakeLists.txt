@@ -24,6 +24,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RelationGraph.msg"
   "msg/SkillDescription.msg"
   "msg/SkillStatus.msg"
+  "msg/EpisodeData.msg"
   "srv/SafetyCheck.srv"
   "srv/EmergencyStop.srv"
   "srv/SubmitTask.srv"
@@ -35,10 +36,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ControlGripper.srv"
   "srv/ListSkills.srv"
   "srv/ManageSkill.srv"
+  "srv/QueryExperience.srv"
+  "srv/RecordEpisode.srv"
   "action/PickPlace.action"
   "action/ExecuteTask.action"
   "action/GraspObject.action"
   "action/ExecuteSkill.action"
+  "action/SubmitTaskGoals.action"
 )
 
 ament_package()

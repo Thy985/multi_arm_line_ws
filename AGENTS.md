@@ -784,7 +784,7 @@ WorldModel 5层: Entity Layer + State Layer + Relation Layer + History Layer + P
 **测试**: 30 tests ALL PASS (22 unit + 8 E2E closed-loop)
 **验证报告**: `docs/validation/M6_2_validation_report.md`
 
-#### M6.3 Skill Runtime ✅
+#### M6.3 Skill Runtime ✅ FROZEN v1.0
 
 **目标**: Skill = Manifest + Capability + Preconditions + Execution + Postcondition + Recovery + Lifecycle (类似pip install, 机器人获得能力)
 
@@ -804,27 +804,58 @@ WorldModel 5层: Entity Layer + State Layer + Relation Layer + History Layer + P
 | Skill组合 | 多Skill可串联（pick→move→place） | ✅ |
 | 热更新 | Skill版本升级不中断当前执行 | ✅ |
 
-**测试**: 90 tests ALL PASS (63 unit + 25 E2E + 2 smoke)
+**测试**: 102 tests ALL PASS (63 unit + 25 E2E + 12 跨层 + 2 smoke)
 **验证报告**: `docs/validation/M6_3_validation_report.md`
+**SPEC**: `docs/architecture/M6_3_SPEC.md` (12项冻结)
+**ADR**: `docs/architecture/ADR-M6.3-Freeze.md`
+**状态**: 🔒 FROZEN v1.0 — M6 Gate 2 Baseline, 禁止破坏性修改
 
-#### M6.5 Robot Runtime API (重命名)
+#### M6.5 Robot Runtime API ✅
 
 **目标**: M6只提供能力接口，不包含自然语言理解（语言理解属M7）
 
 **重命名理由**: 旧名"Agent Capability Interface"误导(M6没有Agent), 新名"Robot Runtime API"准确反映M6提供的是Runtime能力接口
 
 ```
-M6提供: ExecuteSkill, QueryWorld, GetCapability, ListSkills, ManageSkill, SubmitTaskGoals, QueryData
-M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data Layer学习
+M6提供: ExecuteSkill, QueryWorld, GetCapability, ListSkills, ManageSkill, SubmitTaskGoals, QueryExperience
+M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Experience学习
 ```
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| Robot Runtime API | ExecuteSkill/QueryWorld/GetCapability/ListSkills/ManageSkill/SubmitTaskGoals |
-| TaskGoal引用 | 接口引用M5.7冻结的TaskGoal |
-| 边界清晰 | M6不含自然语言理解，M7负责 |
-| Skill调用 | SubmitTaskGoals → ExecuteSkill → Coordinator链路 |
-| 能力查询 | GetCapability返回三层能力(Static+Dynamic+Context) |
+**新增包**: `multi_arm_runtime_api`
+
+```
+multi_arm_runtime_api/
+├── runtime_api_node.py    # 统一聚合层节点
+└── launch/runtime_api.launch.py
+```
+
+**新接口**:
+- `SubmitTaskGoals.action` — 统一任务提交入口(TaskGoal[] → results[], success_count, total_count)
+
+**7个Robot Runtime API** (统一入口 `/runtime/*`):
+
+| API | 类型 | 话题 | 后端 |
+|-----|------|------|------|
+| SubmitTaskGoals | action | /runtime/submit_task_goals | → /skill/execute (ExecuteSkill) |
+| QueryWorld | proxy | /runtime/query_world | → /world_model/query_world |
+| GetCapability | proxy | /runtime/get_capability | → /capability/get_capability |
+| ListSkills | proxy | /runtime/list_skills | → /skill/list |
+| ManageSkill | proxy | /runtime/manage_skill | → /skill/manage |
+| QueryExperience | proxy | /runtime/query_experience | → /experience/query |
+| ExecuteSkill | action client | /skill/execute | 直接调用 |
+
+**action_type → skill_name映射**: pick_place→pick_object, place→place_object, move→move_object, grasp→pick_object, lift/retract/inspect→move_object
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| Robot Runtime API | ExecuteSkill/QueryWorld/GetCapability/ListSkills/ManageSkill/SubmitTaskGoals | ✅ 7个API |
+| TaskGoal引用 | 接口引用M5.7冻结的TaskGoal | ✅ SubmitTaskGoals.action + ExecuteSkill.action |
+| 边界清晰 | M6不含自然语言理解，M7负责 | ✅ |
+| Skill调用 | SubmitTaskGoals → ExecuteSkill链路 | ✅ E2E验证(mock ExecuteSkill server) |
+| 能力查询 | GetCapability返回三层能力(Static+Dynamic+Context) | ✅ 代理到/capability/get_capability |
+
+**测试**: 32 tests ALL PASS (9 mapping + 4 TaskGoal引用 + 8 接口可用性 + 4 backend不可用 + 5 SubmitTaskGoals链路 + 2 smoke)
+**验证报告**: `docs/validation/M6_5_validation_report.md`
 
 #### M6.6 Mobile Base (后置)
 
@@ -837,23 +868,42 @@ M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data
 | SLAM | 建图成功 |
 | 移动+操作 | 导航到桌边→抓取→导航到放置位 |
 
-#### Data Layer (横向贯穿)
+#### M6.4 Robot Experience Infrastructure ✅
 
-**目标**: Robot Data Pipeline — 类似软件的Observability, M7 Agent学习的数据来源
+**目标**: Robot Experience Infrastructure — 系统产生的是Robot Experience（Episode, World State Snapshot, Skill Trace, Failure Memory, Dataset Export），不是普通数据。M7 Agent学习的数据来源。
 
-**六类数据**: Sensor Data(短期) + Episode Data(中期) + Skill Execution Log(长期) + Failure Data(长期) + WorldModel Snapshot(中期) + Training Dataset(永久)
+**五类Experience**: Episode Data(完整任务执行记录) + World State Snapshot(执行前后世界状态) + Skill Trace(步骤级执行轨迹) + Failure Memory(失败案例+恢复) + Dataset Export(SQLite+JSON)
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| Sensor Data采集 | 原始传感器流ring buffer存储 |
-| Episode Data记录 | 任务执行完整episode记录到SQLite |
-| Skill Log记录 | Skill执行日志(参数/结果/耗时/recovery) |
-| Failure Data记录 | 失败案例(原因/上下文/recovery结果) |
-| WorldModel Snapshot | 定期+事件触发快照 |
-| Training Dataset | 从上述数据生成训练数据集 |
-| Skill Monitor集成 | Skill执行后Monitor更新success_rate (读Skill Log) |
-| M7数据接口 | QueryData.srv供M7查询训练数据 |
-| M5.4兼容 | benchmark.db作为Skill Log子集 |
+**新增包**: `multi_arm_experience`
+
+```
+multi_arm_experience/
+├── episode.py               # Episode + WorldStateSnapshot + SkillTraceStep + RecoveryRecord
+├── experience_recorder.py   # ExperienceRecorder: start/record/finish/capture/query
+├── dataset_exporter.py      # DatasetExporter: SQLite + JSON导出
+├── experience_node.py       # ROS2节点 (RecordEpisode + QueryExperience + /data/episode)
+└── launch/experience.launch.py
+```
+
+**新接口**:
+- `EpisodeData.msg` — episode完整记录
+- `RecordEpisode.srv` — 记录完成的episode
+- `QueryExperience.srv` — 查询experience数据
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| Episode数据结构 | Episode+Snapshot+SkillTrace+RecoveryRecord | ✅ |
+| ExperienceRecorder | start/record_step/record_recovery/finish/capture/query | ✅ |
+| DatasetExporter | SQLite(episodes/failures/skill_traces表) + JSON导出 | ✅ |
+| ROS2节点 | RecordEpisode服务 + QueryExperience服务 + /data/episode topic | ✅ |
+| Episode Data记录 | 任务执行完整episode记录到SQLite | ✅ |
+| Skill Trace记录 | 步骤级执行轨迹(名称/成功/耗时/详情) | ✅ |
+| Failure Data记录 | 失败案例(原因/上下文/recovery结果) | ✅ |
+| WorldModel Snapshot | 执行前后世界状态快照 | ✅ |
+| Dataset导出 | SQLite结构化查询 + JSON人类可读 | ✅ |
+| M7数据接口 | QueryExperience.srv供M7查询训练数据 | ✅ |
+
+**测试**: 48 tests ALL PASS (12 DatasetExporter + 16 Episode + 18 ExperienceRecorder + 2 smoke)
 
 #### M6 Sim2Real (贯穿)
 
@@ -877,7 +927,7 @@ M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data
 | M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
 | M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E), M5.7 Audit ✅ |
-| M6 Robot Platform Upgrade | 🔄 实施中 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ (90, E2E 25/25), M6.5-M6.6+Data Layer待实施 |
+| M6 Robot Platform Upgrade | 🔄 Gate 2基线 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ FROZEN v1.0 (102, E2E 25/25, 跨层 12/12), M6.4 ✅ (48), M6.5 ✅ (32), M6.6待实施 |
 
 ---
 
@@ -913,7 +963,11 @@ M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data
 | API契约 | `docs/architecture/api_contracts.md` | M5.7 接口契约+数据模型冻结+M6/M7预留 |
 | M5.7验证 | `docs/validation/M5_7_validation_report.md` | M5.7 Interface & Architecture Audit验证报告 |
 | M6.2验证 | `docs/validation/M6_2_validation_report.md` | M6.2 Manipulation Layer验证报告 (30 tests, E2E 8/8) |
-| M6.3验证 | `docs/validation/M6_3_validation_report.md` | M6.3 Skill Runtime验证报告 (65 tests) |
+| M6.3验证 | `docs/validation/M6_3_validation_report.md` | M6.3 Skill Runtime验证报告 (90 tests, E2E 25/25) |
+| M6.3 SPEC | `docs/architecture/M6_3_SPEC.md` | M6.3 Skill Runtime接口冻结SPEC (12项冻结) |
+| M6.3 ADR | `docs/architecture/ADR-M6.3-Freeze.md` | M6.3 Interface Freeze决策记录 |
+| M6.4验证 | `docs/validation/M6_4_validation_report.md` | M6.4 Robot Experience Infrastructure验证报告 (48 tests) |
+| M6.5验证 | `docs/validation/M6_5_validation_report.md` | M6.5 Robot Runtime API验证报告 (32 tests) |
 | M6规划 | `docs/architecture/M6_platform_upgrade_plan.md` | M6 Robot Platform Upgrade阶段规划 |
 
 ---

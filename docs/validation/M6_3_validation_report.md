@@ -2,7 +2,7 @@
 
 **Date**: 2026-08-07
 **Status**: ✅ ALL PASS
-**Tests**: 90 total (63 unit + 25 E2E + 2 smoke)
+**Tests**: 102 total (63 unit + 25 E2E + 12 跨层 + 2 smoke)
 
 ---
 
@@ -73,7 +73,23 @@ Skill = Manifest + Capability + Preconditions + Execution + Postcondition + Reco
 | `TestHotUpdate` | 3 | 热更新: 版本升级+状态保留 | ✅ |
 | `TestSkillRemoval` | 2 | 卸载: 状态+不可执行 | ✅ |
 
-### 3.3 Total: 90/90 ALL PASS
+### 3.3 跨层 E2E Tests (12 tests) — Skill真正驱动机器人
+
+| Test Class | Tests | Focus | Status |
+|------------|-------|-------|--------|
+| `TestSkillDrivesRobot` | 3 | Skill执行函数调用GripperController+WorldModel | ✅ |
+| `TestSkillFailureWithRealRobot` | 4 | 真实失败: object不存在/capability缺失/grasp失败/recovery重试 | ✅ |
+| `TestWorldModelVerification` | 3 | WorldModel始终反映Skill驱动的Reality | ✅ |
+| `TestTaskGoalToRobotAction` | 2 | TaskGoal→Skill选择→真实机器人动作→验证 | ✅ |
+
+**核心证明**: Skill执行函数不是mock返回True，而是真正调用:
+- `GripperController.close()` / `attach()` / `detach()` / `open()`
+- `GraspPlanner.plan_grasp()`
+- `RelationLayer.set_attached()` / `set_detached()`
+- `HistoryLayer.record()`
+- `StateDatabase.update_object_pose()`
+
+### 3.4 Total: 102/102 ALL PASS
 
 ---
 

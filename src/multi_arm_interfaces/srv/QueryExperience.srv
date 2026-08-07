@@ -1,0 +1,5 @@
+string data_type
+string filter_json
+---
+string[] records_json
+int32 count

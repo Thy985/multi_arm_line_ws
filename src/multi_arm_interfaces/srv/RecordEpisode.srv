@@ -1,0 +1,9 @@
+string task_id
+string task_type
+string skill_name
+string steps_json
+string result
+float64 duration
+---
+bool success
+string episode_id

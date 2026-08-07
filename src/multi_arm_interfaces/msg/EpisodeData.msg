@@ -1,0 +1,10 @@
+string episode_id
+string task_type
+string skill_name
+string robot_id
+string initial_world_json
+string execution_steps_json
+string result
+float64 duration
+int32 recovery_count
+float64 timestamp

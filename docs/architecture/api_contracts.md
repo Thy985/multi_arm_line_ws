@@ -365,11 +365,16 @@ GraspObject.action:
 
 **接入方式**: M6.2实现Gripper Controller + GraspPlanner，BT插件新增GraspNode/PlaceNode。抓取/放置后更新WorldModel State Layer和Relation Layer。
 
-### 4.3 Skill Interface (M6.3)
+### 4.3 Skill Interface (M6.3) — FROZEN v1.0
 
 **Skill = Manifest + Capability + Preconditions + Execution + Postcondition + Recovery + Lifecycle**
 
 **Skill Lifecycle**: Install→Register→Validate→Ready→Execute→Monitor→Update→Remove (类似K8s Pod生命周期)
+
+> **⚠️ FROZEN v1.0 (M6 Gate 2 Baseline, 2026-08-07)**
+> 完整SPEC见 `docs/architecture/M6_3_SPEC.md`
+> 决策记录见 `docs/architecture/ADR-M6.3-Freeze.md`
+> 90 tests ALL PASS (63 unit + 25 E2E + 2 smoke)
 
 ```yaml
 # M6.3新增msg — Skill Manifest (类似package.json)
@@ -661,6 +666,8 @@ CI Layer: interface-compat
 
 ### 冻结的接口 (v1.0)
 
+#### M5.7 Freeze (v1.0) — 18项
+
 | 接口 | 类型 | 冻结内容 |
 |------|------|----------|
 | ExecuteTask.action | Action | Goal/Result/Feedback字段 |
@@ -681,6 +688,27 @@ CI Layer: interface-compat
 | /safety/status | Topic | 类型+QoS |
 | /world_model/state | Topic | 类型+QoS |
 | /perception/object_poses | Topic | 类型+QoS (M6实现Publisher) |
+
+#### M6.3 Freeze (v1.0, Gate 2) — 12项
+
+| 接口 | 类型 | 冻结内容 |
+|------|------|----------|
+| ExecuteSkill.action | Action | Goal/Result/Feedback字段 |
+| ListSkills.srv | Service | Request/Response字段 |
+| ManageSkill.srv | Service | Request/Response字段 |
+| SkillDescription.msg | Message | 所有字段 |
+| SkillStatus.msg | Message | 所有字段 |
+| SkillManifest Schema | Data Model | 14A14个字段 |
+| SkillLifecycleState | Enum | 10个状态 |
+| VALID_TRANSITIONS | State Machine | 状态转换矩阵 |
+| ExecutionStatus | Enum | 5个值 |
+| Recovery Policy | Contract | 触发条件+匹配顺序 |
+| Skill Composition | Contract | 链式执行+optional规则 |
+| BT Compatibility | Contract | BT→Skill包装规则 |
+
+**SPEC**: `docs/architecture/M6_3_SPEC.md`
+**ADR**: `docs/architecture/ADR-M6.3-Freeze.md`
+**Tests**: 90 ALL PASS (63 unit + 25 E2E + 2 smoke)
 
 ### 未冻结的接口
 

@@ -1,0 +1,11 @@
+# SubmitTaskGoals — unified task submission entry point for Robot Runtime API
+# M6.5: M7 Agent submits task goals here, Runtime API routes to ExecuteSkill
+multi_arm_interfaces/TaskGoal[] goals
+---
+bool success
+string[] results
+int32 success_count
+int32 total_count
+---
+string current_goal
+float32 progress
