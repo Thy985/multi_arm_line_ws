@@ -656,11 +656,199 @@ Level 5: 真正复杂操作 — 双臂协作
 - Gazebo E2E真实运动执行时间~2-5s，规划时间<0.1s
 - RandomTaskGenerator参数空间：5物体×3区域×9位置×2臂×3接近方式
 
-### M6: Sim2Real（远期）
+#### M5.7 Interface & Architecture Audit ✅
 
-**前置依赖**: Recovery存在 + Benchmark存在 + 参数化完成
+**目标**: 系统性盘点接口，冻结下一阶段演进接口（API Freeze / Architecture Review / ICD）。
 
-**不进入M5的原因**: 实体机器人还缺calibration、safety limits、network latency、hardware fault、controller behavior等，这些依赖M5的可靠性基础设施。
+**五项审计**:
+
+1. **接口资产盘点**: 18个接口（8 Action/Srv/Topic FROZEN + 2 EXPERIMENTAL + 1 RESERVED）
+2. **数据模型清算**: TaskGoal/TaskConstraint/ExecuteTask/SafetyCheck等核心数据结构冻结v1.0
+3. **模块边界审计**: 7层架构映射，发现2处越层调用（BT插件直连Safety/WorldModel），接受为已知偏差
+4. **M6/M7接口预留**: Perception Interface、Skill Interface、Agent Interface、Robot Hardware Interface
+5. **版本治理**: Interface Freeze v1.0，禁止破坏性修改，CI interface-compat检查
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| interface_catalog.md | 所有msg/srv/action盘点 | ✅ 18个接口 |
+| data_flow.md | 任务/安全/环境/恢复数据流 | ✅ 8个数据流 |
+| dependency_graph.md | 7层映射+依赖矩阵+边界审计 | ✅ 2处越层(接受) |
+| api_contracts.md | 接口契约+数据模型冻结+M6/M7预留 | ✅ v1.0 Freeze |
+| 模块边界审计 | 无越层调用(或已记录) | ✅ 2处已知偏差 |
+| 数据模型冻结 | 核心结构不可变 | ✅ 13个FROZEN |
+| M6/M7接口预留 | Perception/Skill/Agent/HW | ✅ 4组预留 |
+| 版本治理 | Interface Freeze v1.0 | ✅ |
+
+**M5.7关键发现**:
+- BT插件直连SafetyCheck/QueryResources是越层调用（L6→Safety/L5），但为只读查询且避免Coordinator瓶颈，接受为已知偏差
+- RecoveryManager是纯Python模块非ROS2节点，RecoverFromFailure.srv预留为M6分布式接口
+- SafetyCheck不可用时Coordinator默认批准运动——M6需改为默认拒绝（安全优先）
+- /perception/object_poses topic已由WorldModel订阅，M6实现Publisher即可接入感知
+
+**Interface Freeze v1.0**: ExecuteTask, TaskGoal, TaskConstraint, SafetyCheck, EmergencyStop, QueryResources, RecoverFromFailure, CollisionEvent, ObjectPose, ResourceStatus, RecoveryAction, SystemHealth, MotionRequest + 3个Topic
+
+### M6: Robot Platform Upgrade
+
+**核心理念**: M5=机器人OS内核 | M6=机器人OS运行时 | M7=机器人智能层
+> 不是"给机器人加功能"，而是"把双臂控制系统升级为机器人操作系统运行时"
+
+**前置依赖**: M5.7 Interface Freeze v1.0完成
+
+**详细规划**: `docs/architecture/M6_platform_upgrade_plan.md` (第四轮架构评审后调整)
+
+```
+M6.0 Robot Description Layer      — robot.yaml + 动态Capability Registry + Hardware Adapter
+M6.S Simulation Infrastructure    — 仿真平台 (提前, 横向贯穿M6.1-M6.6)
+M6.1 Perception + WorldModel      — 感知 + 世界模型5层 (Entity/State/Relation/History/Prediction)
+M6.2 Manipulation Layer           — Gripper + Object attachment + Force feedback
+M6.3 Skill Runtime                — Skill五要素 + Manifest + Registry + Lifecycle
+M6.5 Robot Runtime API            — 能力接口 (重命名, 非自然语言, 语言理解属M7)
+M6.6 Mobile Base                  — 移动底盘 (后置)
+Data Layer (横切)                 — Robot Data Pipeline (Sensor/Episode/Skill/Failure/WorldModel/Dataset)
+```
+
+**第四轮调整**: Capability动态服务(三层) + WorldModel Relation Layer(5层) + Skill Lifecycle + Sim提前 + Robot Runtime API重命名 + Data Layer横切
+
+#### M6.0 Robot Description Layer
+
+**目标**: Robot Infrastructure as Code — 不造平行系统，作为ROS模型上层管理
+
+```
+robot.yaml (结构) + capability.yaml (Static能力) + 动态Capability Registry (运行时能力服务) + Hardware Adapter
+机器人差异主要不是结构而是能力: UR5e(joint_position,6DOF) vs Franka(joint_torque,7DOF) vs Humanoid(whole_body)
+```
+
+**动态Capability Registry三层**: Static Capability(固有能力) + Dynamic Capability(当前状态, payload_remaining/gripper_overheated) + Context Capability(环境限制, can_reach/can_grasp/path_clear)
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| robot.yaml | 声明所有组件，参数化驱动 |
+| capability.yaml | 声明Static Capability（固有能力） |
+| 动态Capability Registry | 三层能力: Static+Dynamic+Context, 运行时可查询 |
+| Capability变化通知 | 能力变化时发布/capability/updates |
+| 代码生成 | YAML → URDF/SRDF/controllers自动生成 |
+| 向后兼容 | 现有multi_arm_robot.xacro仍可用 |
+| 换硬件 | robot.yaml + capability.yaml + adapter，上层接口不变 |
+
+#### M6.S Simulation Infrastructure (提前)
+
+**目标**: 仿真本身是平台 — Robot Simulation OS，横向贯穿M6.1-M6.6
+
+**提前理由**: M6.1+所有模块依赖仿真, Simulation是Runtime执行环境之一, 不是事后验证工具
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| 场景生成器 | 随机生成多样化场景 |
+| Domain Randomization | 光照/纹理/位置/物理随机化 |
+| Dataset Pipeline | Gazebo → 数据集自动采集 |
+| Ground Truth | Gazebo提供精确标注 |
+| 仿真/实体切换 | 共享robot.yaml, 仅Hardware Adapter不同 |
+
+#### M6.1 Perception + WorldModel
+
+**目标**: 感知与世界模型绑定 — 没有WorldModel的Perception不是机器人智能
+
+```
+Sensor → Perception → WorldModel → Reasoning → Action
+WorldModel 5层: Entity Layer + State Layer + Relation Layer + History Layer + Prediction Layer
+```
+
+**Relation Layer是Skill判断的关键依赖**: on/near/inside/attached/above/below关系, Skill的precondition/postcondition查询Relation判断是否满足
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Gazebo Camera | RGB+Depth图像正确发布 |
+| 物体检测 | 检测Gazebo中物体，输出ObjectPose |
+| WorldModel Entity Layer | 实体定义(Robot/Object/Obstacle/Zone) |
+| WorldModel State Layer | 缓存物体位姿+grasp_state+attached_to |
+| WorldModel Relation Layer | 维护on/near/inside/attached关系 |
+| WorldModel History Layer | 状态时间序列历史 |
+| WorldModel Prediction Layer | 运动预测/碰撞预测 |
+| 感知-认知闭环 | "pick red_cube" → 检测 → WorldModel更新 → 规划 → 执行 |
+| Agent查询接口 | QueryWorld.srv返回完整世界状态(含关系) |
+
+#### M6.2 Manipulation Layer
+
+**目标**: 从"运动控制系统"进入"操作系统" — Gripper + Object attachment + Force feedback
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Robotiq URDF | Gazebo加载UR5e+Gripper模型 |
+| Gripper Controller | open/close控制成功 |
+| 物理附着 | Gazebo中物体附着到Gripper |
+| Manipulation State | WorldModel更新object attached_to/grasp_state |
+| Relation更新 | WorldModel更新attached_to/on关系 |
+| 完整PickPlace | 检测→抓取→搬运→放置 全链路成功 |
+
+#### M6.3 Skill Runtime
+
+**目标**: Skill = Manifest + Capability + Preconditions + Execution + Postcondition + Recovery + Lifecycle (类似pip install, 机器人获得能力)
+
+**Skill Lifecycle**: Install→Register→Validate→Ready→Execute→Monitor→Update→Remove (类似K8s Pod生命周期, 否则Skill Library变成文件仓库)
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Skill Manifest | 包含required_capabilities/input/output/cost/pre/post/recovery |
+| Skill Lifecycle | Install→Register→Validate→Ready→Execute→Monitor→Update→Remove |
+| Skill Registry | ListSkills返回READY状态Skill列表 |
+| Skill Runtime | ExecuteSkill.action执行成功 |
+| Capability检查 | Skill执行前查询动态Capability Registry三层 |
+| precondition/postcondition | 条件检查正确（查询WorldModel Relation Layer） |
+| recovery | Skill失败→恢复策略执行 |
+| 执行监控 | Monitor更新success_rate/cost → Data Layer |
+| BT兼容 | 现有BT XML可包装为Skill |
+| Skill组合 | 多Skill可串联（pick→move→place） |
+| 热更新 | Skill版本升级不中断当前执行 |
+
+#### M6.5 Robot Runtime API (重命名)
+
+**目标**: M6只提供能力接口，不包含自然语言理解（语言理解属M7）
+
+**重命名理由**: 旧名"Agent Capability Interface"误导(M6没有Agent), 新名"Robot Runtime API"准确反映M6提供的是Runtime能力接口
+
+```
+M6提供: ExecuteSkill, QueryWorld, GetCapability, ListSkills, ManageSkill, SubmitTaskGoals, QueryData
+M7负责: 自然语言理解, 规划, 推理, 任务拆解, Agent决策, 从Data Layer学习
+```
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Robot Runtime API | ExecuteSkill/QueryWorld/GetCapability/ListSkills/ManageSkill/SubmitTaskGoals |
+| TaskGoal引用 | 接口引用M5.7冻结的TaskGoal |
+| 边界清晰 | M6不含自然语言理解，M7负责 |
+| Skill调用 | SubmitTaskGoals → ExecuteSkill → Coordinator链路 |
+| 能力查询 | GetCapability返回三层能力(Static+Dynamic+Context) |
+
+#### M6.6 Mobile Base (后置)
+
+**目标**: 从固定机械臂升级为移动操作机器人 — Navigation2+SLAM复杂度高，后置
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Mobile Base URDF | Gazebo加载移动底盘 |
+| Navigation2 | 自主导航到目标位 |
+| SLAM | 建图成功 |
+| 移动+操作 | 导航到桌边→抓取→导航到放置位 |
+
+#### Data Layer (横向贯穿)
+
+**目标**: Robot Data Pipeline — 类似软件的Observability, M7 Agent学习的数据来源
+
+**六类数据**: Sensor Data(短期) + Episode Data(中期) + Skill Execution Log(长期) + Failure Data(长期) + WorldModel Snapshot(中期) + Training Dataset(永久)
+
+| 验收项 | 通过条件 |
+|--------|----------|
+| Sensor Data采集 | 原始传感器流ring buffer存储 |
+| Episode Data记录 | 任务执行完整episode记录到SQLite |
+| Skill Log记录 | Skill执行日志(参数/结果/耗时/recovery) |
+| Failure Data记录 | 失败案例(原因/上下文/recovery结果) |
+| WorldModel Snapshot | 定期+事件触发快照 |
+| Training Dataset | 从上述数据生成训练数据集 |
+| Skill Monitor集成 | Skill执行后Monitor更新success_rate (读Skill Log) |
+| M7数据接口 | QueryData.srv供M7查询训练数据 |
+| M5.4兼容 | benchmark.db作为Skill Log子集 |
+
+#### M6 Sim2Real (贯穿)
 
 | 验收项 | 通过条件 |
 |--------|----------|
@@ -681,8 +869,8 @@ Level 5: 真正复杂操作 — 双臂协作
 | M4 Gazebo Integration | ✅ | 7/8 (缺Benchmark数据) |
 | M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
-| M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E) |
-| M6 Sim2Real | ⬜ 远期 | 依赖M5完成 |
+| M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E), M5.7 Audit ✅ |
+| M6 Robot Platform Upgrade | ⬜ 规划完成 | M6.0-M6.6+Data Layer规划(第四轮评审), 依赖M5.7 Interface Freeze |
 
 ---
 
@@ -712,6 +900,12 @@ Level 5: 真正复杂操作 — 双臂协作
 | M5.4验证 | `docs/validation/M5_4_validation_report.md` | M5.4 Benchmark System验证报告 |
 | M5.5验证 | `docs/validation/M5_5_validation_report.md` | M5.5 CI/CD Pipeline验证报告 |
 | M5.6验证 | `docs/validation/M5_6_validation_report.md` | M5.6 Simulation Stress Test验证报告 |
+| 接口目录 | `docs/architecture/interface_catalog.md` | M5.7 接口资产盘点 (18接口) |
+| 数据流 | `docs/architecture/data_flow.md` | M5.7 数据流图 (8流) |
+| 依赖图 | `docs/architecture/dependency_graph.md` | M5.7 模块依赖+边界审计 |
+| API契约 | `docs/architecture/api_contracts.md` | M5.7 接口契约+数据模型冻结+M6/M7预留 |
+| M5.7验证 | `docs/validation/M5_7_validation_report.md` | M5.7 Interface & Architecture Audit验证报告 |
+| M6规划 | `docs/architecture/M6_platform_upgrade_plan.md` | M6 Robot Platform Upgrade阶段规划 |
 
 ---
 
