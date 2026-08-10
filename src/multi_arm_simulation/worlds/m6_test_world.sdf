@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="m6_test_world">
+    <!--
+      M6 Simulation E2E Test World
+      Contains: ground plane, table, red cube, blue cylinder
+      Objects have PosePublisher plugin for ground truth pose extraction.
+    -->
+
+    <!-- System plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics">
+      <engine>ode</engine>
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster">
+      <publish_world_info>true</publish_world_info>
+    </plugin>
+
+    <gravity>0 0 -9.8</gravity>
+
+    <!-- Lighting -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.5 -1</direction>
+    </light>
+
+    <!-- Ground plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 10</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+            </plane>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Table (static, in front of arm1) -->
+    <model name="table">
+      <static>true</static>
+      <pose>0.5 0 0.4 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.8 1.0 0.02</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.8 1.0 0.02</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Red cube on table (dynamic, with PosePublisher) -->
+    <model name="red_cube">
+      <pose>0.5 0 0.435 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.05</size>
+            </box>
+          </geometry>
+        </collision>
+        <inertial>
+          <mass>0.1</mass>
+          <inertia>
+            <ixx>0.0000417</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0000417</iyy>
+            <iyz>0</iyz>
+            <izz>0.0000417</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_model_pose>true</publish_model_pose>
+        <publish_link_pose>false</publish_link_pose>
+        <publish_frequency>10</publish_frequency>
+      </plugin>
+    </model>
+
+    <!-- Blue cylinder on table (dynamic, with PosePublisher) -->
+    <model name="blue_cylinder">
+      <pose>0.3 0.2 0.44 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.06</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 0 1 1</ambient>
+            <diffuse>0 0 1 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.06</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <inertial>
+          <mass>0.1</mass>
+          <inertia>
+            <ixx>0.00005</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00005</iyy>
+            <iyz>0</iyz>
+            <izz>0.000045</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_model_pose>true</publish_model_pose>
+        <publish_link_pose>false</publish_link_pose>
+        <publish_frequency>10</publish_frequency>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

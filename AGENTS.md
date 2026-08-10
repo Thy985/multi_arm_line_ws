@@ -857,16 +857,67 @@ multi_arm_runtime_api/
 **测试**: 32 tests ALL PASS (9 mapping + 4 TaskGoal引用 + 8 接口可用性 + 4 backend不可用 + 5 SubmitTaskGoals链路 + 2 smoke)
 **验证报告**: `docs/validation/M6_5_validation_report.md`
 
-#### M6.6 Mobile Base (后置)
+#### M6.6 Runtime Developer Experience ✅
 
-**目标**: 从固定机械臂升级为移动操作机器人 — Navigation2+SLAM复杂度高，后置
+**原M6.6 Mobile Base → 推迟到M7**: 移动底盘(Navigation2+SLAM)属于Navigation Capability，不属于Robot Runtime Platform，推迟到M7。
 
-| 验收项 | 通过条件 |
-|--------|----------|
-| Mobile Base URDF | Gazebo加载移动底盘 |
-| Navigation2 | 自主导航到目标位 |
-| SLAM | 建图成功 |
-| 移动+操作 | 导航到桌边→抓取→导航到放置位 |
+**M6.6重新定义**: Runtime Developer Experience — 机器人的kubectl。Python CLI工具集，让已有426+测试、Simulation E2E、Skill Runtime真正变成"可使用的平台"。
+
+**定位**: 开发阶段最需要的不是Web UI(展示层)，而是CLI(交互层)。CLI成本低(~500行)，解决80%问题：架构验证、调试Runtime、快速体验闭环能力。M6.7 Web Visualization实施顺序后移，其设计仍有价值(未来展示层)。
+
+**新增包**: `multi_arm_tools`
+
+```
+multi_arm_tools/
+├── multi_arm_tools/
+│   ├── cli.py                 # 主CLI入口 (robot命令)
+│   ├── runtime_client.py      # Runtime API客户端(封装ROS2 service/action)
+│   ├── trace_viewer.py        # Trace终端渲染(树状/时间线)
+│   ├── episode_viewer.py      # Episode Inspector(查看历史/失败案例)
+│   ├── world_query.py         # WorldModel查询+展示
+│   └── benchmark_runner.py    # 批量Benchmark(100 episodes → success rate)
+├── test/
+│   ├── test_cli.py
+│   ├── test_trace_viewer.py
+│   └── test_benchmark_runner.py
+├── package.xml
+└── setup.py
+```
+
+**CLI命令** (机器人的kubectl):
+```bash
+robot status                    # 机器人+世界+Skill概览
+robot world [object_id]         # 世界状态查询
+robot world --relations         # 关系图
+robot skills                    # 已注册Skill列表
+robot capability                # 三层能力查询
+robot run pick_place red_cube zone_b  # 提交任务+实时Trace
+robot episodes [--failures-only]      # Episode历史
+robot episode <id>              # Episode详情+Trace回放
+robot traces [--recent N]       # Trace历史
+robot benchmark pick_place --count 100  # 批量Benchmark
+```
+
+**4个核心工具**:
+
+1. **Runtime CLI** — 任务提交、状态查询(robot status/world/skills/capability/run)
+2. **Trace Viewer** — 终端渲染Skill执行决策链路(TaskGoal→Skill选择→Precondition→Execute→Recovery→Verification)
+3. **Episode Inspector** — 查看历史Episode、失败案例、step-by-step回放
+4. **Benchmark Runner** — 批量执行(100 episodes → success rate/avg duration/failure breakdown)
+
+**接口依赖**: 纯消费M5.7 FROZEN v1.0 + M6.5 Runtime API接口，无新增ROS2接口
+
+| 验收项 | 通过条件 | 状态 |
+|--------|----------|------|
+| Runtime CLI | robot status/world/skills/capability/run命令可用 | ✅ |
+| Trace Viewer | 终端渲染Skill执行决策链路(树状/时间线) | ✅ |
+| Episode Inspector | 查看历史Episode+失败案例+step回放 | ✅ |
+| Benchmark Runner | 批量执行→success rate/duration/failure breakdown | ✅ |
+| 闭环体验 | robot run → 实时Trace → Episode记录 → 验证 | ✅ |
+
+**测试**: 57 tests ALL PASS (21 CLI + 7 Analyzer + 8 TaskManager + 6 SimManager + 5 Trace + 6 Episode + 6 WorldQuery + 5 Benchmark)
+**验证报告**: `docs/validation/M6_6_validation_report.md`
+**设计文档**: `docs/architecture/M6_6_runtime_cli_design.md`
 
 #### M6.4 Robot Experience Infrastructure ✅
 
@@ -905,6 +956,74 @@ multi_arm_experience/
 
 **测试**: 48 tests ALL PASS (12 DatasetExporter + 16 Episode + 18 ExperienceRecorder + 2 smoke)
 
+#### M6.7 Robot Runtime Visualization Layer (设计完成 v2, 实施后移)
+
+**目标**: Robot Runtime Observability Plane — 类似K8s Dashboard, 不是简单UI而是运行时可观测性平面
+
+**定位调整(v3)**: M6.7是展示层(适合Demo/教学/运营监控)，当前开发阶段优先实施M6.6 Runtime CLI(交互层)。M6.7设计仍有价值，实施顺序后移到M6.6完成后。
+
+**核心理念**: 横切平面(类似Safety Plane), **只读**消费所有M6运行时状态, 零侵入现有代码
+
+**v2关键调整** (根据架构评审反馈):
+1. **纯只读** — 移除所有控制能力(execute/e-stop/release/submit_task_goals), 控制属于Control Plane(M7.x)
+2. **Trace模型** — 类似OpenTelemetry的trace_id+events结构, Skill Timeline基于Trace Viewer实现
+3. **2D优先** — MVP不做3D渲染(避免重新造RViz), 用2D Scene Graph替代
+4. **优先级调整** — WorldModel Viewer + Skill Timeline + Episode Replay为Phase 2核心, Robot State+Safety降为Phase 3
+
+**新增包**: `multi_arm_visualization`
+
+```
+multi_arm_visualization/
+├── viz_bridge_node.py          # ROS2节点 + WebSocket服务器(tornado)
+├── data_collector.py            # ROS2数据聚合器(订阅所有topic)
+├── trace_collector.py           # Trace收集器(构建Trace模型)
+├── trace_model.py               # Trace + TraceEvent数据结构
+├── episode_replay.py            # Episode回放引擎(重建Trace)
+├── web_server.py                # HTTP/WebSocket服务器(只读REST)
+├── web/                         # 单页HTML前端(零构建, CDN加载)
+│   ├── index.html
+│   ├── js/
+│   │   ├── world_model_viewer.js # WorldModel Viewer(2D Scene Graph, Phase 2核心)
+│   │   ├── skill_timeline.js    # Skill时间线(基于Trace模型, Phase 2核心)
+│   │   ├── episode_replayer.js  # Episode回放器(Phase 2核心)
+│   │   ├── runtime_console.js   # 只读查询控制台
+│   │   ├── robot_state.js       # 机器人状态面板(Phase 3辅助)
+│   │   ├── safety_panel.js      # 安全状态面板(Phase 3辅助, 只读)
+│   │   └── scene_graph.js       # 2D Scene Graph渲染
+│   └── css/style.css
+└── launch/visualization.launch.py
+```
+
+**6个可视化面板** (按优先级排序):
+1. **WorldModel Viewer** (Phase 2核心) — Objects+Relations+Task Context+2D Scene Graph(Digital Twin Explorer)
+2. **Skill Timeline** (Phase 2核心) — 基于Trace模型的Skill执行决策链路(可解释性)
+3. **Episode Replayer** (Phase 2核心) — 历史Episode回放(step-by-step, 类似自动驾驶数据回放)
+4. **Runtime Console** (Phase 2) — 只读查询控制台(query capability/list skills/query world/query episodes/query traces)
+5. **Robot State Panel** (Phase 3辅助) — 关节状态+控制器+Gripper(实时10Hz WebSocket)
+6. **Safety Panel** (Phase 3辅助, 只读) — 安全状态+碰撞监控(无控制按钮, E-Stop/Release属于Control Plane)
+
+**技术选型**: Python tornado(WebSocket) + 单页HTML/vanilla JS(零构建) + Canvas 2D/SVG(2D Scene Graph) + Chart.js CDN(图表)
+
+**Trace模型**: 类似OpenTelemetry, Trace(trace_id+events[])从EpisodeData构建, 不单独持久化, 支持历史回放重建
+
+**接口依赖**: 纯消费M5.7 FROZEN v1.0只读接口, 无新增ROS2接口。已排除EmergencyStop和SubmitTaskGoals(属于Control Plane)
+
+**实施顺序**: Phase 0接口验证 → Phase 1 Runtime Snapshot(不用Web) → Phase 2 Web Dashboard(WMV+Timeline+Replay) → Phase 3 Robot State+Safety → Phase 4 3D View(未来)
+
+| 验收项 | Phase | 通过条件 | 状态 |
+|--------|-------|----------|------|
+| VizBridgeNode | 1 | ROS2节点+WebSocket服务器(port 8080) | ⬜ |
+| Runtime Snapshot | 1 | DataCollector聚合所有topic数据 | ⬜ |
+| WorldModel Viewer | 2 | 物体+关系+任务上下文+2D Scene Graph | ⬜ |
+| Skill Timeline | 2 | 基于Trace模型显示Skill执行决策链路 | ⬜ |
+| Episode Replayer | 2 | 历史Episode回放(step-by-step) | ⬜ |
+| Runtime Console | 2 | 只读查询(capability/skills/world/episodes/traces) | ⬜ |
+| Robot State Panel | 3 | 实时显示关节状态(10Hz) | ⬜ |
+| Safety Panel | 3 | 安全状态+碰撞事件(只读) | ⬜ |
+| Web界面可访问 | 2 | http://localhost:8080 | ⬜ |
+
+**设计文档**: `docs/architecture/M6_7_visualization_design.md` (v2)
+
 #### M6 Sim2Real (贯穿)
 
 | 验收项 | 通过条件 |
@@ -927,7 +1046,7 @@ multi_arm_experience/
 | M4.5 MoveIt Validation | ✅ | 双臂规划+执行验证 |
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
 | M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E), M5.7 Audit ✅ |
-| M6 Robot Platform Upgrade | 🔄 Gate 2基线 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ FROZEN v1.0 (102, E2E 25/25, 跨层 12/12), M6.4 ✅ (48), M6.5 ✅ (32), M6.6待实施 |
+| M6 Robot Platform Upgrade | 🔄 Gate 2基线 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ FROZEN v1.0 (102, E2E 25/25, 跨层 12/12), M6.4 ✅ (48), M6.5 ✅ (32), M6 E2E ✅ (17, 5节点7链路), M6 Full-Chain E2E ✅ (12, 全组件协同+可视化), L6 Simulation E2E ✅ Phase 1+2+3+4+5 (22 tests), M6.6 ✅ Runtime Developer Experience (57 tests, Runtime CLI: 机器人的kubectl, 5阶段全部完成: sim+doctor+task+analyze+watch), M6.7设计完成v2 (只读Observability Plane+Trace模型+2D优先, 实施后移) |
 
 ---
 
@@ -968,7 +1087,15 @@ multi_arm_experience/
 | M6.3 ADR | `docs/architecture/ADR-M6.3-Freeze.md` | M6.3 Interface Freeze决策记录 |
 | M6.4验证 | `docs/validation/M6_4_validation_report.md` | M6.4 Robot Experience Infrastructure验证报告 (48 tests) |
 | M6.5验证 | `docs/validation/M6_5_validation_report.md` | M6.5 Robot Runtime API验证报告 (32 tests) |
+| M6 E2E验证 | `docs/validation/M6_system_e2e_validation_report.md` | M6 System-Level E2E: 5节点真实ROS2集成 (17 tests, 7条链路) |
+| M6 Full-Chain E2E | `docs/validation/M6_full_chain_e2e_validation_report.md` | M6全链路E2E: 全部M6组件协同工作+可视化 (12 tests, 0.87s) |
+| L6 Simulation E2E | `docs/validation/M6_simulation_e2e_validation_report.md` | L6仿真E2E: Gazebo场景+全栈Pick-Place闭环+失败恢复+Domain Randomization+Episode记录+Dataset导出 (22 tests, Phase 1+2+3+4+5) |
 | M6规划 | `docs/architecture/M6_platform_upgrade_plan.md` | M6 Robot Platform Upgrade阶段规划 |
+| M6.6验证 | `docs/validation/M6_6_validation_report.md` | M6.6 Runtime Developer Experience验证报告 (36 tests, Runtime CLI: 机器人的kubectl) |
+| M6.6设计 | `docs/architecture/M6_6_runtime_cli_design.md` | M6.6 Runtime Developer Experience设计文档 (Runtime CLI: 机器人的kubectl) |
+| M6.6使用文档 | `docs/architecture/M6_6_cli_usage_guide.md` | M6.6 Robot Runtime CLI使用文档 (命令详解+工作流+故障排查) |
+| M6.6教程 | `docs/architecture/M6_6_getting_started_tutorial.md` | M6.6 从零开始手把手教程 (12步: 环境→构建→测试→仿真→CLI→E2E→Benchmark) |
+| M6.7设计 | `docs/architecture/M6_7_visualization_design.md` | M6.7 Robot Runtime Visualization Layer设计文档 (v2: 只读Observability Plane+Trace模型+2D优先, 实施后移) |
 
 ---
 

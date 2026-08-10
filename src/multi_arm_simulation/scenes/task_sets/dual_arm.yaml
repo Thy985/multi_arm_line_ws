@@ -1,0 +1,25 @@
+name: dual_arm
+description: "Dual-arm coordination benchmark on warehouse"
+scene: warehouse
+repetitions: 3
+tasks:
+  - task_id: arm1_pick_place
+    action_type: pick_place
+    arm_name: arm1
+    zone_name: zone_a
+    object_id: red_cube
+    approach: top
+    timeout: 60.0
+  - task_id: arm2_pick_place
+    action_type: pick_place
+    arm_name: arm2
+    zone_name: zone_b
+    object_id: blue_cylinder
+    approach: side
+    timeout: 60.0
+  - task_id: dual_move_home
+    action_type: move
+    arm_name: arm1
+    zone_name: zone_a
+    position_name: home
+    timeout: 30.0

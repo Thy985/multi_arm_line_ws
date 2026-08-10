@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<!-- wheeled_base.xacro — Mobile base chassis (4 wheels, fixed in M7.0, revolute in M7.6) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry><cylinder length="0.05" radius="0.06"/></geometry>
+        <material name="wheel_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry><cylinder length="0.05" radius="0.06"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+    <joint name="base_to_${name}" type="fixed">
+      <origin xyz="${x} ${y} 0.0" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="${name}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="wheeled_base" params="prefix=''">
+    <!-- World root -->
+    <link name="world"/>
+
+    <!-- Main chassis body -->
+    <link name="${prefix}base_link">
+      <visual>
+        <origin xyz="0.5 0 0.15" rpy="0 0 0"/>
+        <geometry><box size="1.4 0.5 0.3"/></geometry>
+        <material name="chassis_blue"/>
+      </visual>
+      <collision>
+        <origin xyz="0.5 0 0.15" rpy="0 0 0"/>
+        <geometry><box size="1.4 0.5 0.3"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="40.0"/>
+        <origin xyz="0.5 0 0.15" rpy="0 0 0"/>
+        <inertia ixx="1.0" ixy="0" ixz="0" iyy="1.5" iyz="0" izz="2.0"/>
+      </inertial>
+    </link>
+    <joint name="world_to_base" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="world"/>
+      <child link="${prefix}base_link"/>
+    </joint>
+
+    <!-- Front control panel -->
+    <link name="front_panel">
+      <visual>
+        <geometry><box size="1.4 0.02 0.2"/></geometry>
+        <material name="panel_dark"/>
+      </visual>
+      <collision>
+        <geometry><box size="1.4 0.02 0.2"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="2.0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+    <joint name="base_to_front_panel" type="fixed">
+      <origin xyz="0.5 0.26 0.15" rpy="0 0 0"/>
+      <parent link="${prefix}base_link"/>
+      <child link="front_panel"/>
+    </joint>
+
+    <!-- Status LED strip -->
+    <link name="status_led">
+      <visual>
+        <geometry><box size="0.3 0.03 0.02"/></geometry>
+        <material name="led_green"/>
+      </visual>
+    </link>
+    <joint name="base_to_status_led" type="fixed">
+      <origin xyz="0.5 0.255 0.28" rpy="0 0 0"/>
+      <parent link="${prefix}base_link"/>
+      <child link="status_led"/>
+    </joint>
+
+    <!-- arm1 mounting pillar -->
+    <link name="arm1_pillar">
+      <visual>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder length="0.2" radius="0.08"/></geometry>
+        <material name="pillar_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder length="0.2" radius="0.08"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="5.0"/>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.02"/>
+      </inertial>
+    </link>
+    <joint name="base_to_arm1_pillar" type="fixed">
+      <origin xyz="0 0 0.3" rpy="0 0 0"/>
+      <parent link="${prefix}base_link"/>
+      <child link="arm1_pillar"/>
+    </joint>
+
+    <!-- arm2 mounting pillar -->
+    <link name="arm2_pillar">
+      <visual>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder length="0.2" radius="0.08"/></geometry>
+        <material name="pillar_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder length="0.2" radius="0.08"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="5.0"/>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.02"/>
+      </inertial>
+    </link>
+    <joint name="base_to_arm2_pillar" type="fixed">
+      <origin xyz="1.0 0 0.3" rpy="0 0 0"/>
+      <parent link="${prefix}base_link"/>
+      <child link="arm2_pillar"/>
+    </joint>
+
+    <!-- 4 wheels (fixed joint, M7.6 will make revolute) -->
+    <xacro:wheel name="wheel_fl" x="0.05" y="0.28"/>
+    <xacro:wheel name="wheel_fr" x="0.05" y="-0.28"/>
+    <xacro:wheel name="wheel_bl" x="0.95" y="0.28"/>
+    <xacro:wheel name="wheel_br" x="0.95" y="-0.28"/>
+
+    <!-- Gazebo reference -->
+    <gazebo reference="world"/>
+  </xacro:macro>
+
+</robot>

@@ -28,6 +28,48 @@ setup(
             "share/" + package_name + "/launch",
             [
                 "launch/simulation_scenario.launch.py",
+                "launch/m6_simulation_scene.launch.py",
+                "launch/m6_pick_place_sim.launch.py",
+                "launch/m6_domain_randomization.launch.py",
+            ],
+        ),
+        (
+            "share/" + package_name + "/worlds",
+            [
+                "worlds/m6_test_world.sdf",
+            ],
+        ),
+        (
+            "share/" + package_name + "/scenes/environments",
+            [
+                "scenes/environments/tabletop.yaml",
+                "scenes/environments/home.yaml",
+                "scenes/environments/warehouse.yaml",
+                "scenes/environments/lab.yaml",
+            ],
+        ),
+        (
+            "share/" + package_name + "/scenes/objects",
+            [
+                "scenes/objects/cube.yaml",
+                "scenes/objects/cylinder.yaml",
+                "scenes/objects/box.yaml",
+            ],
+        ),
+        (
+            "share/" + package_name + "/scenes/tasks",
+            [
+                "scenes/tasks/pick_place.yaml",
+                "scenes/tasks/assembly.yaml",
+                "scenes/tasks/inspect.yaml",
+            ],
+        ),
+        (
+            "share/" + package_name + "/scenes/task_sets",
+            [
+                "scenes/task_sets/basic.yaml",
+                "scenes/task_sets/dual_arm.yaml",
+                "scenes/task_sets/stress.yaml",
             ],
         ),
     ],
@@ -46,6 +88,7 @@ setup(
         "console_scripts": [
             "scene_generator = multi_arm_simulation.scene_generator:main",
             "dataset_pipeline_node = multi_arm_simulation.dataset_pipeline_node:main",
+            "gazebo_ground_truth_node = multi_arm_simulation.gazebo_ground_truth_node:main",
         ],
     },
 )

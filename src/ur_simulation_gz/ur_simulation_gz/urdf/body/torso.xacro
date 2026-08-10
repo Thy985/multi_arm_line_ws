@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  torso.xacro — Torso module placeholder for M7.1 Robot Body Upgrade.
+
+  M7.0.1: Placeholder (no torso, arms mount directly on base pillars).
+  M7.1: Will add adjustable torso (1-DOF height) between base and arm pillars.
+
+  Params:
+    parent_link  - base link to mount torso on (default "base_link")
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="torso" params="parent_link:='base_link'">
+    <!-- M7.1: Adjustable torso (1-DOF prismatic) will be added here -->
+    <!-- Placeholder: no-op macro, arms mount directly on base pillars in M7.0 -->
+  </xacro:macro>
+
+</robot>

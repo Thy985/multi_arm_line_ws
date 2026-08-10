@@ -9,6 +9,10 @@
 
   <depend>rclpy</depend>
   <depend>multi_arm_interfaces</depend>
+  <depend>multi_arm_robot_description</depend>
+  <depend>multi_arm_world_model</depend>
+  <depend>multi_arm_skill_runtime</depend>
+  <depend>multi_arm_experience</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -272,6 +272,16 @@ class CoordinatorNode(Node):
             success, msg = self._moveit_interface.move_to_preset(
                 arm_name, position_name, timeout=60.0,
             )
+            if not success:
+                self.get_logger().warn(
+                    f"[{arm_name}] MoveIt2 failed ({msg}), falling back to JTC direct"
+                )
+                duration = 3.0
+                if speed_scale < 1.0:
+                    duration = duration / speed_scale
+                trajectory = self.create_trajectory(arm_name, positions, duration)
+                success = self._send_trajectory_sync(arm_name, trajectory, timeout=15.0)
+                msg = "jtc_fallback_success" if success else "jtc_fallback_failed"
         else:
             self.get_logger().info(
                 f"[{arm_name}] MoveIt2 unavailable, using JTC direct for task {task_id}"

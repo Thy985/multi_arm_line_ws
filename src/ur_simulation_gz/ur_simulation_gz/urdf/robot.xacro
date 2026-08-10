@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!--
+  robot.xacro — Top-level modular robot assembly (M7.0.1).
+
+  This is the new entry point for the modular URDF.
+  Assembly order: materials → mobile_base → torso → head → dual_ur5e → sensors → ros2_control
+
+  Modules:
+    materials.xacro              — Shared material definitions
+    mobile_base/wheeled_base.xacro — Chassis + wheels + arm pillars
+    body/torso.xacro             — Torso placeholder (M7.1 will fill)
+    body/head.xacro              — Head placeholder (M7.1 will fill)
+    arms/dual_ur5e.xacro         — Dual UR5e + Robotiq grippers
+    sensors/camera.xacro         — Wrist camera
+    sensors/imu.xacro            — IMU placeholder (M7.4 will fill)
+    ros2_control/multi_arm_ros2_control.xacro — ros2_control block
+
+  Args:
+    name                  - robot name (default "multi_arm")
+    ur_type               - UR type (default "ur5e")
+    simulation_controllers - controllers yaml path
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="multi_arm">
+
+  <xacro:arg name="name" default="multi_arm"/>
+  <xacro:arg name="ur_type" default="ur5e"/>
+  <xacro:arg name="simulation_controllers" default=""/>
+
+  <xacro:arg name="joint_limit_params"
+    default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+  <xacro:arg name="kinematics_params"
+    default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+  <xacro:arg name="physical_params"
+    default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
+  <xacro:arg name="visual_params"
+    default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+
+  <!-- ===== Include all modules ===== -->
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/materials.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/mobile_base/wheeled_base.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/body/torso.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/body/head.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/arms/dual_ur5e.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/sensors/camera.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/sensors/imu.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/ros2_control/multi_arm_ros2_control.xacro"/>
+
+  <!-- ===== Assemble robot ===== -->
+
+  <!-- 1. Mobile base (chassis + wheels + arm pillars) -->
+  <xacro:wheeled_base prefix=""/>
+
+  <!-- 2. Torso (M7.0 placeholder: no-op, arms mount on pillars) -->
+  <xacro:torso parent_link="base_link"/>
+
+  <!-- 3. Head (M7.0 placeholder: no-op, perception uses wrist camera) -->
+  <xacro:head parent_link="base_link"/>
+
+  <!-- 4. Dual UR5e arms + grippers -->
+  <xacro:dual_ur5e
+    name="$(arg name)"
+    ur_type="$(arg ur_type)"
+    joint_limit_params="$(arg joint_limit_params)"
+    kinematics_params="$(arg kinematics_params)"
+    physical_params="$(arg physical_params)"
+    visual_params="$(arg visual_params)"/>
+
+  <!-- 5. Sensors -->
+  <xacro:wrist_camera
+    prefix="arm1_"
+    parent_link="arm1_wrist_3_link"
+    sensor_name="arm1_wrist_camera"
+    topic="arm1/camera/image_raw"/>
+  <xacro:imu_sensor parent_link="base_link" sensor_name="base_imu"/>
+
+  <!-- 6. ros2_control (14 joints: 12 arm + 2 gripper) -->
+  <xacro:multi_arm_ros2_control controllers_file="$(arg simulation_controllers)"/>
+
+</robot>

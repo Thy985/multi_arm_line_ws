@@ -7,7 +7,11 @@ import time as _time
 
 @dataclass
 class TrackedObject:
-    """A tracked object in the world model."""
+    """A tracked object in the world model.
+
+    M7.0.2: Added temporal (observed_at/updated_at/ttl) and uncertainty
+    (position_covariance/orientation_uncertainty) fields.
+    """
     object_id: str
     object_type: str = "unknown"
     position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
@@ -16,10 +20,22 @@ class TrackedObject:
     velocity: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     last_seen: float = field(default_factory=_time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    observed_at: float = 0.0
+    updated_at: float = field(default_factory=_time.time)
+    ttl: float = 5.0
+    position_covariance: Tuple[float, float, float, float, float, float, float, float, float] = \
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    orientation_uncertainty: float = 0.0
 
     def is_stale(self, max_age: float = 5.0) -> bool:
-        """Check if object data is stale."""
-        return (_time.time() - self.last_seen) > max_age
+        """Check if object data is stale.
+
+        Uses ttl if > 0, otherwise falls back to max_age parameter.
+        """
+        effective_ttl = self.ttl if self.ttl > 0.0 else max_age
+        if effective_ttl == 0.0:
+            return False
+        return (_time.time() - self.last_seen) > effective_ttl
 
     def predicted_position(self, dt: float = 0.0) -> Tuple[float, float, float]:
         """Predict future position based on velocity.
@@ -149,6 +165,9 @@ class StateDatabase:
             obj.orientation = orientation
         obj.confidence = confidence
         obj.last_seen = now
+        obj.updated_at = now
+        if obj.observed_at == 0.0:
+            obj.observed_at = now
         return True
 
     # === Environment (OWNED) ===

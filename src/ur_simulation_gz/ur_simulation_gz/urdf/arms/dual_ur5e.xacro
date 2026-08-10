@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!--
+  dual_ur5e.xacro — Dual UR5e arms with Robotiq 2F-85 grippers.
+
+  Instantiates two UR5e arms on arm1_pillar / arm2_pillar,
+  each with a Robotiq 2F-85 gripper on tool0.
+
+  Params:
+    name                  - robot name (default from arg)
+    ur_type               - UR type (default "ur5e")
+    joint_limit_params    - joint limits yaml path
+    kinematics_params     - kinematics yaml path
+    physical_params       - physical params yaml path
+    visual_params         - visual params yaml path
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/end_effectors/robotiq_2f_85.xacro"/>
+
+  <xacro:macro name="dual_ur5e"
+    params="name ur_type joint_limit_params kinematics_params physical_params visual_params">
+
+    <!-- arm1: mounted on arm1_pillar -->
+    <xacro:ur_robot
+      name="${name}"
+      tf_prefix="arm1_"
+      parent="arm1_pillar"
+      joint_limits_parameters_file="${joint_limit_params}"
+      kinematics_parameters_file="${kinematics_params}"
+      physical_parameters_file="${physical_params}"
+      visual_parameters_file="${visual_params}"
+      safety_limits="true"
+      safety_pos_margin="0.15"
+      safety_k_position="20"
+      force_abs_paths="true">
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    </xacro:ur_robot>
+
+    <!-- arm1: Robotiq 2F-85 gripper -->
+    <xacro:robotiq_2f_85 prefix="arm1_" parent="arm1_tool0"/>
+
+    <!-- arm2: mounted on arm2_pillar -->
+    <xacro:ur_robot
+      name="${name}"
+      tf_prefix="arm2_"
+      parent="arm2_pillar"
+      joint_limits_parameters_file="${joint_limit_params}"
+      kinematics_parameters_file="${kinematics_params}"
+      physical_parameters_file="${physical_params}"
+      visual_parameters_file="${visual_params}"
+      safety_limits="true"
+      safety_pos_margin="0.15"
+      safety_k_position="20"
+      force_abs_paths="true">
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    </xacro:ur_robot>
+
+    <!-- arm2: Robotiq 2F-85 gripper -->
+    <xacro:robotiq_2f_85 prefix="arm2_" parent="arm2_tool0"/>
+
+  </xacro:macro>
+
+</robot>

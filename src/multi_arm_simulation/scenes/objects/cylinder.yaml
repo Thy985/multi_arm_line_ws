@@ -1,0 +1,14 @@
+name: cylinder
+description: "Standard cylinder object"
+type: cylinder
+size: [0.03, 0.06]
+mass: 0.1
+friction: 0.4
+graspable: true
+variants:
+  red:
+    color: [0.8, 0.1, 0.1, 1.0]
+  blue:
+    color: [0.1, 0.1, 0.8, 1.0]
+  green:
+    color: [0.1, 0.6, 0.1, 1.0]

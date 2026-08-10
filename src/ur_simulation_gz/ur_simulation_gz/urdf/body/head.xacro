@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  head.xacro — Head module placeholder for M7.1 Robot Body Upgrade.
+
+  M7.0.1: Placeholder (no head, perception uses wrist camera only).
+  M7.1: Will add head (pan-tilt) with head-mounted camera for attention control.
+
+  Note: head_controller is separate from torso_controller.
+  Head belongs to Perception Attention System, not manipulation chain.
+
+  Params:
+    parent_link  - link to mount head on (default "base_link")
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="head" params="parent_link:='base_link'">
+    <!-- M7.1: Head (pan-tilt 2-DOF) + head camera will be added here -->
+    <!-- Placeholder: no-op macro, perception uses wrist camera in M7.0 -->
+  </xacro:macro>
+
+</robot>

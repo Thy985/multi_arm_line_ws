@@ -228,7 +228,7 @@ class RuntimeApiNode(Node):
             ExecuteSkill result or None if unavailable.
 
         """
-        if not self._execute_skill_client.wait_for_server(timeout_sec=1.0):
+        if not self._execute_skill_client.wait_for_server(timeout_sec=10.0):
             return None
 
         future = self._execute_skill_client.send_goal_async(goal)
@@ -240,7 +240,7 @@ class RuntimeApiNode(Node):
             return None
 
         result_future = goal_handle.get_result_async()
-        if not self._wait_future(result_future, timeout_sec):
+        if not self._wait_future(result_future, 120.0):
             return None
 
         return result_future.result().result

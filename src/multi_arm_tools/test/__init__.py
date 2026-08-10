@@ -1,0 +1,1 @@
+"""Test __init__ for multi_arm_tools tests."""

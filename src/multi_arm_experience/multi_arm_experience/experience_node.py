@@ -15,7 +15,7 @@ import sys
 from typing import Any
 
 import rclpy
-from rclpy.callback_group import ReentrantCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 

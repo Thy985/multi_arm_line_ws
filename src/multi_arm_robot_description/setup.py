@@ -14,6 +14,7 @@ setup(
             [
                 "config/robot.yaml",
                 "config/capability.yaml",
+                "config/base_interface.yaml",
             ],
         ),
         (

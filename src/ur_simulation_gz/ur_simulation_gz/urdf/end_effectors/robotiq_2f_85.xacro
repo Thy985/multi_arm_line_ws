@@ -1,0 +1,254 @@
+<?xml version="1.0"?>
+<!--
+  robotiq_2f_85.xacro
+  Simplified Robotiq 2F-85 parallel gripper for Gazebo simulation.
+
+  Params:
+    prefix  - tf prefix (e.g. "arm1_")
+    parent  - parent link (e.g. "arm1_tool0")
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="robotiq_2f_85" params="prefix parent">
+    <!-- Gripper base link (attached to tool0) -->
+    <link name="${prefix}robotiq_base_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.07 0.07 0.04"/>
+        </geometry>
+        <material name="${prefix}robotiq_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.07 0.07 0.04"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.726"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.000500" ixy="0.0" ixz="0.0"
+                 iyy="0.000500" iyz="0.0"
+                 izz="0.000600"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_base_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}robotiq_base_link"/>
+    </joint>
+
+    <!-- Left outer knuckle (active joint) -->
+    <link name="${prefix}robotiq_left_knuckle_link">
+      <visual>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.028 0.032"/>
+        </geometry>
+        <material name="${prefix}robotiq_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.028 0.032"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.0174"/>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <inertia ixx="0.000003" ixy="0.0" ixz="0.0"
+                 iyy="0.000003" iyz="0.0"
+                 izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_left_knuckle_joint" type="revolute">
+      <origin xyz="0 0.018 0" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_base_link"/>
+      <child link="${prefix}robotiq_left_knuckle_link"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0.0" upper="0.8" effort="100" velocity="2.0"/>
+    </joint>
+
+    <!-- Left finger (extends from knuckle) -->
+    <link name="${prefix}robotiq_left_finger_link">
+      <visual>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.068"/>
+        </geometry>
+        <material name="${prefix}robotiq_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.068"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.038"/>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <inertia ixx="0.000016" ixy="0.0" ixz="0.0"
+                 iyy="0.000016" iyz="0.0"
+                 izz="0.000002"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_left_finger_joint" type="revolute">
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_left_knuckle_link"/>
+      <child link="${prefix}robotiq_left_finger_link"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.8" upper="0.8" effort="100" velocity="2.0"/>
+      <mimic joint="${prefix}robotiq_left_knuckle_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Left fingertip pad -->
+    <link name="${prefix}robotiq_left_finger_tip_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.008"/>
+        </geometry>
+        <material name="${prefix}robotiq_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.008"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.005"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.000001" ixy="0.0" ixz="0.0"
+                 iyy="0.000001" iyz="0.0"
+                 izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_left_finger_tip_joint" type="fixed">
+      <origin xyz="0 0 -0.068" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_left_finger_link"/>
+      <child link="${prefix}robotiq_left_finger_tip_link"/>
+    </joint>
+
+    <!-- Right outer knuckle (mimic of left) -->
+    <link name="${prefix}robotiq_right_knuckle_link">
+      <visual>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.028 0.032"/>
+        </geometry>
+        <material name="${prefix}robotiq_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.028 0.032"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.0174"/>
+        <origin xyz="0 0 0.016" rpy="0 0 0"/>
+        <inertia ixx="0.000003" ixy="0.0" ixz="0.0"
+                 iyy="0.000003" iyz="0.0"
+                 izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_right_knuckle_joint" type="revolute">
+      <origin xyz="0 -0.018 0" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_base_link"/>
+      <child link="${prefix}robotiq_right_knuckle_link"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0.0" upper="0.8" effort="100" velocity="2.0"/>
+      <mimic joint="${prefix}robotiq_left_knuckle_joint" multiplier="1" offset="0"/>
+    </joint>
+
+    <!-- Right finger -->
+    <link name="${prefix}robotiq_right_finger_link">
+      <visual>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.068"/>
+        </geometry>
+        <material name="${prefix}robotiq_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.068"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.038"/>
+        <origin xyz="0 0 -0.034" rpy="0 0 0"/>
+        <inertia ixx="0.000016" ixy="0.0" ixz="0.0"
+                 iyy="0.000016" iyz="0.0"
+                 izz="0.000002"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_right_finger_joint" type="revolute">
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_right_knuckle_link"/>
+      <child link="${prefix}robotiq_right_finger_link"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.8" upper="0.8" effort="100" velocity="2.0"/>
+      <mimic joint="${prefix}robotiq_left_knuckle_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Right fingertip pad -->
+    <link name="${prefix}robotiq_right_finger_tip_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.008"/>
+        </geometry>
+        <material name="${prefix}robotiq_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.005 0.022 0.008"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.005"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.000001" ixy="0.0" ixz="0.0"
+                 iyy="0.000001" iyz="0.0"
+                 izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}robotiq_right_finger_tip_joint" type="fixed">
+      <origin xyz="0 0 -0.068" rpy="0 0 0"/>
+      <parent link="${prefix}robotiq_right_finger_link"/>
+      <child link="${prefix}robotiq_right_finger_tip_link"/>
+    </joint>
+
+    <!-- Materials -->
+    <material name="${prefix}robotiq_gray">
+      <color rgba="0.6 0.6 0.6 1.0"/>
+    </material>
+    <material name="${prefix}robotiq_dark">
+      <color rgba="0.2 0.2 0.2 1.0"/>
+    </material>
+
+    <!-- Gazebo friction for fingertip pads -->
+    <gazebo reference="${prefix}robotiq_left_finger_tip_link">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+    <gazebo reference="${prefix}robotiq_right_finger_tip_link">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

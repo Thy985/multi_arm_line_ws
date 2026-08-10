@@ -22,11 +22,21 @@
     <group name="arm2"/>
   </group>
 
-  <!-- arm1 end-effector -->
-  <end_effector name="arm1_ee" parent_link="arm1_wrist_3_link" group="arm1"/>
+  <!-- arm1 gripper group -->
+  <group name="arm1_gripper">
+    <joint name="arm1_robotiq_left_knuckle_joint"/>
+  </group>
 
-  <!-- arm2 end-effector -->
-  <end_effector name="arm2_ee" parent_link="arm2_wrist_3_link" group="arm2"/>
+  <!-- arm2 gripper group -->
+  <group name="arm2_gripper">
+    <joint name="arm2_robotiq_left_knuckle_joint"/>
+  </group>
+
+  <!-- arm1 end-effector (gripper) -->
+  <end_effector name="arm1_ee" parent_link="arm1_robotiq_base_link" group="arm1_gripper"/>
+
+  <!-- arm2 end-effector (gripper) -->
+  <end_effector name="arm2_ee" parent_link="arm2_robotiq_base_link" group="arm2_gripper"/>
 
   <!-- Named positions -->
   <group_state name="home" group="arm1">
@@ -95,10 +105,34 @@
     <joint name="arm2_wrist_3_joint" value="0"/>
   </group_state>
 
+  <!-- Gripper named positions -->
+  <group_state name="open" group="arm1_gripper">
+    <joint name="arm1_robotiq_left_knuckle_joint" value="0.0"/>
+  </group_state>
+  <group_state name="closed" group="arm1_gripper">
+    <joint name="arm1_robotiq_left_knuckle_joint" value="0.8"/>
+  </group_state>
+  <group_state name="open" group="arm2_gripper">
+    <joint name="arm2_robotiq_left_knuckle_joint" value="0.0"/>
+  </group_state>
+  <group_state name="closed" group="arm2_gripper">
+    <joint name="arm2_robotiq_left_knuckle_joint" value="0.8"/>
+  </group_state>
+
   <!-- Disable collisions for fixed joints -->
   <disable_collisions link1="world" link2="base_link" reason="Adjacent"/>
-  <disable_collisions link1="base_link" link2="arm1_base_link" reason="Adjacent"/>
-  <disable_collisions link1="base_link" link2="arm2_base_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="front_panel" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="status_led" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="arm1_pillar" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="arm2_pillar" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="wheel_fl" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="wheel_fr" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="wheel_bl" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="wheel_br" reason="Adjacent"/>
+  <disable_collisions link1="arm1_pillar" link2="arm1_base_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_pillar" link2="arm2_base_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="arm1_base_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="arm2_base_link" reason="Never"/>
   <disable_collisions link1="arm1_base_link" link2="arm1_base_link_inertia" reason="Adjacent"/>
   <disable_collisions link1="arm1_base_link_inertia" link2="arm1_shoulder_link" reason="Adjacent"/>
   <disable_collisions link1="arm1_shoulder_link" link2="arm1_upper_arm_link" reason="Adjacent"/>
@@ -121,5 +155,29 @@
   <disable_collisions link1="arm2_ft_frame" link2="arm2_flange" reason="Adjacent"/>
   <disable_collisions link1="arm2_flange" link2="arm2_tool0" reason="Adjacent"/>
   <disable_collisions link1="arm2_base_link" link2="arm2_base" reason="Adjacent"/>
+
+  <!-- Gripper collision exclusions (arm1) -->
+  <disable_collisions link1="arm1_tool0" link2="arm1_robotiq_base_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_base_link" link2="arm1_robotiq_left_knuckle_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_base_link" link2="arm1_robotiq_right_knuckle_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_left_knuckle_link" link2="arm1_robotiq_left_finger_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_right_knuckle_link" link2="arm1_robotiq_right_finger_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_left_finger_link" link2="arm1_robotiq_left_finger_tip_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_robotiq_right_finger_link" link2="arm1_robotiq_right_finger_tip_link" reason="Adjacent"/>
+  <disable_collisions link1="arm1_wrist_3_link" link2="arm1_robotiq_base_link" reason="Never"/>
+  <disable_collisions link1="arm1_flange" link2="arm1_robotiq_base_link" reason="Never"/>
+  <disable_collisions link1="arm1_ft_frame" link2="arm1_robotiq_base_link" reason="Never"/>
+
+  <!-- Gripper collision exclusions (arm2) -->
+  <disable_collisions link1="arm2_tool0" link2="arm2_robotiq_base_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_base_link" link2="arm2_robotiq_left_knuckle_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_base_link" link2="arm2_robotiq_right_knuckle_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_left_knuckle_link" link2="arm2_robotiq_left_finger_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_right_knuckle_link" link2="arm2_robotiq_right_finger_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_left_finger_link" link2="arm2_robotiq_left_finger_tip_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_robotiq_right_finger_link" link2="arm2_robotiq_right_finger_tip_link" reason="Adjacent"/>
+  <disable_collisions link1="arm2_wrist_3_link" link2="arm2_robotiq_base_link" reason="Never"/>
+  <disable_collisions link1="arm2_flange" link2="arm2_robotiq_base_link" reason="Never"/>
+  <disable_collisions link1="arm2_ft_frame" link2="arm2_robotiq_base_link" reason="Never"/>
 
 </robot>

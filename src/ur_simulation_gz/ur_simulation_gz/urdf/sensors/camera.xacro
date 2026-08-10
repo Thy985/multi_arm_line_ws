@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  camera.xacro — Wrist-mounted camera sensor for Gazebo.
+
+  Params:
+    prefix       - tf prefix (e.g. "arm1_")
+    parent_link  - link to attach camera to (e.g. "arm1_wrist_3_link")
+    sensor_name  - sensor name (e.g. "arm1_wrist_camera")
+    topic        - image topic (e.g. "arm1/camera/image_raw")
+    width        - image width  (default 640)
+    height       - image height (default 480)
+    rate         - update rate Hz (default 10)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="wrist_camera"
+    params="prefix parent_link sensor_name topic width:=640 height:=480 rate:=10">
+    <gazebo reference="${parent_link}">
+      <sensor name="${sensor_name}" type="camera">
+        <camera>
+          <horizontal_fov>1.5708</horizontal_fov>
+          <image>
+            <width>${width}</width>
+            <height>${height}</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>${rate}</update_rate>
+        <topic>${topic}</topic>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

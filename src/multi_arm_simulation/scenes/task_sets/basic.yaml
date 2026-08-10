@@ -1,0 +1,24 @@
+name: basic
+description: "Basic pick-and-place benchmark on tabletop"
+scene: tabletop
+repetitions: 5
+tasks:
+  - task_id: move_ready
+    action_type: move
+    arm_name: arm1
+    zone_name: zone_a
+    position_name: ready
+    timeout: 30.0
+  - task_id: pick_place_cube
+    action_type: pick_place
+    arm_name: arm1
+    zone_name: zone_a
+    object_id: red_cube
+    approach: top
+    timeout: 60.0
+  - task_id: move_home
+    action_type: move
+    arm_name: arm1
+    zone_name: zone_a
+    position_name: home
+    timeout: 30.0

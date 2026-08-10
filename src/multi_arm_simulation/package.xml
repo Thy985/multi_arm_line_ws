@@ -13,6 +13,12 @@
   <depend>geometry_msgs</depend>
   <depend>multi_arm_interfaces</depend>
   <depend>multi_arm_robot_description</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>controller_manager</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>ur_simulation_gz</depend>
+  <depend>multi_arm_moveit_config</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

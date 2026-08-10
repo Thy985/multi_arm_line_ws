@@ -11,6 +11,8 @@ moveit_simple_controller_manager:
   controller_names:
     - arm1_joint_trajectory_controller
     - arm2_joint_trajectory_controller
+    - arm1_gripper_controller
+    - arm2_gripper_controller
 
   arm1_joint_trajectory_controller:
     type: FollowJointTrajectory
@@ -35,3 +37,15 @@ moveit_simple_controller_manager:
       - arm2_wrist_1_joint
       - arm2_wrist_2_joint
       - arm2_wrist_3_joint
+
+  arm1_gripper_controller:
+    type: GripperCommand
+    action_ns: gripper_cmd
+    joints:
+      - arm1_robotiq_left_knuckle_joint
+
+  arm2_gripper_controller:
+    type: GripperCommand
+    action_ns: gripper_cmd
+    joints:
+      - arm2_robotiq_left_knuckle_joint

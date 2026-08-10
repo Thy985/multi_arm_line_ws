@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  imu.xacro — IMU sensor placeholder for M7.4 Perception+Calibration.
+
+  M7.0.1: Placeholder only (no physical IMU yet).
+  M7.4: Will add real IMU sensor on base_link for odometry fusion.
+
+  Params:
+    parent_link  - link to attach IMU to (default "base_link")
+    sensor_name  - sensor name (default "base_imu")
+    rate         - update rate Hz (default 100)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="imu_sensor"
+    params="parent_link:='base_link' sensor_name:='base_imu' rate:=100">
+    <!-- M7.4: Real IMU sensor will be added here -->
+    <!-- Placeholder: no-op macro, expanded when M7.4 implements perception -->
+  </xacro:macro>
+
+</robot>

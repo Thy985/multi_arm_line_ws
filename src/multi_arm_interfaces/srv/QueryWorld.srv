@@ -1,6 +1,8 @@
 string query_type
 string entity_id
 string relation_predicate
+# M7.0.2: Temporal query (0.0 = now, nonzero = state at time T)
+float64 at_time
 ---
 multi_arm_interfaces/ObjectState[] object_states
 multi_arm_interfaces/SceneState scene_state

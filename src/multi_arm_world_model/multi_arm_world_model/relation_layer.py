@@ -24,7 +24,10 @@ class RelationType(Enum):
 
 @dataclass
 class Relation:
-    """A spatial relation between two entities."""
+    """A spatial relation between two entities.
+
+    M7.0.2: Added ttl (time-to-live) for temporal expiry.
+    """
 
     subject: str
     predicate: str
@@ -32,6 +35,7 @@ class Relation:
     confidence: float = 1.0
     distance: float = 0.0
     timestamp: float = 0.0
+    ttl: float = 0.0
 
     def matches(
         self,

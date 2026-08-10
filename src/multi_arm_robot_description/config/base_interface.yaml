@@ -1,0 +1,38 @@
+# M7.0.4: Mobile base interface contract.
+# Defines the cmd_vel/odom/tf contract for the mobile base.
+# In M7.0, base is fixed (steering_mode: fixed, wheels: fixed joints).
+# In M7.6, base will be differential drive (steering_mode: differential, wheels: revolute).
+
+base:
+  steering_mode: fixed          # fixed | differential | ackermann | omni
+  is_movable: false             # M7.0: false, M7.6: true
+
+  # TF frames
+  odom_frame: odom              # odometry reference frame
+  base_frame: base_link         # robot base frame
+  odom_to_base_static: true     # M7.0: odom=base_link (fixed), M7.6: dynamic
+
+  # Topics (contract definition, not yet active in M7.0)
+  cmd_vel_topic: /cmd_vel       # geometry_msgs/Twist — velocity command
+  odom_topic: /odom             # nav_msgs/Odometry — odometry feedback
+  base_state_topic: /base/state # multi_arm_interfaces/BaseState — base state
+
+  # Wheels (4 corners)
+  wheels:
+    count: 4
+    joint_type: fixed           # M7.0: fixed, M7.6: revolute
+    names: [wheel_fl, wheel_fr, wheel_bl, wheel_br]
+    radius_m: 0.06
+    width_m: 0.05
+
+  # Differential drive params (M7.6 will activate)
+  differential:
+    wheel_separation_m: 0.56    # distance between left/right wheels
+    max_linear_speed_ms: 1.0
+    max_angular_speed_rads: 1.5
+
+  # Safety
+  safety:
+    max_speed_ms: 1.0
+    max_acceleration_ms2: 0.5
+    estop_enabled: true

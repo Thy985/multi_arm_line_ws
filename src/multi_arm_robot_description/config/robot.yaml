@@ -31,9 +31,28 @@ components:
         max_velocity_scale: 1.0
         max_acceleration_scale: 1.0
 
-  sensors: []
+  sensors:
+    - name: arm1_wrist_camera
+      type: camera
+      parent: arm1_wrist_3_link
+      topic: arm1/camera/image_raw
+      rgb: true
+      resolution: [640, 480]
+      fps: 10
 
-  end_effectors: []
+  end_effectors:
+    - name: arm1_gripper
+      type: robotiq_2f_85
+      parent: arm1_tool0
+      controller: arm1_gripper_controller
+      joint: arm1_robotiq_left_knuckle_joint
+      max_opening_mm: 85
+    - name: arm2_gripper
+      type: robotiq_2f_85
+      parent: arm2_tool0
+      controller: arm2_gripper_controller
+      joint: arm2_robotiq_left_knuckle_joint
+      max_opening_mm: 85
 
   body:
     type: fixed

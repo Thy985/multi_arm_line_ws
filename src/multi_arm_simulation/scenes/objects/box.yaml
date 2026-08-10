@@ -1,0 +1,14 @@
+name: box
+description: "Rectangular box object"
+type: box
+size: [0.08, 0.04, 0.04]
+mass: 0.15
+friction: 0.6
+graspable: true
+variants:
+  red:
+    color: [0.8, 0.1, 0.1, 1.0]
+  green:
+    color: [0.1, 0.6, 0.1, 1.0]
+  blue:
+    color: [0.1, 0.1, 0.8, 1.0]

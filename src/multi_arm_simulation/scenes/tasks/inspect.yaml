@@ -1,0 +1,33 @@
+name: inspect
+description: "Inspect object and report properties"
+version: "1.0"
+
+precondition:
+  - "object exists in workspace"
+  - "camera is active"
+
+postcondition:
+  - "object properties recorded"
+  - "inspection report generated"
+
+steps:
+  - action: move_to
+    target: inspection_pose
+    description: "Move camera to inspection viewpoint"
+  - action: capture
+    description: "Capture image of object"
+  - action: analyze
+    description: "Analyze object properties (size, color, orientation)"
+  - action: report
+    description: "Generate inspection report"
+
+success_criteria:
+  - "image captured successfully"
+  - "object properties within expected range"
+  - "report generated"
+
+parameters:
+  object_id: ""
+  inspection_pose: "above_object"
+  arm_name: "arm1"
+  time_limit_s: 15.0

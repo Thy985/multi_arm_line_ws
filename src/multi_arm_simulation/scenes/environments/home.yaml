@@ -1,0 +1,59 @@
+# Home environment — living room layout
+name: home
+description: "Living room with coffee table and shelf"
+version: "1.0"
+
+world:
+  gravity: [0.0, 0.0, -9.8]
+  ground_plane: true
+  lighting:
+    type: directional
+    cast_shadows: true
+    direction: [0.3, 0.7, -1.0]
+
+static_models:
+  - name: coffee_table
+    type: box
+    position: [0.6, 0.0, 0.35]
+    size: [1.0, 0.6, 0.02]
+    color: [0.5, 0.35, 0.2, 1.0]
+    static: true
+  - name: shelf
+    type: box
+    position: [1.2, 0.0, 0.6]
+    size: [0.04, 1.0, 1.2]
+    color: [0.4, 0.3, 0.2, 1.0]
+    static: true
+  - name: sofa
+    type: box
+    position: [0.0, 0.8, 0.3]
+    size: [1.2, 0.4, 0.5]
+    color: [0.2, 0.3, 0.5, 1.0]
+    static: true
+
+dynamic_models:
+  - object: cube
+    variant: red
+    position: [0.6, 0.0, 0.385]
+  - object: box
+    variant: green
+    position: [0.4, -0.1, 0.385]
+  - object: cylinder
+    variant: blue
+    position: [0.8, 0.1, 0.39]
+
+workspace_bounds:
+  x: [-0.5, 1.5]
+  y: [-0.5, 1.2]
+  z: [0.0, 1.5]
+
+zones:
+  zone_a:
+    description: "Coffee table center"
+    bounds: [0.4, -0.2, 0.37, 0.8, 0.2, 0.45]
+  zone_b:
+    description: "Shelf bottom"
+    bounds: [1.1, -0.4, 0.05, 1.3, 0.4, 0.4]
+  zone_c:
+    description: "Shelf top"
+    bounds: [1.1, -0.4, 0.8, 1.3, 0.4, 1.2]

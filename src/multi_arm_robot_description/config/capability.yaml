@@ -5,30 +5,33 @@ capabilities:
     payload_kg: 5.0
     available: true
     precision_mm: 0.1
+    requires: ["arm_reachable"]
 
   force_control:
     available: false
     reason: "UR5e simulation has no force control"
+    conflicts_with: ["manipulation"]
 
   gripper:
     type: parallel_jaw
     max_opening_mm: 85
-    available: false
-    reason: "M6.2 not yet implemented"
+    available: true
+    model: "robotiq_2f_85"
 
   vision:
-    types: ["rgb", "depth"]
-    available: false
-    reason: "M6.1 not yet implemented"
+    types: ["rgb"]
+    available: true
+    reason: "arm1 wrist camera (Gazebo sensor)"
 
   mobile:
     available: false
-    reason: "M6.6 not yet implemented"
+    reason: "M7.6 not yet implemented"
 
   skills:
-    available: false
-    list: []
-    reason: "M6.3 not yet implemented"
+    available: true
+    list: ["pick_object", "place_object", "move_object"]
+    reason: "M6.3 Skill Runtime"
+    requires: ["manipulation", "gripper"]
 
 dynamic_capabilities:
   payload_remaining:
@@ -48,11 +51,14 @@ context_capabilities:
   can_reach:
     compute: "workspace_intersection(zone)"
     depends_on: world_model
+    requires: ["manipulation"]
 
   can_grasp:
     compute: "object_size < max_opening"
     depends_on: world_model
+    requires: ["gripper"]
 
   path_clear:
     compute: "collision_check(target)"
     depends_on: world_model
+    requires: ["manipulation"]

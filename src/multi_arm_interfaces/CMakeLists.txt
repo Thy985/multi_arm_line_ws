@@ -25,6 +25,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SkillDescription.msg"
   "msg/SkillStatus.msg"
   "msg/EpisodeData.msg"
+  "msg/BaseState.msg"
   "srv/SafetyCheck.srv"
   "srv/EmergencyStop.srv"
   "srv/SubmitTask.srv"

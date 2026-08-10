@@ -250,6 +250,11 @@ class WorldModelNode(Node):
                     state.confidence = obj.confidence
                     state.attached_to = ""
                     state.grasp_state = "FREE"
+                    state.observed_at = obj.observed_at if obj.observed_at > 0.0 else obj.last_seen
+                    state.updated_at = obj.updated_at
+                    state.ttl = obj.ttl
+                    state.position_covariance = list(obj.position_covariance)
+                    state.orientation_uncertainty = obj.orientation_uncertainty
 
                     attached_rels = self._relations.query(
                         subject=obj.object_id, predicate="attached_to"
@@ -268,6 +273,7 @@ class WorldModelNode(Node):
                     msg.object = rel.object
                     msg.confidence = rel.confidence
                     msg.distance = rel.distance
+                    msg.ttl = rel.ttl
                     response.relations.append(msg)
 
             if query_type in ("scene", "all", ""):
@@ -299,6 +305,7 @@ class WorldModelNode(Node):
                 msg.object = rel.object
                 msg.confidence = rel.confidence
                 msg.distance = rel.distance
+                msg.ttl = rel.ttl
                 response.relations.append(msg)
 
             response.exists = len(rels) > 0

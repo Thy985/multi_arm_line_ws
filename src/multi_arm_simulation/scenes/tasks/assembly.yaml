@@ -1,0 +1,39 @@
+name: assembly
+description: "Assemble parts into a structure"
+version: "1.0"
+
+precondition:
+  - "all parts exist in workspace"
+  - "gripper is open"
+  - "assembly area is clear"
+
+postcondition:
+  - "parts are assembled in correct order"
+  - "assembly is stable"
+  - "gripper is open"
+
+steps:
+  - action: pick
+    target: base_part
+    description: "Pick base part"
+  - action: place
+    target: assembly_area
+    description: "Place base in assembly area"
+  - action: pick
+    target: top_part
+    description: "Pick top part"
+  - action: place
+    target: on_base
+    description: "Place top on base (aligned)"
+
+success_criteria:
+  - "parts aligned within 2mm"
+  - "assembly stable (no toppling)"
+  - "completed within time limit"
+
+parameters:
+  base_part: ""
+  top_part: ""
+  assembly_area: "zone_c"
+  arm_name: "arm1"
+  time_limit_s: 60.0

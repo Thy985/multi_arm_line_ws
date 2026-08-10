@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--
+  robotiq_2f_85.xacro — Backward-compatible wrapper (M7.0.1).
+
+  The actual definition is now in end_effectors/robotiq_2f_85.xacro.
+  This wrapper is kept for any external references.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/end_effectors/robotiq_2f_85.xacro"/>
+
+</robot>

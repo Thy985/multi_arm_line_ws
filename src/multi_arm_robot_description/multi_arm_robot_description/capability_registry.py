@@ -21,7 +21,10 @@ class CapabilityCategory(Enum):
 
 @dataclass
 class Capability:
-    """Single capability entry with three-layer information."""
+    """Single capability entry with three-layer information.
+
+    M7.0.3: Added graph fields (requires, composed_of, conflicts_with).
+    """
 
     name: str
     available: bool = True
@@ -30,6 +33,9 @@ class Capability:
     static_value: Any = None
     dynamic_value: Any = None
     context_value: Any = None
+    requires: list[str] = field(default_factory=list)
+    composed_of: list[str] = field(default_factory=list)
+    conflicts_with: list[str] = field(default_factory=list)
 
     def merge(self) -> None:
         """Merge three layers: static as base, dynamic overrides, context restricts."""
@@ -84,6 +90,9 @@ class Capability:
             "available": self.available,
             "value": json.dumps(self.value) if self.value is not None else "",
             "reason": self.reason,
+            "requires": list(self.requires),
+            "composed_of": list(self.composed_of),
+            "conflicts_with": list(self.conflicts_with),
         }
 
 
@@ -136,6 +145,9 @@ class CapabilityRegistry:
                 static_value=value,
                 available=value.get("available", True) if isinstance(value, dict) else True,
                 reason=value.get("reason", "") if isinstance(value, dict) else "",
+                requires=value.get("requires", []) if isinstance(value, dict) else [],
+                composed_of=value.get("composed_of", []) if isinstance(value, dict) else [],
+                conflicts_with=value.get("conflicts_with", []) if isinstance(value, dict) else [],
             )
 
         self._dynamic_configs = data.get("dynamic_capabilities", {})
@@ -167,10 +179,16 @@ class CapabilityRegistry:
         merged = Capability(name=name)
         if static is not None:
             merged.static_value = static.static_value
+            merged.requires = list(static.requires)
+            merged.composed_of = list(static.composed_of)
+            merged.conflicts_with = list(static.conflicts_with)
         if dynamic is not None:
             merged.dynamic_value = dynamic.dynamic_value
         if context is not None:
             merged.context_value = context.context_value
+            ctx_config = self._context_configs.get(name, {})
+            if "requires" in ctx_config:
+                merged.requires = list(ctx_config["requires"])
         merged.merge()
         return merged
 
@@ -296,3 +314,105 @@ class CapabilityRegistry:
         remaining = max(0.0, max_payload - current_load)
         self.update_dynamic("payload_remaining", remaining)
         return remaining
+
+    # === M7.0.3: Capability Graph Methods ===
+
+    def get_dependencies(self, name: str) -> list[str]:
+        """Get capabilities that this capability requires.
+
+        Args:
+            name: Capability name.
+
+        Returns:
+            List of required capability names, empty if none or not found.
+
+        """
+        cap = self.get_capability(name)
+        if cap is None:
+            return []
+        return list(cap.requires)
+
+    def get_dependents(self, name: str) -> list[str]:
+        """Get capabilities that depend on this capability.
+
+        Args:
+            name: Capability name.
+
+        Returns:
+            List of capability names that require this one.
+
+        """
+        dependents: list[str] = []
+        all_names = set(self._static.keys())
+        all_names.update(self._dynamic.keys())
+        all_names.update(self._context.keys())
+        for other_name in sorted(all_names):
+            if other_name == name:
+                continue
+            deps = self.get_dependencies(other_name)
+            if name in deps:
+                dependents.append(other_name)
+        return dependents
+
+    def is_satisfied(self, name: str) -> bool:
+        """Check if all requirements of a capability are available.
+
+        Args:
+            name: Capability name.
+
+        Returns:
+            True if all required capabilities are available, False otherwise.
+
+        """
+        deps = self.get_dependencies(name)
+        for dep_name in deps:
+            dep = self.get_capability(dep_name)
+            if dep is None or not dep.available:
+                return False
+        return True
+
+    def get_conflicts(self, name: str) -> list[str]:
+        """Get capabilities that conflict with this one.
+
+        Args:
+            name: Capability name.
+
+        Returns:
+            List of conflicting capability names.
+
+        """
+        cap = self.get_capability(name)
+        if cap is None:
+            return []
+        return list(cap.conflicts_with)
+
+    def propagate_failure(self, name: str, reason: str = "") -> list[str]:
+        """Propagate capability failure to dependents.
+
+        When a capability becomes unavailable, all capabilities that require
+        it also become unavailable.
+
+        Args:
+            name: The capability that failed.
+            reason: Failure reason.
+
+        Returns:
+            List of capability names that were marked unavailable as a result.
+
+        """
+        affected: list[str] = []
+        dependents = self.get_dependents(name)
+        for dep_name in dependents:
+            cap = self.get_capability(dep_name)
+            if cap is not None and cap.available:
+                failure_reason = reason or f"dependency '{name}' unavailable"
+                self.update_dynamic(
+                    dep_name,
+                    {"available": False},
+                    available=False,
+                    reason=failure_reason,
+                )
+                affected.append(dep_name)
+                sub_affected = self.propagate_failure(dep_name, failure_reason)
+                affected.extend(sub_affected)
+        return affected

@@ -1,0 +1,16 @@
+name: cube
+description: "Standard cube object"
+type: box
+size: [0.05, 0.05, 0.05]
+mass: 0.1
+friction: 0.5
+graspable: true
+variants:
+  red:
+    color: [0.8, 0.1, 0.1, 1.0]
+  blue:
+    color: [0.1, 0.1, 0.8, 1.0]
+  green:
+    color: [0.1, 0.6, 0.1, 1.0]
+  yellow:
+    color: [0.9, 0.8, 0.1, 1.0]

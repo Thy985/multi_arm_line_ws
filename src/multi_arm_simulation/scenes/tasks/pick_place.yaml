@@ -1,0 +1,42 @@
+name: pick_place
+description: "Pick object from source and place at target"
+version: "1.0"
+
+precondition:
+  - "object exists in source zone"
+  - "gripper is open"
+  - "arm is at home position"
+
+postcondition:
+  - "object is at target zone"
+  - "gripper is open"
+  - "arm is at home position"
+
+steps:
+  - action: move_to
+    target: source_zone
+    description: "Move arm above source zone"
+  - action: grasp
+    target: object_id
+    description: "Close gripper on object"
+  - action: lift
+    description: "Lift object 10cm above surface"
+  - action: move_to
+    target: target_zone
+    description: "Move to target zone"
+  - action: place
+    description: "Lower and release object"
+  - action: retract
+    description: "Return to safe position"
+
+success_criteria:
+  - "object position within 5cm of target"
+  - "no collision during execution"
+  - "completed within time limit"
+
+parameters:
+  object_id: ""
+  source_zone: "zone_a"
+  target_zone: "zone_b"
+  arm_name: "arm1"
+  time_limit_s: 30.0

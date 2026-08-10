@@ -12,3 +12,5 @@ initial_positions:
   arm2_wrist_1_joint: -1.57
   arm2_wrist_2_joint: 0.0
   arm2_wrist_3_joint: 0.0
+  arm1_robotiq_left_knuckle_joint: 0.0
+  arm2_robotiq_left_knuckle_joint: 0.0

@@ -108,6 +108,9 @@ class CapabilityRegistryNode(Node):
         msg.available = info.get("available", True)
         msg.value = info.get("value", "")
         msg.reason = info.get("reason", "")
+        msg.requires = info.get("requires", [])
+        msg.composed_of = info.get("composed_of", [])
+        msg.conflicts_with = info.get("conflicts_with", [])
         return msg
 
 
