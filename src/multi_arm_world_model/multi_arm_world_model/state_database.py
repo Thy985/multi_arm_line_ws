@@ -135,14 +135,17 @@ class StateDatabase:
         position: Tuple[float, float, float],
         orientation: Optional[Tuple[float, float, float, float]] = None,
         confidence: float = 1.0,
+        position_covariance: Optional[Tuple[float, float, float, float, float, float, float, float, float]] = None,
     ) -> bool:
-        """Update object pose with velocity estimation.
+        """Update object pose with velocity estimation and uncertainty.
 
         Args:
             object_id: Object ID.
             position: New position (x, y, z).
             orientation: New orientation (qx, qy, qz, qw).
             confidence: Detection confidence.
+            position_covariance: 3x3 flat covariance (9 elements). If None,
+                computed from confidence as diagonal (1-conf)*0.05.
 
         Returns:
             True if object was found and updated.
@@ -168,6 +171,14 @@ class StateDatabase:
         obj.updated_at = now
         if obj.observed_at == 0.0:
             obj.observed_at = now
+
+        if position_covariance is not None:
+            obj.position_covariance = position_covariance
+        else:
+            var = (1.0 - confidence) * 0.05
+            obj.position_covariance = (var, 0.0, 0.0, 0.0, var, 0.0, 0.0, 0.0, var)
+        obj.orientation_uncertainty = (1.0 - confidence) * 0.1
+
         return True
 
     # === Environment (OWNED) ===

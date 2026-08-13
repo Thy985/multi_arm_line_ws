@@ -1,21 +1,26 @@
 <?xml version="1.0"?>
 <!--
-  imu.xacro — IMU sensor placeholder for M7.4 Perception+Calibration.
+  imu.xacro — IMU sensor (M7.1 Robot Body Upgrade).
 
-  M7.0.1: Placeholder only (no physical IMU yet).
-  M7.4: Will add real IMU sensor on base_link for odometry fusion.
+  Gazebo IMU sensor on torso_link for body attitude estimation.
+  IMU is on torso, not head — torso attitude is the body attitude.
 
   Params:
-    parent_link  - link to attach IMU to (default "base_link")
-    sensor_name  - sensor name (default "base_imu")
+    parent_link  - link to attach IMU to (default "torso_link")
+    sensor_name  - sensor name (default "torso_imu")
     rate         - update rate Hz (default 100)
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:macro name="imu_sensor"
-    params="parent_link:='base_link' sensor_name:='base_imu' rate:=100">
-    <!-- M7.4: Real IMU sensor will be added here -->
-    <!-- Placeholder: no-op macro, expanded when M7.4 implements perception -->
+    params="parent_link:='torso_link' sensor_name:='torso_imu' rate:=100">
+    <gazebo reference="${parent_link}">
+      <sensor name="${sensor_name}" type="imu">
+        <always_on>1</always_on>
+        <update_rate>${rate}</update_rate>
+        <topic>${sensor_name}/data</topic>
+      </sensor>
+    </gazebo>
   </xacro:macro>
 
 </robot>

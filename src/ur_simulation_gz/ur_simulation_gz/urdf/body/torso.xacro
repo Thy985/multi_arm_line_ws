@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 <!--
-  torso.xacro — Torso module placeholder for M7.1 Robot Body Upgrade.
+  torso.xacro — Torso module (M7.1 Robot Body Upgrade).
 
-  M7.0.1: Placeholder (no torso, arms mount directly on base pillars).
-  M7.1: Will add adjustable torso (1-DOF height) between base and arm pillars.
+  Adds torso_yaw_joint (revolute Z) between base_link and torso_link.
+  Arms remain on base pillars; torso provides body rotation for
+  workspace expansion and IMU mounting point.
 
   Params:
     parent_link  - base link to mount torso on (default "base_link")
@@ -11,8 +12,30 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:macro name="torso" params="parent_link:='base_link'">
-    <!-- M7.1: Adjustable torso (1-DOF prismatic) will be added here -->
-    <!-- Placeholder: no-op macro, arms mount directly on base pillars in M7.0 -->
+    <link name="torso_link">
+      <visual>
+        <origin xyz="0.5 0 0.55" rpy="0 0 0"/>
+        <geometry><cylinder length="0.5" radius="0.15"/></geometry>
+        <material name="pillar_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0.5 0 0.55" rpy="0 0 0"/>
+        <geometry><cylinder length="0.5" radius="0.15"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="8.0"/>
+        <origin xyz="0.5 0 0.55" rpy="0 0 0"/>
+        <inertia ixx="0.2" ixy="0" ixz="0" iyy="0.2" iyz="0" izz="0.1"/>
+      </inertial>
+    </link>
+
+    <joint name="torso_yaw_joint" type="revolute">
+      <origin xyz="0 0 0.3" rpy="0 0 0"/>
+      <parent link="${parent_link}"/>
+      <child link="torso_link"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-3.14" upper="3.14" effort="50.0" velocity="1.0"/>
+    </joint>
   </xacro:macro>
 
 </robot>

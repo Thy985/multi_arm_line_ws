@@ -26,6 +26,7 @@ from multi_arm_world_model.object_tracker import ObjectTracker
 from multi_arm_world_model.relation_layer import RelationLayer
 from multi_arm_world_model.history_layer import HistoryLayer
 from multi_arm_world_model.prediction_layer import PredictionLayer
+from multi_arm_world_model.belief_layer import BeliefUpdater, GaussianBelief
 
 
 class WorldModelNode(Node):
@@ -55,9 +56,18 @@ class WorldModelNode(Node):
         self._relations = RelationLayer()
         self._history = HistoryLayer(max_length=100)
         self._prediction = PredictionLayer(history=self._history)
+        self._belief_updater = BeliefUpdater(base_variance=0.05, gt_variance=0.001)
 
         self._arm_names = self.declare_parameter(
             "arm_names", ["arm1", "arm2"]
+        ).value
+
+        self._min_confidence = self.declare_parameter(
+            "min_confidence", 0.3
+        ).value
+
+        self._contradiction_threshold = self.declare_parameter(
+            "contradiction_threshold", 0.5
         ).value
 
         self._joint_states_raw: Dict[str, JointState] = {}
@@ -94,6 +104,13 @@ class WorldModelNode(Node):
                 ObjectPose,
                 "/perception/object_poses",
                 self._on_object_pose,
+                10,
+                callback_group=cb_group,
+            )
+            self.create_subscription(
+                ObjectPose,
+                "/perception/vision_poses",
+                self._on_vision_pose,
                 10,
                 callback_group=cb_group,
             )
@@ -205,12 +222,102 @@ class WorldModelNode(Node):
         }
         self._tracker.update(self._db, [detection])
 
+        obj = self._db.get_object(msg.object_id)
+        if obj is not None:
+            source = msg.source if msg.source else "ground_truth"
+            obj.metadata["source"] = source
+
+            belief = self._belief_updater.update(
+                msg.object_id,
+                tuple(msg.position),
+                msg.confidence,
+                source,
+            )
+            obj.position_covariance = belief.to_covariance_flat()
+            obj.metadata["belief_uncertainty"] = belief.uncertainty
+
         self._history.record(
             msg.object_id,
             {
                 "position": list(msg.position),
                 "orientation": list(msg.orientation),
                 "confidence": msg.confidence,
+                "velocity": list(obj.velocity) if obj else [0.0, 0.0, 0.0],
+                "source": msg.source if msg.source else "ground_truth",
+            },
+        )
+
+    def _on_vision_pose(self, msg) -> None:
+        """Handle vision pose updates.
+
+        - Reject detections below min_confidence (hallucination defense)
+        - When GT absent, use vision as primary position (vision-only mode)
+        - When GT present, compute error and flag/clear contradictions
+        - Update belief state with vision observation
+        - Record to history layer (M7.6: vision now writes history)
+        """
+        if msg.confidence < self._min_confidence:
+            return
+
+        obj = self._db.get_object(msg.object_id)
+        gt_claimed = obj is not None and obj.metadata.get("source") == "ground_truth"
+
+        if obj is None:
+            detection = {
+                "id": msg.object_id,
+                "object_type": msg.object_type,
+                "position": tuple(msg.position),
+                "orientation": tuple(msg.orientation),
+                "confidence": msg.confidence,
+            }
+            self._tracker.update(self._db, [detection])
+            obj = self._db.get_object(msg.object_id)
+
+        if obj is None:
+            return
+
+        obj.metadata["vision_position"] = list(msg.position)
+        obj.metadata["vision_confidence"] = msg.confidence
+
+        belief = self._belief_updater.update(
+            msg.object_id,
+            tuple(msg.position),
+            msg.confidence,
+            "vision",
+        )
+        obj.metadata["belief_uncertainty"] = belief.uncertainty
+
+        if not gt_claimed:
+            obj.metadata["source"] = "vision"
+            obj.position = tuple(msg.position)
+            obj.orientation = tuple(msg.orientation)
+            obj.confidence = msg.confidence
+            obj.position_covariance = belief.to_covariance_flat()
+
+        gt_pos = obj.position
+        vis_pos = tuple(msg.position)
+        error = (
+            (gt_pos[0] - vis_pos[0]) ** 2
+            + (gt_pos[1] - vis_pos[1]) ** 2
+            + (gt_pos[2] - vis_pos[2]) ** 2
+        ) ** 0.5
+        obj.metadata["vision_error"] = error
+        obj.metadata["uncertain"] = msg.confidence < 0.8
+
+        if gt_claimed and error > self._contradiction_threshold:
+            obj.metadata["contradiction"] = True
+        elif gt_claimed and error <= self._contradiction_threshold:
+            obj.metadata["contradiction"] = False
+
+        self._history.record(
+            msg.object_id,
+            {
+                "position": list(msg.position),
+                "orientation": list(msg.orientation),
+                "confidence": msg.confidence,
+                "velocity": list(obj.velocity),
+                "source": "vision",
+                "vision_error": error,
             },
         )
 
@@ -224,7 +331,10 @@ class WorldModelNode(Node):
         return response
 
     def _on_query_world(self, request, response) -> None:
-        """Handle QueryWorld service — return complete world state."""
+        """Handle QueryWorld service — return complete world state.
+
+        M7.6: Supports at_time temporal query (0.0 = now, nonzero = state at time T).
+        """
         try:
             from multi_arm_interfaces.msg import (
                 ObjectState, SceneState, TaskState, Relation as RelationMsg,
@@ -232,15 +342,28 @@ class WorldModelNode(Node):
             )
 
             query_type = request.query_type
+            at_time = getattr(request, "at_time", 0.0)
 
             if query_type in ("object", "all", ""):
                 for obj in self._db.get_all_objects():
                     pose = ObjectPose()
                     pose.object_id = obj.object_id
                     pose.object_type = obj.object_type
-                    pose.position = list(obj.position)
+
+                    if at_time > 0.0:
+                        hist_entry = self._history.get_latest(obj.object_id)
+                        if hist_entry and hist_entry.timestamp <= at_time:
+                            hist_pos = hist_entry.data.get("position", list(obj.position))
+                            pose.position = hist_pos
+                            pose.confidence = hist_entry.data.get("confidence", obj.confidence)
+                        else:
+                            pose.position = list(obj.position)
+                            pose.confidence = obj.confidence
+                    else:
+                        pose.position = list(obj.position)
+                        pose.confidence = obj.confidence
+
                     pose.orientation = list(obj.orientation) if obj.orientation else [0, 0, 0, 1]
-                    pose.confidence = obj.confidence
 
                     state = ObjectState()
                     state.object_id = obj.object_id
@@ -255,6 +378,14 @@ class WorldModelNode(Node):
                     state.ttl = obj.ttl
                     state.position_covariance = list(obj.position_covariance)
                     state.orientation_uncertainty = obj.orientation_uncertainty
+                    state.source = obj.metadata.get("source", "unknown")
+                    state.vision_error = obj.metadata.get("vision_error", 0.0)
+                    state.uncertain = obj.metadata.get("uncertain", False)
+                    state.contradiction = obj.metadata.get("contradiction", False)
+
+                    belief = self._belief_updater.get_belief(obj.object_id)
+                    if belief is not None:
+                        obj.metadata["belief_uncertainty"] = belief.uncertainty
 
                     attached_rels = self._relations.query(
                         subject=obj.object_id, predicate="attached_to"

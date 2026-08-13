@@ -32,6 +32,16 @@
     <joint name="arm2_robotiq_left_knuckle_joint"/>
   </group>
 
+  <!-- torso planning group (M7.1: independent, not combined with arms) -->
+  <group name="torso">
+    <joint name="torso_yaw_joint"/>
+  </group>
+
+  <!-- head planning group (M7.1: perception attention, separate from torso) -->
+  <group name="head">
+    <joint name="neck_pitch_joint"/>
+  </group>
+
   <!-- arm1 end-effector (gripper) -->
   <end_effector name="arm1_ee" parent_link="arm1_robotiq_base_link" group="arm1_gripper"/>
 
@@ -179,5 +189,10 @@
   <disable_collisions link1="arm2_wrist_3_link" link2="arm2_robotiq_base_link" reason="Never"/>
   <disable_collisions link1="arm2_flange" link2="arm2_robotiq_base_link" reason="Never"/>
   <disable_collisions link1="arm2_ft_frame" link2="arm2_robotiq_base_link" reason="Never"/>
+
+  <!-- Torso + Head collision exclusions (M7.1) -->
+  <disable_collisions link1="base_link" link2="torso_link" reason="Adjacent"/>
+  <disable_collisions link1="torso_link" link2="head_link" reason="Adjacent"/>
+  <disable_collisions link1="head_link" link2="head_camera_link" reason="Adjacent"/>
 
 </robot>

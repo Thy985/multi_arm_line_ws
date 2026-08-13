@@ -1,7 +1,8 @@
 # Home environment — living room layout
+# M7 enhanced: sensors + body + perception configuration
 name: home
-description: "Living room with coffee table and shelf"
-version: "1.0"
+description: "Living room with coffee table and shelf (M7 enhanced)"
+version: "2.0"
 
 world:
   gravity: [0.0, 0.0, -9.8]
@@ -57,3 +58,51 @@ zones:
   zone_c:
     description: "Shelf top"
     bounds: [1.1, -0.4, 0.8, 1.3, 0.4, 1.2]
+
+body:
+  torso:
+    initial_position: 0.0
+    max_velocity: 0.5
+  head:
+    initial_position: 0.0
+    max_velocity: 0.3
+    look_at: coffee_table
+
+sensors:
+  head_camera:
+    type: rgbd
+    active: true
+    rgb: true
+    depth: true
+    resolution: [640, 480]
+    fps: 30
+    depth_range: [0.1, 10.0]
+  arm1_wrist_camera:
+    type: camera
+    active: true
+    rgb: true
+    resolution: [640, 480]
+    fps: 10
+  torso_imu:
+    type: imu
+    active: true
+    frame: torso_link
+
+perception:
+  color_detector:
+    active: true
+    topic: /perception/vision_poses
+    min_confidence: 0.5
+    colors:
+      red: [0.8, 1.0]
+      blue: [0.8, 1.0]
+      green: [0.8, 1.0]
+  grounding:
+    active: true
+    gt_isolated: true
+    contradiction_threshold_m: 0.3
+    belief_fusion: kalman
+  worldmodel:
+    confidence_threshold: 0.5
+    stale_threshold_s: 5.0
+    uncertainty_growth: 0.001

@@ -50,6 +50,13 @@ CLEANUP_PATTERNS = [
     "skill_node",
     "capability_registry",
     "experience_node",
+    "vision_grounding",
+    "color_detector",
+    "gazebo_ground_truth",
+    "world_model_node",
+    "safety_supervisor",
+    "coordinator_node",
+    "task_planner_node",
 ]
 
 

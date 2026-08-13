@@ -1,5 +1,6 @@
 """World query module — query and display WorldModel state in terminal."""
 
+import time
 from typing import Any
 
 from multi_arm_interfaces.srv import QueryWorld
@@ -33,39 +34,85 @@ class WorldQuery:
                 self._print_relations(response.relations)
 
     def _print_objects_list(self, response: QueryWorld.Response) -> None:
-        """Print all objects in a table."""
+        """Print all objects in a table with source/confidence/uncertainty."""
         objects = response.object_states
         if not objects:
             print("No objects in world model.")
             return
 
-        print(f"\nObjects ({len(objects)}):")
+        print(f"\nWORLD MODEL")
+        print("-" * 60)
+        print()
+        print(f"{'OBJECT':<15} {'POSITION':<28} {'SOURCE':<12} {'CONF':<6} {'STATUS'}")
         for obj in objects:
             pos = obj.pose.position
-            state_str = obj.grasp_state if obj.grasp_state else "UNKNOWN"
-            attached = f"  -> {obj.attached_to}" if obj.attached_to else ""
-            print(
-                f"  {obj.object_id:<15} "
-                f"[{pos[0]:6.2f}, {pos[1]:6.2f}, {pos[2]:6.2f}]  "
-                f"{state_str:<10}  conf={obj.confidence:.2f}{attached}"
-            )
+            source = obj.source if obj.source else "unknown"
+            pos_str = f"({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})"
+            state_str = obj.grasp_state if obj.grasp_state else "FREE"
+            flags = []
+            if obj.uncertain:
+                flags.append("UNCERTAIN")
+            if obj.contradiction:
+                flags.append("CONFLICT")
+            flag_str = f" [{' '.join(flags)}]" if flags else ""
+            print(f"  {obj.object_id:<13} {pos_str:<28} {source:<12} {obj.confidence:<6.2f} {state_str}{flag_str}")
+        print()
+
+        uncertain = sum(1 for o in objects if o.uncertain)
+        conflicts = sum(1 for o in objects if o.contradiction)
+        stale = sum(1 for o in objects if o.ttl > 0 and o.updated_at > 0 and (time.time() - o.updated_at > o.ttl))
+
+        print("HEALTH")
+        print(f"  tracked:     {len(objects)}")
+        print(f"  uncertain:   {uncertain}")
+        print(f"  stale:       {stale}")
+        print(f"  conflicts:   {conflicts}")
         print()
 
     def _print_object_detail(
         self, response: QueryWorld.Response, object_id: str
     ) -> None:
-        """Print detail for a single object."""
+        """Print detail for a single object — WorldModel debugger."""
         for obj in response.object_states:
             if obj.object_id == object_id:
                 pos = obj.pose.position
                 ori = obj.pose.orientation
-                print(f"\nObject: {obj.object_id}")
+                print(f"\nOBJECT: {obj.object_id}")
+                print()
+                print("CURRENT BELIEF")
+                print(f"  Position")
+                print(f"    mean:       ({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
+                if obj.position_covariance is not None and len(obj.position_covariance) > 0:
+                    var_x = obj.position_covariance[0] if len(obj.position_covariance) > 0 else 0
+                    var_y = obj.position_covariance[4] if len(obj.position_covariance) > 4 else 0
+                    var_z = obj.position_covariance[8] if len(obj.position_covariance) > 8 else 0
+                    avg_var = (var_x + var_y + var_z) / 3.0
+                    print(f"    variance:   {avg_var:.6f}")
+                print(f"    confidence: {obj.confidence:.2f}")
+                print()
+                print("SOURCE")
+                src = obj.source if obj.source else "unknown"
+                print(f"  {src}")
+                print()
+                print("STATE")
                 print(f"  type:        {obj.object_type}")
-                print(f"  position:    [{pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f}]")
-                print(f"  orientation: [{ori[0]:.3f}, {ori[1]:.3f}, {ori[2]:.3f}, {ori[3]:.3f}]")
                 print(f"  grasp_state: {obj.grasp_state if obj.grasp_state else 'UNKNOWN'}")
                 print(f"  attached_to: {obj.attached_to if obj.attached_to else '(none)'}")
-                print(f"  confidence:  {obj.confidence:.2f}")
+                print(f"  orientation: [{ori[0]:.3f}, {ori[1]:.3f}, {ori[2]:.3f}, {ori[3]:.3f}]")
+                print()
+                if obj.vision_error > 0:
+                    print("OBSERVATION")
+                    print(f"  vision_error: {obj.vision_error:.4f}m")
+                    print()
+                print("HEALTH")
+                stale = obj.ttl > 0 and obj.updated_at > 0 and (time.time() - obj.updated_at > obj.ttl)
+                print(f"  stale:        {'YES' if stale else 'NO'}")
+                print(f"  contradiction:{'YES' if obj.contradiction else 'NO'}")
+                print(f"  uncertain:    {'YES' if obj.uncertain else 'NO'}")
+                if obj.position_covariance is not None and len(obj.position_covariance) > 0:
+                    print(f"  covariance:   [{obj.position_covariance[0]:.6f}, ...]")
+                if obj.orientation_uncertainty > 0:
+                    print(f"  orient_unc:   {obj.orientation_uncertainty:.4f}")
                 print()
                 return
         print(f"Object '{object_id}' not found in world model.")

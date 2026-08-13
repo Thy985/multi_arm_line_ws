@@ -40,7 +40,7 @@ class RuntimeClient:
     suitable for CLI usage.
     """
 
-    def __init__(self, timeout_sec: float = 5.0) -> None:
+    def __init__(self, timeout_sec: float = 10.0) -> None:
         rclpy.init()
         self._node = Node("runtime_cli")
         self._timeout = timeout_sec
@@ -62,16 +62,33 @@ class RuntimeClient:
 
     def shutdown(self) -> None:
         """Shutdown ROS2."""
-        self._submit_task.destroy()
-        self._node.destroy_node()
-        rclpy.shutdown()
+        try:
+            self._submit_task.destroy()
+            self._node.destroy_node()
+            rclpy.shutdown()
+        except Exception:
+            pass
+
+    def _safe_spin(self, future: Any) -> Any:
+        """Spin until future complete, handling shutdown exceptions."""
+        try:
+            rclpy.spin_until_future_complete(
+                self._node, future, timeout_sec=self._timeout
+            )
+        except Exception:
+            pass
+        return future.result()
 
     def _wait_for_service(self, client: Any, name: str) -> bool:
         """Wait for a service to be available."""
-        if not client.wait_for_service(self._timeout):
-            print(f"ERROR: Service {name} not available")
+        try:
+            if not client.wait_for_service(self._timeout):
+                print(f"ERROR: Service {name} not available")
+                return False
+            return True
+        except Exception:
+            print(f"ERROR: Service {name} context invalid")
             return False
-        return True
 
     def query_world(
         self, entity_id: str = "", relation_predicate: str = ""
@@ -83,8 +100,7 @@ class RuntimeClient:
         req.entity_id = entity_id
         req.relation_predicate = relation_predicate
         future = self._query_world.call_async(req)
-        rclpy.spin_until_future_complete(self._node, future, timeout_sec=self._timeout)
-        return future.result()
+        return self._safe_spin(future)
 
     def list_skills(
         self, lifecycle_state: str = ""
@@ -95,8 +111,7 @@ class RuntimeClient:
         req = ListSkills.Request()
         req.lifecycle_state = lifecycle_state
         future = self._list_skills.call_async(req)
-        rclpy.spin_until_future_complete(self._node, future, timeout_sec=self._timeout)
-        return future.result()
+        return self._safe_spin(future)
 
     def get_capability(
         self, include_dynamic: bool = True
@@ -109,8 +124,7 @@ class RuntimeClient:
         req = GetCapability.Request()
         req.include_dynamic = include_dynamic
         future = self._get_capability.call_async(req)
-        rclpy.spin_until_future_complete(self._node, future, timeout_sec=self._timeout)
-        return future.result()
+        return self._safe_spin(future)
 
     def query_experience(
         self, data_type: str = "episodes", filter_json: str = ""
@@ -124,8 +138,7 @@ class RuntimeClient:
         req.data_type = data_type
         req.filter_json = filter_json
         future = self._query_experience.call_async(req)
-        rclpy.spin_until_future_complete(self._node, future, timeout_sec=self._timeout)
-        return future.result()
+        return self._safe_spin(future)
 
     def submit_task(
         self,
@@ -154,19 +167,27 @@ class RuntimeClient:
         goal_msg.goals = [goal]
 
         send_future = self._submit_task.send_goal_async(goal_msg)
-        rclpy.spin_until_future_complete(self._node, send_future, timeout_sec=self._timeout)
+        self._safe_spin(send_future)
         goal_handle: ClientGoalHandle = send_future.result()
+        if goal_handle is None:
+            print("ERROR: Task goal not accepted (timeout or service unavailable)")
+            return None
         if not goal_handle.accepted:
             print("ERROR: Task goal rejected")
             return None
 
+        latest_feedback = []
+        if on_feedback:
+            def _feedback_cb(fb_msg):
+                latest_feedback.append(fb_msg.feedback)
+            goal_handle.request_feedback(_feedback_cb)
+
         result_future = goal_handle.get_result_async()
         while not result_future.done():
             rclpy.spin_once(self._node, timeout_sec=0.1)
-            if on_feedback:
-                feedback = goal_handle.feedback
-                if feedback:
-                    on_feedback(feedback)
+            if on_feedback and latest_feedback:
+                on_feedback(latest_feedback[-1])
+                latest_feedback.clear()
 
         return result_future.result().result
 
@@ -206,6 +227,59 @@ class RuntimeClient:
                 goal.zone_name = args[1]
 
         return goal
+
+    def emergency_stop(self) -> tuple[bool, str]:
+        """Call SafetySupervisor emergency stop directly.
+
+        Bypasses RuntimeApiNode/Coordinator — Safety has final stop authority.
+
+        Returns:
+            (success, message) tuple.
+
+        """
+        from multi_arm_interfaces.srv import EmergencyStop
+
+        client = self._node.create_client(EmergencyStop, "/safety/emergency_stop")
+        if not client.wait_for_service(self._timeout):
+            return False, "Safety service not available"
+
+        req = EmergencyStop.Request()
+        req.emergency = True
+        future = client.call_async(req)
+        self._safe_spin(future)
+        result = future.result()
+        client.destroy()
+
+        if result is None:
+            return False, "No response from SafetySupervisor"
+        return result.success, result.message
+
+    def safety_check(
+        self, arm_names: list[str] | None = None
+    ) -> tuple[bool, float, str]:
+        """Call SafetySupervisor safety check directly.
+
+        Returns:
+            (approved, speed_scale, message) tuple.
+
+        """
+        from multi_arm_interfaces.srv import SafetyCheck
+
+        client = self._node.create_client(SafetyCheck, "/safety/safety_check")
+        if not client.wait_for_service(self._timeout):
+            return False, 0.0, "Safety service not available"
+
+        req = SafetyCheck.Request()
+        if arm_names:
+            req.arm_names = arm_names
+        future = client.call_async(req)
+        self._safe_spin(future)
+        result = future.result()
+        client.destroy()
+
+        if result is None:
+            return False, 0.0, "No response from SafetySupervisor"
+        return result.approved, result.speed_scale, result.message
 
     def spin_once(self, timeout_sec: float = 0.1) -> None:
         """Spin once for callback processing."""

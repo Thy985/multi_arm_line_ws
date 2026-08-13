@@ -24,6 +24,14 @@ class SceneInfo:
     num_static: int
     num_dynamic: int
     num_zones: int
+    has_body: bool = False
+    has_sensors: bool = False
+    has_perception: bool = False
+    sensor_types: list = None
+
+    def __post_init__(self) -> None:
+        if self.sensor_types is None:
+            self.sensor_types = []
 
 
 class SceneManager:
@@ -58,12 +66,23 @@ class SceneManager:
             try:
                 with open(path) as f:
                     data = yaml.safe_load(f)
+                sensors = data.get("sensors", {})
+                sensor_types = []
+                for sname, sdata in sensors.items():
+                    if isinstance(sdata, dict):
+                        stype = sdata.get("type", "unknown")
+                        if stype not in sensor_types:
+                            sensor_types.append(stype)
                 result.append(SceneInfo(
                     name=data.get("name", path.stem),
                     description=data.get("description", ""),
                     num_static=len(data.get("static_models", [])),
                     num_dynamic=len(data.get("dynamic_models", [])),
                     num_zones=len(data.get("zones", {})),
+                    has_body=bool(data.get("body")),
+                    has_sensors=bool(sensors),
+                    has_perception=bool(data.get("perception")),
+                    sensor_types=sensor_types,
                 ))
             except Exception:
                 pass
@@ -133,6 +152,15 @@ class SceneManager:
             print(f"  {env.name}")
             print(f"    {env.description}")
             print(f"    Static: {env.num_static}  Dynamic: {env.num_dynamic}  Zones: {env.num_zones}")
+            m7_tags = []
+            if env.has_body:
+                m7_tags.append("body")
+            if env.has_sensors:
+                m7_tags.append(f"sensors({','.join(env.sensor_types)})")
+            if env.has_perception:
+                m7_tags.append("perception")
+            if m7_tags:
+                print(f"    M7: {' + '.join(m7_tags)}")
             print()
 
         objs = self.list_objects()
@@ -178,6 +206,52 @@ class SceneManager:
         for zname, zdata in env.get("zones", {}).items():
             print(f"  {zname:10s}  {zdata.get('description', '')}")
         print()
+
+        body = env.get("body", {})
+        if body:
+            print("Body (M7.1):")
+            torso = body.get("torso", {})
+            head = body.get("head", {})
+            if torso:
+                print(f"  Torso: init={torso.get('initial_position', 0.0)}  max_vel={torso.get('max_velocity', '?')}")
+            if head:
+                print(f"  Head:  init={head.get('initial_position', 0.0)}  max_vel={head.get('max_velocity', '?')}  look_at={head.get('look_at', '?')}")
+            print()
+
+        sensors = env.get("sensors", {})
+        if sensors:
+            print(f"Sensors ({len(sensors)}):")
+            for sname, sdata in sensors.items():
+                if isinstance(sdata, dict):
+                    stype = sdata.get("type", "?")
+                    active = "ACTIVE" if sdata.get("active", True) else "INACTIVE"
+                    detail = f"type={stype}  {active}"
+                    if stype == "rgbd":
+                        detail += f"  rgb={sdata.get('rgb', True)}  depth={sdata.get('depth', True)}"
+                    elif stype == "camera":
+                        detail += f"  rgb={sdata.get('rgb', True)}"
+                    elif stype == "imu":
+                        detail += f"  frame={sdata.get('frame', '?')}"
+                    res = sdata.get("resolution")
+                    if res:
+                        detail += f"  res={res[0]}x{res[1]}"
+                    fps = sdata.get("fps")
+                    if fps:
+                        detail += f"  fps={fps}"
+                    print(f"  {sname:20s}  {detail}")
+            print()
+
+        perception = env.get("perception", {})
+        if perception:
+            print("Perception (M7.4/M7.5):")
+            for pname, pdata in perception.items():
+                if isinstance(pdata, dict):
+                    active = "ACTIVE" if pdata.get("active", True) else "INACTIVE"
+                    print(f"  {pname:20s}  {active}")
+                    for pk, pv in pdata.items():
+                        if pk != "active":
+                            print(f"    {pk}: {pv}")
+            print()
 
         bounds = env.get("workspace_bounds", {})
         print(f"Workspace: x={bounds.get('x', '?')}  y={bounds.get('y', '?')}  z={bounds.get('z', '?')}")

@@ -17,6 +17,12 @@ controller_manager:
     arm2_gripper_controller:
       type: position_controllers/GripperActionController
 
+    torso_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    head_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
 
 joint_state_broadcaster:
   ros__parameters:
@@ -89,3 +95,39 @@ arm2_gripper_controller:
     type: position_controllers/GripperActionController
     joint: arm2_robotiq_left_knuckle_joint
     action_monitor_rate: 20.0
+
+torso_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - torso_yaw_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.2
+      goal_time: 0.0
+      torso_yaw_joint: { trajectory: 0.2, goal: 0.1 }
+
+head_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - neck_pitch_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.2
+      goal_time: 0.0
+      neck_pitch_joint: { trajectory: 0.2, goal: 0.1 }

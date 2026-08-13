@@ -34,6 +34,8 @@ class Doctor:
         self._check_safety()
         self._check_runtime_api()
         self._check_experience()
+        self._check_perception()
+        self._check_evaluation()
 
         self._print_summary()
         self._print_failures()
@@ -113,12 +115,21 @@ class Doctor:
 
     def _check_controllers(self) -> None:
         """Check ros2_control controllers."""
-        result = subprocess.run(
-            ["ros2", "control", "list_controllers"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        try:
+            result = subprocess.run(
+                ["ros2", "control", "list_controllers"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            self._fail(
+                "Controllers",
+                "Controller manager",
+                "ros2 control list_controllers timed out (30s)",
+                "Check controller_manager is running: ros2 node list | grep controller_manager",
+            )
+            return
         if result.returncode != 0:
             self._fail(
                 "Controllers",
@@ -133,9 +144,9 @@ class Doctor:
         ]
         for line in lines:
             parts = line.split()
-            if len(parts) >= 2:
+            if len(parts) >= 3:
                 name = parts[0]
-                state = parts[1]
+                state = parts[2]
                 if "active" in state.lower():
                     self._pass("Controllers", f"{name} ACTIVE")
                 else:
@@ -145,6 +156,9 @@ class Doctor:
                         f"State: {state}",
                         f"Run: ros2 control set_controller_state {name} active",
                     )
+            elif len(parts) >= 1:
+                name = parts[0]
+                self._pass("Controllers", f"{name} loaded")
 
         if not lines:
             self._fail(
@@ -223,6 +237,60 @@ class Doctor:
                 "Experience node not running",
                 "Run: ros2 run multi_arm_experience experience_node",
             )
+
+    def _check_perception(self) -> None:
+        """Check perception pipeline."""
+        nodes = self._get_nodes()
+        if any("color_detector" in n for n in nodes):
+            self._pass("Perception", "ColorDetector online")
+        else:
+            self._fail(
+                "Perception",
+                "ColorDetector online",
+                "color_detector_node not found",
+                "Check launch file includes ColorDetectorNode",
+            )
+
+        topics = self._get_topics()
+        if any("vision_poses" in t for t in topics):
+            self._pass("Perception", "Vision poses topic active")
+        else:
+            self._fail(
+                "Perception",
+                "Vision poses topic",
+                "/perception/vision_poses not found",
+                "ColorDetectorNode may not be publishing",
+            )
+
+    def _check_evaluation(self) -> None:
+        """Check evaluation and GT isolation."""
+        services = self._get_services()
+        if any("safety_check" in s for s in services):
+            self._pass("Evaluation", "Safety check service available")
+        else:
+            self._fail(
+                "Evaluation",
+                "Safety check service",
+                "/safety/safety_check not found",
+                "SafetySupervisor may not be running",
+            )
+
+    def _get_topics(self) -> list[str]:
+        """Get ROS2 topic list."""
+        try:
+            result = subprocess.run(
+                ["ros2", "topic", "list"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                return [
+                    line.strip()
+                    for line in result.stdout.strip().split("\n")
+                    if line.strip()
+                ]
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        return []
 
     def _pass(self, category: str, check: str, detail: str = "") -> None:
         """Record a passing check."""

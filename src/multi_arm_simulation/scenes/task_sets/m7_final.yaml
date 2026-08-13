@@ -1,0 +1,256 @@
+# M7.FINAL System Acceptance — 15 scenarios + 7 invariants
+# Preset task set for one-click reproduction: robot benchmark m7_final --count 1
+name: m7_final
+description: "M7.FINAL System Acceptance: 15 scenarios + 7 invariants"
+scene: tabletop
+repetitions: 1
+version: "2.0"
+
+# 7 System Invariants (must always hold)
+invariants:
+  - id: INV-001
+    name: gt_isolation
+    description: "Ground truth never enters robot decisions"
+    check: "all object sources in WorldModel != 'ground_truth'"
+
+  - id: INV-002
+    name: safety_authority
+    description: "Safety > Coordinator > Skill > Task authority chain"
+    check: "safety_stop halts all motion regardless of coordinator state"
+
+  - id: INV-003
+    name: episode_completeness
+    description: "Every task execution produces a complete episode record"
+    check: "episode has initial_state, final_state, steps, result"
+
+  - id: INV-004
+    name: evaluation_independence
+    description: "Evaluation layer does not influence robot decisions"
+    check: "evaluation runs post-execution only"
+
+  - id: INV-005
+    name: observation_overrides_prediction
+    description: "New observation overrides predicted state"
+    check: "observed_pos replaces predicted_pos on update"
+
+  - id: INV-006
+    name: uncertainty_grows_without_observation
+    description: "Uncertainty increases monotonically without observation"
+    check: "variance(t2) > variance(t1) when no observation in [t1, t2]"
+
+  - id: INV-007
+    name: belief_fusion_variance_decreases
+    description: "Fused variance < min(individual variances)"
+    check: "fused_var < min(var_source_a, var_source_b)"
+
+# 15 Acceptance Scenarios
+tasks:
+  # === Closed Loop Scenarios (FINAL-001 ~ 004) ===
+  - task_id: FINAL-001
+    description: "Vision -> Pick -> Place complete closed loop"
+    action_type: pick_place
+    arm_name: arm1
+    object_id: red_cube
+    zone_name: zone_b
+    approach: top
+    timeout: 120.0
+    acceptance:
+      - "task_success == true"
+      - "worldmodel contains red_cube at zone_b"
+      - "episode recorded with 6 steps"
+      - "gt_isolated == true"
+      - "safety_satisfied == true"
+
+  - task_id: FINAL-002
+    description: "Vision-only — GT does not enter robot decisions"
+    action_type: query
+    query: worldmodel_sources
+    timeout: 15.0
+    acceptance:
+      - "all sources in WorldModel are 'vision' or 'prediction'"
+      - "no source is 'ground_truth' in decision path"
+
+  - task_id: FINAL-003
+    description: "Low Confidence — uncertainty handling"
+    action_type: pick_place
+    arm_name: arm1
+    object_id: red_cube
+    zone_name: zone_b
+    approach: top
+    timeout: 120.0
+    injection:
+      type: low_confidence
+      confidence: 0.3
+    acceptance:
+      - "object with conf < 0.5 flagged as uncertain"
+      - "uncertain count > 0 in status"
+      - "task handles uncertainty gracefully"
+
+  - task_id: FINAL-004
+    description: "High-confidence Hallucination defense"
+    action_type: pick_place
+    arm_name: arm1
+    object_id: hallucinated_object
+    zone_name: zone_b
+    approach: top
+    timeout: 60.0
+    injection:
+      type: hallucination
+      confidence: 0.92
+      position: [2.0, 2.0, 0.5]
+    acceptance:
+      - "hallucinated object not accepted by WorldModel"
+      - "task fails safely (no crash)"
+      - "evaluation not fooled by high confidence"
+
+  # === WorldModel Intelligence Scenarios (FINAL-005 ~ 008) ===
+  - task_id: FINAL-005
+    description: "Contradiction — multi-source conflict detection"
+    action_type: query
+    query: contradiction_check
+    timeout: 10.0
+    injection:
+      type: source_conflict
+      gt_position: [0.5, 0.0, 0.4]
+      vision_position: [1.5, 1.0, 0.4]
+    acceptance:
+      - "error > contradiction_threshold (0.3m)"
+      - "contradiction flagged in WorldModel"
+
+  - task_id: FINAL-006
+    description: "State Drift — WorldModel state correction"
+    action_type: query
+    query: state_drift
+    timeout: 15.0
+    injection:
+      type: no_observation
+      duration_s: 10.0
+    acceptance:
+      - "uncertainty grows over time without observation"
+      - "re-observation reduces uncertainty"
+
+  - task_id: FINAL-007
+    description: "Belief Fusion — multi-source Kalman update"
+    action_type: query
+    query: belief_fusion
+    timeout: 10.0
+    injection:
+      type: multi_source
+      sources: [ground_truth, vision]
+      positions: [[0.500, 0.0, 0.0], [0.470, 0.0, 0.0]]
+    acceptance:
+      - "fused mean is weighted average"
+      - "fused variance < min(individual variances)"
+
+  - task_id: FINAL-008
+    description: "Temporal Query — historical state retrieval"
+    action_type: query
+    query: temporal_history
+    timeout: 10.0
+    acceptance:
+      - "HistoryLayer returns states at queried timestamps"
+      - "historical states are immutable"
+
+  # === Failure & Recovery Scenarios (FINAL-009 ~ 010) ===
+  - task_id: FINAL-009
+    description: "Failure Recovery — Experience loop"
+    action_type: move
+    arm_name: arm1
+    position_name: nonexistent_position
+    timeout: 60.0
+    followed_by:
+      action_type: move
+      arm_name: arm1
+      position_name: ready
+    acceptance:
+      - "first task fails (invalid position)"
+      - "FailureAnalyzer produces suggestion"
+      - "retry with adjusted params succeeds"
+
+  - task_id: FINAL-010
+    description: "Retry — system recovers after a failure"
+    action_type: move
+    arm_name: arm1
+    position_name: nonexistent_position
+    timeout: 60.0
+    followed_by:
+      action_type: move
+      arm_name: arm1
+      position_name: ready
+    acceptance:
+      - "system state is recoverable after failure"
+      - "subsequent valid task succeeds"
+
+  # === Safety Scenarios (FINAL-011 ~ 012) ===
+  - task_id: FINAL-011
+    description: "Safety Abort — safety interrupts execution"
+    action_type: pick_place
+    arm_name: arm1
+    object_id: red_cube
+    zone_name: zone_b
+    timeout: 60.0
+    injection:
+      type: safety_trigger
+      trigger: velocity_exceed
+    acceptance:
+      - "safety check rejects motion"
+      - "task aborts with safety reason"
+      - "exit code == 2"
+
+  - task_id: FINAL-012
+    description: "Safety Independence — Safety works without Coordinator"
+    action_type: safety_check
+    timeout: 10.0
+    injection:
+      type: coordinator_down
+    acceptance:
+      - "SafetySupervisor responds independently"
+      - "emergency_stop service available without coordinator"
+
+  # === Multi-task & Integrity Scenarios (FINAL-013 ~ 015) ===
+  - task_id: FINAL-013
+    description: "Multi-task — 10 consecutive tasks"
+    action_type: multi_task
+    repetitions: 10
+    sequence:
+      - {action_type: move, arm_name: arm1, position_name: ready}
+      - {action_type: move, arm_name: arm1, position_name: home}
+      - {action_type: move, arm_name: arm2, position_name: ready}
+      - {action_type: move, arm_name: arm2, position_name: home}
+    timeout: 600.0
+    acceptance:
+      - "success_rate >= 0.8"
+      - "all episodes recorded"
+      - "WorldModel consistent across tasks"
+
+  - task_id: FINAL-014
+    description: "Episode Integrity — experience fully recorded"
+    action_type: pick_place
+    arm_name: arm1
+    object_id: red_cube
+    zone_name: zone_b
+    timeout: 120.0
+    acceptance:
+      - "episode has task_type, skill_name, result, duration"
+      - "episode has initial and final world state snapshots"
+      - "episode has step-by-step trace"
+      - "episode has recovery attempts (if any)"
+
+  - task_id: FINAL-015
+    description: "Evaluation Integrity — evaluation not fooled by confidence"
+    action_type: evaluate
+    timeout: 30.0
+    injection:
+      type: high_confidence_hallucination
+      confidence: 0.95
+    acceptance:
+      - "evaluation layer independently verifies task outcome"
+      - "high confidence does not bypass evaluation"
+      - "GT isolation maintained throughout"
+
+# Summary
+summary:
+  total_scenarios: 15
+  total_invariants: 7
+  exit_gate: "ALL 15 scenarios pass AND ALL 7 invariants hold"
+  gt_isolation: "Ground truth used ONLY by EvaluationLayer, NEVER by decision-making"

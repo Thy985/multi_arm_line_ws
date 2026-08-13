@@ -29,6 +29,9 @@ setup(
         "console_scripts": [
             "perception_node = multi_arm_perception.perception_node:main",
             "ground_truth_node = multi_arm_perception.ground_truth_node:main",
+            "vision_grounding_node = multi_arm_perception.vision_grounding_node:main",
+            "color_detector_node = multi_arm_perception.color_detector_node:main",
+            "synthetic_camera_node = multi_arm_perception.synthetic_camera_node:main",
         ],
     },
 )

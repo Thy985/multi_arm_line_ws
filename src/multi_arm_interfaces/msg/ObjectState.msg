@@ -11,3 +11,8 @@ float64 updated_at
 float64 ttl
 float64[9] position_covariance
 float64 orientation_uncertainty
+# M7.4: Vision Grounding fields (Tier 2 extension)
+string source
+float64 vision_error
+bool uncertain
+bool contradiction

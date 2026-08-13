@@ -19,19 +19,58 @@ capabilities:
     model: "robotiq_2f_85"
 
   vision:
-    types: ["rgb"]
+    types: ["rgb", "depth"]
     available: true
-    reason: "arm1 wrist camera (Gazebo sensor)"
+    reason: "head_camera RGB-D (M7.1) + arm1 wrist camera"
+    sensors:
+      - name: head_camera
+        types: ["rgb", "depth"]
+        resolution: [640, 480]
+        fps: 30
+      - name: arm1_wrist_camera
+        types: ["rgb"]
+        resolution: [640, 480]
+        fps: 10
+
+  perception:
+    available: true
+    reason: "M7.5 ColorDetector + M7.4 vision grounding"
+    pipeline: "image -> color_detect -> pose_estimate -> worldmodel_update"
+    confidence_threshold: 0.5
+    contradiction_threshold_m: 0.3
+
+  body_control:
+    available: true
+    reason: "M7.1 torso + head"
+    joints:
+      - torso_yaw_joint
+      - neck_pitch_joint
+    controllers:
+      - torso_controller
+      - head_controller
+
+  imu:
+    available: true
+    reason: "M7.1 torso_imu on torso_link"
+    sensor: torso_imu
+    frame: torso_link
 
   mobile:
     available: false
-    reason: "M7.6 not yet implemented"
+    reason: "M8 not yet implemented"
 
   skills:
     available: true
     list: ["pick_object", "place_object", "move_object"]
     reason: "M6.3 Skill Runtime"
     requires: ["manipulation", "gripper"]
+
+  evaluation:
+    available: true
+    reason: "M7.FINAL independent evaluation layer"
+    gt_isolated: true
+    scenarios: 15
+    invariants: 7
 
 dynamic_capabilities:
   payload_remaining:
@@ -46,6 +85,15 @@ dynamic_capabilities:
   arm_reachable:
     compute: "workspace_check(current_pose)"
     default: true
+
+  head_attention:
+    compute: "neck_pitch_joint angle"
+    default: 0.0
+    range: [-1.57, 1.57]
+
+  torso_orientation:
+    compute: "torso_imu quaternion"
+    default: [0.0, 0.0, 0.0, 1.0]
 
 context_capabilities:
   can_reach:
@@ -62,3 +110,8 @@ context_capabilities:
     compute: "collision_check(target)"
     depends_on: world_model
     requires: ["manipulation"]
+
+  can_perceive:
+    compute: "head_camera_active and object_in_fov"
+    depends_on: world_model
+    requires: ["vision", "body_control"]

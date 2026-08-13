@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
-  multi_arm_ros2_control.xacro — ros2_control block for dual-arm + grippers.
+  multi_arm_ros2_control.xacro — ros2_control block for dual-arm + grippers + torso + head.
 
-  14 joints: 6 (arm1) + 6 (arm2) + 1 (arm1 gripper) + 1 (arm2 gripper).
+  16 joints: 6 (arm1) + 6 (arm2) + 1 (arm1 gripper) + 1 (arm2 gripper) + 1 (torso) + 1 (head).
   GazeboSimSystem hardware plugin for Gazebo simulation.
 
   Params:
@@ -19,11 +19,27 @@
       </plugin>
     </gazebo>
 
-    <!-- ros2_control (14 joints: 12 arm + 2 gripper) -->
+    <!-- ros2_control (16 joints: 12 arm + 2 gripper + 1 torso + 1 head) -->
     <ros2_control name="MultiArmSystem" type="system">
       <hardware>
         <plugin>gz_ros2_control/GazeboSimSystem</plugin>
       </hardware>
+
+      <!-- torso joint (1 DOF, Z yaw) -->
+      <joint name="torso_yaw_joint">
+        <command_interface name="position"/>
+        <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+      </joint>
+
+      <!-- head joint (1 DOF, Y pitch) -->
+      <joint name="neck_pitch_joint">
+        <command_interface name="position"/>
+        <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
+        <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+      </joint>
 
       <!-- arm1 joints (6 DOF) -->
       <joint name="arm1_shoulder_pan_joint">

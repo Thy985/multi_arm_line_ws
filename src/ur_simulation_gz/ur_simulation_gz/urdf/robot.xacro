@@ -50,11 +50,11 @@
   <!-- 1. Mobile base (chassis + wheels + arm pillars) -->
   <xacro:wheeled_base prefix=""/>
 
-  <!-- 2. Torso (M7.0 placeholder: no-op, arms mount on pillars) -->
+  <!-- 2. Torso (M7.1: torso_yaw_joint revolute Z on base_link) -->
   <xacro:torso parent_link="base_link"/>
 
-  <!-- 3. Head (M7.0 placeholder: no-op, perception uses wrist camera) -->
-  <xacro:head parent_link="base_link"/>
+  <!-- 3. Head (M7.1: neck_pitch_joint revolute Y on torso_link + RGB-D) -->
+  <xacro:head parent_link="torso_link"/>
 
   <!-- 4. Dual UR5e arms + grippers -->
   <xacro:dual_ur5e
@@ -71,9 +71,9 @@
     parent_link="arm1_wrist_3_link"
     sensor_name="arm1_wrist_camera"
     topic="arm1/camera/image_raw"/>
-  <xacro:imu_sensor parent_link="base_link" sensor_name="base_imu"/>
+  <xacro:imu_sensor parent_link="torso_link" sensor_name="torso_imu"/>
 
-  <!-- 6. ros2_control (14 joints: 12 arm + 2 gripper) -->
+  <!-- 6. ros2_control (16 joints: 12 arm + 2 gripper + 1 torso + 1 head) -->
   <xacro:multi_arm_ros2_control controllers_file="$(arg simulation_controllers)"/>
 
 </robot>

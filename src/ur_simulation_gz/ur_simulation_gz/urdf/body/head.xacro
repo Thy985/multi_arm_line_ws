@@ -1,21 +1,80 @@
 <?xml version="1.0"?>
 <!--
-  head.xacro — Head module placeholder for M7.1 Robot Body Upgrade.
+  head.xacro — Head module (M7.1 Robot Body Upgrade).
 
-  M7.0.1: Placeholder (no head, perception uses wrist camera only).
-  M7.1: Will add head (pan-tilt) with head-mounted camera for attention control.
+  Adds neck_pitch_joint (revolute Y) between parent_link and head_link,
+  plus head_camera_link with RGB-D camera for perception attention.
 
-  Note: head_controller is separate from torso_controller.
+  head_controller is separate from torso_controller.
   Head belongs to Perception Attention System, not manipulation chain.
 
   Params:
-    parent_link  - link to mount head on (default "base_link")
+    parent_link  - link to mount head on (default "torso_link")
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:macro name="head" params="parent_link:='base_link'">
-    <!-- M7.1: Head (pan-tilt 2-DOF) + head camera will be added here -->
-    <!-- Placeholder: no-op macro, perception uses wrist camera in M7.0 -->
+  <xacro:macro name="head" params="parent_link:='torso_link'">
+    <link name="head_link">
+      <visual>
+        <origin xyz="0 0 0.05" rpy="0 0 0"/>
+        <geometry><box size="0.12 0.18 0.1"/></geometry>
+        <material name="panel_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.05" rpy="0 0 0"/>
+        <geometry><box size="0.12 0.18 0.1"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="1.5"/>
+        <origin xyz="0 0 0.05" rpy="0 0 0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+
+    <joint name="neck_pitch_joint" type="revolute">
+      <origin xyz="0.5 0 0.85" rpy="0 0 0"/>
+      <parent link="${parent_link}"/>
+      <child link="head_link"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.57" upper="1.57" effort="10.0" velocity="0.5"/>
+    </joint>
+
+    <link name="head_camera_link">
+      <visual>
+        <origin xyz="0.05 0 0" rpy="0 1.5708 0"/>
+        <geometry><cylinder length="0.04" radius="0.03"/></geometry>
+        <material name="panel_dark"/>
+      </visual>
+      <inertial>
+        <mass value="0.2"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <joint name="head_to_camera" type="fixed">
+      <origin xyz="0.06 0 0.05" rpy="0 0 0"/>
+      <parent link="head_link"/>
+      <child link="head_camera_link"/>
+    </joint>
+
+    <gazebo reference="head_camera_link">
+      <sensor name="head_camera" type="rgbd">
+        <camera>
+          <horizontal_fov>1.5708</horizontal_fov>
+          <image>
+            <width>1280</width>
+            <height>720</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>20.0</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+        <topic>head_camera/image_raw</topic>
+      </sensor>
+    </gazebo>
   </xacro:macro>
 
 </robot>

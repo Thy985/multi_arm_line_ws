@@ -1,7 +1,7 @@
 robot:
   name: dual_ur5e_platform
-  version: "1.0"
-  description: "Dual UR5e multi-arm platform"
+  version: "1.1"
+  description: "Dual UR5e multi-arm platform with M7.1 body upgrade (torso + head + RGB-D + IMU)"
 
 components:
   arms:
@@ -31,6 +31,30 @@ components:
         max_velocity_scale: 1.0
         max_acceleration_scale: 1.0
 
+  body:
+    type: humanoid_upper
+    torso:
+      link: torso_link
+      joint: torso_yaw_joint
+      joint_type: revolute
+      axis: z
+      limits: [-3.14, 3.14]
+      controller: torso_controller
+      max_velocity_scale: 0.5
+    head:
+      link: head_link
+      joint: neck_pitch_joint
+      joint_type: revolute
+      axis: y
+      limits: [-1.57, 1.57]
+      controller: head_controller
+      max_velocity_scale: 0.3
+    design_notes:
+      - "Arms stay on base pillars (torso rotates independently)"
+      - "Head parent is torso_link (head follows torso rotation)"
+      - "IMU on torso_link (body attitude, not head)"
+      - "torso_controller != head_controller (body != perception attention)"
+
   sensors:
     - name: arm1_wrist_camera
       type: camera
@@ -39,6 +63,22 @@ components:
       rgb: true
       resolution: [640, 480]
       fps: 10
+    - name: head_camera
+      type: rgbd
+      parent: head_link
+      topic: /head_camera/image_raw
+      rgb: true
+      depth: true
+      resolution: [640, 480]
+      fps: 30
+      depth_range: [0.1, 10.0]
+      description: "M7.1 head RGB-D camera for perception attention"
+    - name: torso_imu
+      type: imu
+      parent: torso_link
+      topic: /torso/imu
+      frame: torso_link
+      description: "M7.1 torso IMU (body attitude, not head)"
 
   end_effectors:
     - name: arm1_gripper
@@ -53,9 +93,6 @@ components:
       controller: arm2_gripper_controller
       joint: arm2_robotiq_left_knuckle_joint
       max_opening_mm: 85
-
-  body:
-    type: fixed
 
 generation:
   urdf_template: multi_arm_robot.xacro
