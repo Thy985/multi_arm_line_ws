@@ -1047,7 +1047,7 @@ multi_arm_visualization/
 | M4.6 Autonomous Task Loop | ✅ 超额完成 | 158 tests (单元131+代码11+E2E8+双臂8) |
 | M5 Reliability & Intelligence | ✅ 全部完成 | M5.1-M5.5 ✅ (355), M5.6 Stress Test ✅ (383+Gazebo E2E), M5.7 Audit ✅ |
 | M6 Robot Platform Upgrade | ✅ Gate 2基线 | M6.0 ✅ (30), M6.S ✅ (44), M6.1 ✅ (40), M6.2 ✅ (30, E2E 8/8), M6.3 ✅ FROZEN v1.0 (102, E2E 25/25, 跨层 12/12), M6.4 ✅ (48), M6.5 ✅ (32), M6 E2E ✅ (17, 5节点7链路), M6 Full-Chain E2E ✅ (12, 全组件协同+可视化), L6 Simulation E2E ✅ Phase 1+2+3+4+5 (22 tests), M6.6 ✅ Runtime Developer Experience (57 tests, Runtime CLI: 机器人的kubectl, 5阶段全部完成: sim+doctor+task+analyze+watch), M6.7设计完成v2 (只读Observability Plane+Trace模型+2D优先, 实施后移) |
-| M7 Embodied Manipulation | ✅ 全部完成 | M7.INT ✅ (68), M7.EXEC ✅ (8), M7.1 ✅ Body Upgrade (10), M7.4 ✅ Vision Grounding (8), M7.5 ✅ Real Perception (9), M7.6 ✅ WorldModel Intelligence (26), M7.FINAL ✅ System Acceptance (23 tests, 15场景+7不变量, GT隔离+独立Evaluation层, 10/10连续任务100%, Exit Gate PASSED), M7.CLI ✅ Operator Interface v2 (22 tests, 三层认知+命令/输出/退出码契约冻结+--json+safety stop直连) — M7 Total 174 tests |
+| M7 Embodied Manipulation | ✅ 全部完成 | M7.INT ✅ (68), M7.EXEC ✅ (8), M7.1 ✅ Body Upgrade (10), M7.4 ✅ Vision Grounding (8), M7.5 ✅ Real Perception (9), M7.6 ✅ WorldModel Intelligence (26), M7.FINAL ✅ System Acceptance (23 tests, 15场景+7不变量, GT隔离+独立Evaluation层, 10/10连续任务100%, Exit Gate PASSED), M7.CLI ✅ Operator Interface v2 (22 tests, 三层认知+命令/输出/退出码契约冻结+--json+safety stop直连), **Robot OS Shell ✅ Runtime Manager (22 CLI tests + 5 E2E: start/stop/repair/restart/shell, Session manifest + PID 树 + DDS 隔离 domain 40-59, auto-repair, 增强 doctor 含 Runtime+DDS ghost 检测)** — M7 Total 196 tests |
 
 ---
 
@@ -1095,7 +1095,9 @@ multi_arm_visualization/
 | M6.6验证 | `docs/validation/M6_6_validation_report.md` | M6.6 Runtime Developer Experience验证报告 (36 tests, Runtime CLI: 机器人的kubectl) |
 | M6.6设计 | `docs/architecture/M6_6_runtime_cli_design.md` | M6.6 Runtime Developer Experience设计文档 (Runtime CLI: 机器人的kubectl) |
 | M6.6使用文档 | `docs/architecture/M6_6_cli_usage_guide.md` | M6.6 Robot Runtime CLI使用文档 (命令详解+工作流+故障排查) |
-| M7.CLI教程 | `docs/architecture/M7_CLI_v2_getting_started_tutorial.md` | M7.CLI v2 从零开始手把手教程 (12步: 环境→构建→测试→仿真→OBSERVE→DIAGNOSE→ACT→安全→Benchmark) |
+| M7.CLI教程 | `docs/architecture/M7_CLI_v2_getting_started_tutorial.md` | M7.CLI v2 从零开始手把手教程 (12步: 环境→构建→测试→仿真→OBSERVE→DIAGNOSE→ACT→安全→Benchmark, 含 Robot OS Shell 快速上手) |
+| Robot OS Shell设计 | `docs/architecture/Robot_OS_Shell_design.md` | Runtime Manager + Robot OS Shell 设计文档 (Session manifest + PID 树 + DDS 隔离 + auto-repair) |
+| Robot OS Shell验证 | `docs/validation/Robot_OS_Shell_validation_report.md` | Runtime Manager 验证报告 (22 CLI tests + 5 E2E: start/stop/repair/restart/shell) |
 | M6.7设计 | `docs/architecture/M6_7_visualization_design.md` | M6.7 Robot Runtime Visualization Layer设计文档 (v2: 只读Observability Plane+Trace模型+2D优先, 实施后移) |
 | M7.INT验证 | `docs/validation/M7_INT_validation_report.md` | M7.INT Integration Validation (68 tests) |
 | M7.EXEC验证 | `docs/validation/M7_EXEC_validation_report.md` | M7.EXEC Execution Validation (8 tests, 100% success) |
