@@ -36,6 +36,7 @@ class Doctor:
         self._check_experience()
         self._check_perception()
         self._check_evaluation()
+        self._check_runtime_health()
 
         self._print_summary()
         self._print_failures()
@@ -342,6 +343,39 @@ class Doctor:
             if f.get("fix"):
                 print(f"      Suggested fix: {f['fix']}")
         print()
+
+    def _check_runtime_health(self) -> None:
+        """Check for duplicate processes and stale DDS nodes."""
+        try:
+            from multi_arm_tools.runtime_manager import RuntimeManager
+            mgr = RuntimeManager()
+        except ImportError:
+            return
+
+        duplicates = mgr.detect_duplicates()
+        if duplicates:
+            names = ", ".join(
+                f"{name} x{len(procs)}" for name, procs in duplicates.items()
+            )
+            self._fail(
+                "Runtime",
+                "Process duplicates",
+                names,
+                "Run: robot repair",
+            )
+        else:
+            self._pass("Runtime", "No duplicate processes")
+
+        stale_nodes = mgr.detect_stale_nodes()
+        if stale_nodes:
+            self._fail(
+                "DDS",
+                "Ghost nodes",
+                f"{len(stale_nodes)} duplicate node(s): {', '.join(stale_nodes[:3])}",
+                "Run: robot repair (restarts DDS daemon)",
+            )
+        else:
+            self._pass("DDS", "No ghost nodes")
 
     def _get_nodes(self) -> list[str]:
         """Get ROS2 node list."""

@@ -1,0 +1,7 @@
+[env]
+ROS_DISTRO = "jazzy"
+ROS_VERSION = "2"
+ROS_PYTHON_VERSION = "3"
+_.source = [
+    "/opt/ros/jazzy/setup.bash",
+]

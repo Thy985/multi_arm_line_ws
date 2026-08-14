@@ -17,7 +17,9 @@
     <link name="head_link">
       <visual>
         <origin xyz="0 0 0.05" rpy="0 0 0"/>
-        <geometry><box size="0.12 0.18 0.1"/></geometry>
+        <geometry>
+          <box size="0.12 0.18 0.1"/>
+        </geometry>
         <material name="panel_dark"/>
       </visual>
       <collision>
@@ -42,8 +44,10 @@
     <link name="head_camera_link">
       <visual>
         <origin xyz="0.05 0 0" rpy="0 1.5708 0"/>
-        <geometry><cylinder length="0.04" radius="0.03"/></geometry>
-        <material name="panel_dark"/>
+        <geometry>
+          <cylinder length="0.03" radius="0.012"/>
+        </geometry>
+        <material name="camera_lens"/>
       </visual>
       <inertial>
         <mass value="0.2"/>
@@ -55,6 +59,26 @@
       <origin xyz="0.06 0 0.05" rpy="0 0 0"/>
       <parent link="head_link"/>
       <child link="head_camera_link"/>
+    </joint>
+
+    <link name="head_led_ring_link">
+      <visual>
+        <origin xyz="0.05 0 0.05" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder length="0.005" radius="0.03"/>
+        </geometry>
+        <material name="led_ring"/>
+      </visual>
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="head_to_led_ring" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="head_link"/>
+      <child link="head_led_ring_link"/>
     </joint>
 
     <gazebo reference="head_camera_link">

@@ -36,13 +36,29 @@ ACTION_TYPE_TO_SKILL = {
 class RuntimeClient:
     """ROS2 client for Runtime API (M6.5).
 
-    Wraps all service/action calls with synchronous wait semantics
-    suitable for CLI usage.
+    Singleton pattern: one ROS2 context per process. This avoids the
+    'rclpy.init() has already been called' error when the client is
+    recreated in a loop (e.g. Robot OS Shell).
+
+    The first instantiation initializes rclpy + node + clients. Subsequent
+    instantiations return the cached instance with just a timeout update.
     """
 
+    _instance: "RuntimeClient | None" = None
+    _initialized: bool = False
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "RuntimeClient":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, timeout_sec: float = 10.0) -> None:
-        rclpy.init()
-        self._node = Node("runtime_cli")
+        if RuntimeClient._initialized:
+            self._timeout = timeout_sec
+            return
+        if not rclpy.ok():
+            rclpy.init()
+        self._node = Node(f"runtime_cli_{int(time.time() * 1000000)}")
         self._timeout = timeout_sec
         self._query_world = self._node.create_client(
             QueryWorld, "/runtime/query_world"
@@ -59,15 +75,15 @@ class RuntimeClient:
         self._submit_task = ActionClient(
             self._node, SubmitTaskGoals, "/runtime/submit_task_goals"
         )
+        RuntimeClient._initialized = True
 
     def shutdown(self) -> None:
-        """Shutdown ROS2."""
-        try:
-            self._submit_task.destroy()
-            self._node.destroy_node()
-            rclpy.shutdown()
-        except Exception:
-            pass
+        """No-op for singleton — rclpy context stays alive across commands.
+
+        The RuntimeClient singleton persists for the process lifetime.
+        Python's atexit handler cleans up rclpy on exit.
+        """
+        pass
 
     def _safe_spin(self, future: Any) -> Any:
         """Spin until future complete, handling shutdown exceptions."""
@@ -76,18 +92,24 @@ class RuntimeClient:
                 self._node, future, timeout_sec=self._timeout
             )
         except Exception:
-            pass
-        return future.result()
+            return None
+        try:
+            return future.result()
+        except Exception:
+            return None
 
     def _wait_for_service(self, client: Any, name: str) -> bool:
         """Wait for a service to be available."""
+        import sys as _sys
         try:
             if not client.wait_for_service(self._timeout):
-                print(f"ERROR: Service {name} not available")
+                print(f"ERROR: Service {name} not available", flush=True)
+                _sys.stdout.flush()
                 return False
             return True
-        except Exception:
-            print(f"ERROR: Service {name} context invalid")
+        except Exception as e:
+            print(f"ERROR: Service {name} context invalid: {e}", flush=True)
+            _sys.stdout.flush()
             return False
 
     def query_world(
@@ -166,7 +188,16 @@ class RuntimeClient:
         goal_msg = SubmitTaskGoals.Goal()
         goal_msg.goals = [goal]
 
-        send_future = self._submit_task.send_goal_async(goal_msg)
+        latest_feedback = []
+        def _feedback_cb(feedback_msg):
+            latest_feedback.append(feedback_msg.feedback)
+
+        if on_feedback:
+            send_future = self._submit_task.send_goal_async(
+                goal_msg, feedback_callback=_feedback_cb
+            )
+        else:
+            send_future = self._submit_task.send_goal_async(goal_msg)
         self._safe_spin(send_future)
         goal_handle: ClientGoalHandle = send_future.result()
         if goal_handle is None:
@@ -175,12 +206,6 @@ class RuntimeClient:
         if not goal_handle.accepted:
             print("ERROR: Task goal rejected")
             return None
-
-        latest_feedback = []
-        if on_feedback:
-            def _feedback_cb(fb_msg):
-                latest_feedback.append(fb_msg.feedback)
-            goal_handle.request_feedback(_feedback_cb)
 
         result_future = goal_handle.get_result_async()
         while not result_future.done():

@@ -9,6 +9,7 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
+    SetEnvironmentVariable,
     TimerAction,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -31,7 +32,7 @@ def launch_setup(context, *args, **kwargs):
 
     # URDF/XACRO描述文件
     description_file = PathJoinSubstitution(
-        [FindPackageShare("ur_simulation_gz"), "urdf", "ur_gz.urdf.xacro"]
+        [FindPackageShare("ur_simulation_gz"), "urdf", "multi_arm_robot.xacro"]
     )
 
     # 机械臂配置
@@ -41,6 +42,17 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     nodes_to_start = []
+
+    # ---- Gazebo mesh 资源路径 ----
+    # Gazebo 把 package:// 转换为 model:// URI，必须把包 install/share 加入 GZ_SIM_RESOURCE_PATH
+    # 否则自定义 STL mesh (torso/head/chassis/pillar) 找不到
+    ur_sim_share = PathJoinSubstitution(
+        [FindPackageShare("ur_simulation_gz"), "share"]
+    ).perform(context)
+    nodes_to_start.append(SetEnvironmentVariable(
+        name="GZ_SIM_RESOURCE_PATH",
+        value=[ur_sim_share, ":", os.environ.get("GZ_SIM_RESOURCE_PATH", "")],
+    ))
 
     # ---- Gazebo ----
     gz_launch_description = IncludeLaunchDescription(

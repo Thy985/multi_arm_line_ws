@@ -1,87 +1,104 @@
 # Robot Runtime CLI v2 从零开始手把手教程
 
-**目标**: 从空环境开始，用 `robot` 命令跑通完整 Pick-Place 闭环，体验三层认知模型。
-**预计耗时**: 15-20 分钟（含构建时间）
+**目标**: 从空环境开始，用 `robot` 命令体验双臂机器人系统的完整能力——观察世界、诊断系统、执行任务、查看 Episode、回放失败、批量 Benchmark。
+**预计耗时**: 20-30 分钟（含构建时间）
 **环境**: WSL2 Ubuntu 24.04 + ROS2 Jazzy + Gazebo Harmonic
-**版本**: CLI v2.0.0 — Operator Interface
+**版本**: CLI v2.1.0 — Robot OS Shell
 
 ---
 
-## 实测验证状态 (2026-08-12)
+## 一句话总览
 
-| 命令 | 状态 | 说明 |
-|------|------|------|
-| `robot --help` | ✅ | 正常显示所有命令 |
-| `python3 -m pytest test_cli.py` | ✅ | 22 tests pass (1.1s) |
-| `robot sim start` | ✅ | 全栈启动，Runtime API ready |
-| `robot doctor` | ✅ | 14/15 checks pass (controller timeout 是已知限制) |
-| `robot status` | ✅ | 显示系统概览（skills/capability 可能显示 0/0） |
-| `robot world` | ✅ | 世界模型查询（可能无物体） |
-| `robot vision status` | ✅ | 感知层状态，显示检测到的物体 |
-| `robot task list` | ✅ | 显示 8 种任务模板 |
-| `robot task positions` | ✅ | 显示 7 个预设位置 |
-| `robot safety status` | ✅ | 安全状态（可能显示 TRIGGERED） |
-| `robot episode list` | ✅ | Episode 历史 |
-| `robot skills` | ⚠️ | 需要 Skill Runtime 节点响应 |
-| `robot capability` | ⚠️ | 需要 Capability Registry 节点响应 |
+```bash
+# 1. 环境（一次性）
+source /opt/ros/jazzy/setup.bash
+export PATH=/usr/bin:$PATH ROS_HOME=/tmp/ros_home HOME=/tmp
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib/gz-sim-8/plugins
 
-> **注意**: `skills`/`capability` 命令依赖 Runtime API 服务响应。如果服务不响应，命令返回 exit code 1。确保 `runtime_api_node` 和 `capability_registry_node` 正常运行。
+# 2. 构建（一次性）
+cd ~/multi_arm_line_ws
+colcon build --packages-select multi_arm_interfaces multi_arm_core multi_arm_safety \
+  multi_arm_world_model multi_arm_task_planner multi_arm_moveit_config \
+  multi_arm_recovery multi_arm_benchmark multi_arm_robot_description \
+  multi_arm_perception multi_arm_manipulation multi_arm_skill_runtime \
+  multi_arm_runtime_api multi_arm_experience multi_arm_simulation \
+  multi_arm_tools ur_simulation_gz
+source install/setup.bash
+export PATH="$PATH:$(ros2 pkg prefix multi_arm_tools)/lib/multi_arm_tools"
 
----
+# 3. 进入 Robot OS Shell
+robot
 
-## CLI v2 三层认知模型
+# 4. 启动仿真（看到 GUI 选 --gui）
+robot> start --gui --scene tabletop
 
+# 5. 体验完整闭环
+robot> status          # 观察：系统概览
+robot> world           # 观察：世界模型中的物体
+robot> vision status   # 观察：感知管线
+robot> skills          # 观察：已注册的 Skills
+robot> capability      # 观察：三层能力
+robot> run pick_place red_cube zone_b  # 行动：执行 Pick-Place
+robot> episodes        # 回顾：刚刚执行的任务
+robot> analyze <id>    # 深入：分析 Episode
+robot> benchmark pick_place --count 10  # 批量：跑 10 次统计成功率
+robot> stop
+robot> exit
 ```
-             HUMAN
-               │
-       ┌───────┴────────┐
-       │                │
-   OBSERVE            ACT
-       │                │
- status/doctor      task/safety
-       │
-    DIAGNOSE
-       │
- world/vision/episode
-```
 
-| 层 | 命令 | 回答的问题 |
-|----|------|-----------|
-| OBSERVE | `status`, `doctor` | 系统活着吗？健康吗？ |
-| DIAGNOSE | `world`, `vision`, `episode` | 世界是什么？看到什么？上次怎么样？ |
-| ACT | `task run`, `safety stop` | 做什么？紧急停止？ |
-
-**三大契约**: Command（固定层次）+ Output（`--json`）+ Exit Code（0/1/2/3）
+**就这么简单。** 下面详细解释每一步，并且会覆盖 GUI/Headless 启动、配置、多场景、多臂操作、Episode 分析、批量 Benchmark。
 
 ---
 
-## 第一步：环境准备 (2分钟)
+## 第一步：环境准备 (2 分钟)
 
-### 1.1 打开终端，source ROS2 环境
+### 1.1 打开终端，source ROS2
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-```
-
-验证：
-```bash
-echo $ROS_DISTRO
-# 应输出: jazzy
+echo $ROS_DISTRO   # 应输出: jazzy
 ```
 
 ### 1.2 设置 WSL2 环境变量
 
 ```bash
+export PATH=/usr/bin:$PATH
 export ROS_HOME=/tmp/ros_home
 export HOME=/tmp
-export PATH=/usr/bin:$PATH
-export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib/gz-sim-8/plugins
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib/gz-sim-8/plugins
 ```
 
 > **为什么用 CycloneDDS**: FastDDS 在 WSL2 下 SHM 通信有冲突，CycloneDDS 更稳定。
 
-### 1.3 进入工作空间
+### 1.3 GUI 显示前置条件（仅 Windows/WSL2 用户）
+
+如果你想看到 Gazebo GUI 或 RViz，需要满足：
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| **WSLg**（WSL2 22.04+） | 自动集成，无需配置 | 性能略差 |
+| **VcXsrv / X410** | 性能好 | 需手动配置 |
+| **Headless（无 GUI）** | 性能最好，CI 友好 | 看不到视觉 |
+
+**VcXsrv 配置**（如用 WSLg 跳过此步）：
+1. Windows 启动 VcXsrv，`Display number=0`，勾选 `Disable access control`
+2. WSL2 内执行：
+   ```bash
+   export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+   # 或固定 IP
+   export DISPLAY=192.168.1.100:0
+   ```
+3. 验证：
+   ```bash
+   sudo apt install -y x11-apps
+   xeyes   # 应弹出窗口
+   ```
+
+> **Headless 模式**（推荐服务器/CI）：不需要任何 X server，启动快 5 倍。
+
+### 1.4 进入工作空间
 
 ```bash
 cd ~/multi_arm_line_ws
@@ -91,9 +108,7 @@ cd ~/multi_arm_line_ws
 
 ---
 
-## 第二步：构建所有包 (10-15分钟)
-
-### 2.1 构建全部 multi_arm 包
+## 第二步：构建所有包 (10-15 分钟)
 
 ```bash
 source /opt/ros/jazzy/setup.bash
@@ -118,1068 +133,832 @@ colcon build --packages-select \
   ur_simulation_gz
 ```
 
-预期输出：
-```
-Starting >>> multi_arm_interfaces
-Finished <<< multi_arm_interfaces
-...
-Starting >>> multi_arm_tools
-Finished <<< multi_arm_tools
-Summary: 17 packages finished
-```
-
-### 2.2 Source 构建结果
+构建完成后：
 
 ```bash
 source install/setup.bash
-```
-
-### 2.3 添加 `robot` 命令到 PATH
-
-colcon 的 `source install/setup.bash` 不会自动将 `lib/<package>` 加入 PATH。
-需要手动添加一行（**每次新终端只需执行一次**）：
-
-```bash
 export PATH="$PATH:$(ros2 pkg prefix multi_arm_tools)/lib/multi_arm_tools"
 ```
 
-> **注意**: 不要用 `~` 路径——`~` 在双引号内不展开，且 WSL2 环境下 `HOME` 可能被设为 `/tmp`。
-
-> **提示**: 将此行加入 `~/.bashrc` 可一劳永逸（**需在 source ROS 环境之后**）：
-> ```bash
-> echo 'export PATH="$PATH:$(ros2 pkg prefix multi_arm_tools)/lib/multi_arm_tools"' >> ~/.bashrc
-> ```
-
-> **替代方案**: 如果不想修改 PATH，也可以用 `ros2 run multi_arm_tools robot` 代替 `robot`。
-
-### 2.4 验证构建成功
+### 验证 robot 命令可用
 
 ```bash
 robot --help
 ```
 
-预期输出：
-```
-usage: robot [-h] [--json] {sim,scene,doctor,status,world,vision,skills,capability,task,run,episode,episodes,analyze,safety,traces,trace,benchmark,watch,evaluate} ...
+**预期输出**：
 
-Robot Runtime CLI v2 — Operator Interface
 ```
+Robot Runtime CLI v2 — Operator Interface
+...
+  start               Start robot runtime session
+  stop                Stop robot runtime session
+  repair              Auto-repair runtime issues
+  restart             Restart robot runtime
+  sim                 Simulation lifecycle
+  scene               Scene management
+  doctor              System diagnosis
+  status              System overview
+  world               World model state
+  vision              Perception layer
+  skills              List registered skills
+  capability          Three-layer capability
+  task                Task management
+  run                 Submit task (shorthand for task run)
+  episode             Episode detail or subcommand
+  episodes            Episode history (shorthand)
+  analyze             Deep episode analysis
+  safety              Safety supervisor
+  traces              Trace history
+  trace               Trace detail
+  benchmark           Batch benchmark
+  watch               Real-time dashboard
+  evaluate            Run evaluation
+```
+
+如果看到 `command not found`，说明 PATH 没设好，见最后的"故障排查"。
 
 ---
 
-## 第三步：运行单元测试 (1分钟，无需 Gazebo)
+## 第三步：运行单元测试 (1 分钟，不需仿真)
 
 ```bash
 python3 -m pytest src/multi_arm_tools/test/test_cli.py -v
 ```
 
-预期输出：
+**预期输出**：
+
 ```
-collected 22 items
-
-src/multi_arm_tools/test/test_cli.py::test_cli_import PASSED
-src/multi_arm_tools/test/test_cli.py::test_cli_argparse_status PASSED
-...
-src/multi_arm_tools/test/test_cli.py::test_cli_no_command_fails PASSED
-
-============================== 22 passed in 1.08s ==============================
+============================== 22 passed in 1.46s ==============================
 ```
 
-> **这验证了什么**: CLI v2 命令解析、三层认知模型、--json 输出契约、退出码契约 — 全部纯 Python 逻辑。
-
-> **完整测试**: `python3 -m pytest src/multi_arm_tools/test/ -v` 收集 284 个测试，但部分需要 Gazebo 全栈运行（M7.FINAL 场景测试），纯 CLI 测试为 22 个。
+✅ **22/22 通过** 说明 CLI 本身工作正常。
 
 ---
 
-## 第四步：一键启动全栈仿真 (3分钟)
-
-**这是最关键的一步** — 以前需要手动开多个终端、输入多条命令，现在只需要一条：
-
-### 4.1 启动仿真
+## 第四步：启动 Robot OS Shell (核心)
 
 ```bash
-robot sim start
+robot
 ```
 
-**内部执行流程**：
+**会发生什么**：
+
 ```
-Robot Runtime Starting...
+  ╭──────────────────────────────────────────╮
+  │   M7 Embodied Robot OS                   │
+  │   Dual UR5e · Gazebo · MoveIt2 · Skills  │
+  ╰──────────────────────────────────────────╯
 
-  [OK] ROS2 Jazzy detected
-  [OK] Workspace built
-  Starting Gazebo simulation...
-  Waiting for nodes to be ready...
-  [OK] WorldModel ready
-  [OK] Safety ready
-  [OK] Coordinator ready
-  [OK] TaskPlanner ready
-  [OK] Perception ready
-  Starting Runtime API node...
-  [OK] All interfaces verified
+Checking environment...
 
-  Runtime Status: READY
+  ✓ ROS2: ROS_DISTRO=jazzy
+  ✓ Workspace: install/setup.bash
+  ✓ DDS: CycloneDDS
+  ✓ Runtime: no active session
 
-  Next steps:
-    robot status
-    robot world
-    robot run pick_place red_cube zone_b
+  Ready.
+
+robot>
 ```
 
-> **如果想看 Gazebo GUI**: `robot sim start --gui`
-> **headless 模式** (无显示器/SSH): `robot sim start` (默认)
+看到了 `robot>` 提示符就成功。
 
-### 4.2 检查仿真状态
-
-```bash
-robot sim status
-```
-
-预期输出：
-```
-=== Simulation Status ===
-
-  Simulation:  [RUNNING]
-  Runtime API:  [RUNNING]
-
-  Active Nodes (8):
-    /coordinator_node
-    /gazebo_ground_truth_node
-    /runtime_api_node
-    /safety_supervisor
-    /task_planner_node
-    /world_model_node
-    /color_detector_node
-    ...
-```
-
-### 4.3 环境诊断 (OBSERVE 层)
-
-```bash
-robot doctor
-```
-
-预期输出：
-```
-=== Robot Runtime Diagnosis ===
-
-  [ROS2] [OK] DDS communication (distro=jazzy)
-  [Simulation] [OK] Gazebo running
-  [Workspace] [OK] 17 packages built
-  [ROS2] [OK] world_model_node online
-  [ROS2] [OK] safety_supervisor online
-  [ROS2] [OK] coordinator_node online
-  [Controllers] [OK] arm1_joint_trajectory_controller ACTIVE
-  [Controllers] [OK] arm2_joint_trajectory_controller ACTIVE
-  [MoveIt] [OK] Planning scene available
-  [WorldModel] [OK] Query service available
-  [Safety] [OK] Supervisor online
-  [Runtime API] [OK] 5 services available
-  [Experience] [OK] Query service available
-  [Perception] [OK] ColorDetector online
-  [Evaluation] [OK] Safety check service available
-
-  System Health: 93/100 (14/15 checks passed)
-
-  Failures:
-    [Controllers] Controller manager
-      Problem: ros2 control list_controllers timed out (15s)
-      Suggested fix: Check controller_manager is running: ros2 node list | grep controller_manager
-```
-
-> **controller timeout 是已知限制**: `ros2 control list_controllers` 在 WSL2 环境下可能超时。这不影响其他功能，控制器状态可通过 `ros2 control list_controllers` 手动检查。
-
-> **如果有其他问题**: doctor 会显示失败项和修复建议，例如：
-> ```
-> [Controllers] [FAIL] arm2_controller active
->   Problem: State: inactive
->   Suggested fix: Run: ros2 control set_controller_state arm2_controller active
-> ```
+> **如果看到 "Auto-repair?" 提示**：说明检测到残留进程，输入 `y` 让它自动清理。
 
 ---
 
-## 第五步：OBSERVE — 用 robot CLI 查询系统状态 (1分钟)
+## 第五步：启动仿真 (多种姿势)
 
-### 5.1 系统概览
-
-```bash
-robot status
-```
-
-预期输出：
-```
-╭──────────────────────────────────────────────╮
-│ ROBOT STATUS                                 │
-├──────────────────────────────────────────────┤
-│ System       ● READY                         │
-│ Skills       3/3 READY                       │
-│ Capability   5/5 AVAILABLE                   │
-╰──────────────────────────────────────────────╯
-
-WORLD
-  Objects    2
-  Observed   2
-  Uncertain  0
-  Conflicts  0
-  Stale       0
-
-OBJECTS
-  red_cube         [  0.50,   0.00,   0.43]  conf=1.00  src=ground_truth
-  blue_cylinder    [  0.30,   0.20,   0.44]  conf=1.00  src=ground_truth
-
-LAST TASK
-  (none)
-
-EPISODES: 0
-```
-
-### 5.2 JSON 输出（机器可读）
+### 5.1 Headless 启动（最快，推荐服务器/CI）
 
 ```bash
-robot status --json
+robot> start
 ```
 
-预期输出：
-```json
-{
-  "system": "READY",
-  "world": {
-    "objects": 2,
-    "uncertain": 0,
-    "conflicts": 0,
-    "stale": 0
-  },
-  "skills": {"ready": 3, "total": 3},
-  "capability": {"available": 5, "total": 5},
-  "episodes": {"total": 0, "success": 0, "failure": 0}
-}
+**会发生什么**：
+```
+  Session: session-20260813-101954
+  Domain:  40
+  Scene:   tabletop
+  Launching simulation...
+  PID:     88287
+  Waiting for nodes to initialize (30s)...
+  [OK] Session started.
 ```
 
-> **--json 是全局 flag**: 任何命令都可以加 `--json`，用于脚本消费。
+### 5.2 GUI 启动（看 Gazebo 3D 仿真）
+
+```bash
+robot> start --gui
+```
+
+会弹出 Gazebo GUI 窗口，看到双臂 UR5e + 桌子 + 物体。
+
+### 5.3 切换场景 (4 种场景可选)
+
+```bash
+robot> start --scene lab        # 实验室场景
+robot> start --scene warehouse  # 仓库场景
+robot> start --scene home       # 家居场景
+robot> start --scene tabletop   # 桌面场景（默认）
+```
+
+**查看所有场景**：
+```bash
+robot> scene list
+```
+
+### 5.4 分配特定 DDS Domain
+
+```bash
+robot> start --domain 42
+```
+
+> **Domain 范围**: 40-59（系统保留），避免冲突。
+
+### 5.5 验证仿真运行
+
+```bash
+robot> status
+```
+
+应看到系统状态（3 Skills READY, N objects）。
 
 ---
 
-## 第六步：DIAGNOSE — 查看世界与感知 (1分钟)
+## 第六步：观察 (OBSERVE) — 三大数据源
 
 ### 6.1 查看世界状态
 
 ```bash
-robot world
+robot> world
 ```
 
-预期输出：
 ```
 WORLD MODEL
 ------------------------------------------------------------
-
-OBJECT          POSITION                    SOURCE       CONF   STATUS
-  red_cube       (0.50, 0.00, 0.43)         ground_truth 1.00   FREE
-  blue_cylinder  (0.30, 0.20, 0.44)         ground_truth 1.00   FREE
-
-HEALTH
-  tracked:     2
-  uncertain:   0
-  stale:       0
-  conflicts:   0
+OBJECT          POSITION                     SOURCE       CONF   STATUS
+  red_cube      (0.50, 0.00, 0.43)           ground_truth 1.00   FREE
+  blue_cylinder (0.30, 0.20, 0.44)           ground_truth 1.00   FREE
+  green_box     (0.40, -0.20, 0.44)          ground_truth 1.00   FREE
 ```
 
-### 6.2 查看物体详情（WorldModel Debugger）
+**查询单个物体**：
+```bash
+robot> world red_cube
+```
+
+**查看关系图（on/near/inside/attached）**：
+```bash
+robot> world --relations
+```
+
+### 6.2 查看感知管线
 
 ```bash
-robot world red_cube
+robot> vision status
 ```
 
-预期输出：
-```
-OBJECT: red_cube
-
-CURRENT BELIEF
-  Position
-    mean:       (0.500, 0.000, 0.435)
-    variance:   0.001000
-    confidence: 1.00
-
-SOURCE
-  ground_truth
-
-STATE
-  type:        cube
-  grasp_state: FREE
-  attached_to: (none)
-  orientation: [0.000, 0.000, 0.000, 1.000]
-
-HEALTH
-  stale:        NO
-  contradiction:NO
-  uncertain:    NO
-  covariance:   [0.001000, ...]
+**查看检测到的物体**：
+```bash
+robot> vision objects
 ```
 
-> **这回答了什么**: "为什么系统认为 red_cube 在这里？" — belief、source、confidence、health 全可见。
-
-### 6.3 查看关系图
+### 6.3 查看 Skills 和能力
 
 ```bash
-robot world --relations
+robot> skills
 ```
 
-### 6.4 查看感知层状态 (Vision ≠ WorldModel)
+```
+Registered Skills (3):
+  pick_object         v1.0
+    Pick an object from a zone
+    cost: 12.0s  success_rate: 0.95
+    requires: grasp, detect
+
+  place_object        v1.0
+    Place held object at a zone
+    cost: 8.0s  success_rate: 0.98
+    requires: move, place
+
+  move_object         v1.0
+    Move robot to a position
+    cost: 5.0s  success_rate: 0.99
+    requires: plan, execute
+```
+
+**查看三层能力 (Static/Dynamic/Context)**：
+```bash
+robot> capability
+```
+
+### 6.4 查看任务类型和位置
 
 ```bash
-robot vision status
+robot> task list
 ```
 
-预期输出：
 ```
-VISION STATUS
-----------------------------------------
-
-Camera
-  topic:    /head_camera/image_raw/image
-  status:   ● ACTIVE
-
-Detector
-  topic:    /perception/vision_poses
-  status:   ● READY
-
-Objects
-  red_cube          conf=0.92
-  blue_cylinder     conf=0.95
-
-Quality
-  high confidence    2
-  uncertain          0
-  rejected           0
+Available Task Types:
+  pick_place  - Pick up an object and place it at a target zone
+  pick        - Pick up an object
+  place       - Place an object at a target zone
+  move        - Move robot to a named position
+  grasp       - Grasp an object
+  lift        - Lift object to safe height
+  retract     - Retract to safe position
+  inspect     - Move to inspection position
 ```
-
-> **Vision vs WorldModel**:
-> - **Vision** = 传感器当前看到什么
-> - **WorldModel** = 机器人当前相信世界是什么（融合了 vision + ground_truth + history）
-
-### 6.5 查看检测结果
 
 ```bash
-robot vision objects
+robot> task positions
 ```
 
-### 6.6 查看可用 Skill 与 Capability
-
-```bash
-robot skills
-robot capability
-```
-
----
-
-## 第七步：ACT — 执行任务 (3分钟)
-
-### 7.1 查看可用任务类型
-
-```bash
-robot task list
-```
-
-预期输出：
-```
-Available Tasks:
-
-  pick_place
-    Pick up an object and place it at a target zone
-    inputs: object_id, zone_name
-    skills: detect -> grasp -> move -> place
-    example: robot run pick_place red_cube zone_b
-
-  move
-    Move robot to a named position
-    inputs: position_name
-    skills: plan -> execute
-    example: robot run move ready
-
-  ...
-```
-
-### 7.2 查看预设位置
-
-```bash
-robot task positions
-```
-
-预期输出：
 ```
 Available Positions:
-  home
-  ready
-  extended
-  scan
-  inspect
-  place_high
-  place_low
-```
-
-### 7.3 提交一个 Move 任务（最简单）
-
-```bash
-robot run move ready
-```
-
-预期输出（实时 Trace）：
-```
-Task submitted: move(ready)
-
-[10:01:22] goal_received (0%)
-[10:01:23] planning (10%)
-[10:01:24] executing (30%)
-[10:01:27] completed (100%)
-
-[OK] SUCCESS
-  Success: 1/1
-```
-
-> **退出码**: `echo $?` 输出 `0`（成功）。
-
-### 7.4 提交一个 Pick-Place 任务
-
-```bash
-robot run pick_place red_cube zone_b
-```
-
-预期输出：
-```
-Task submitted: pick_place(red_cube zone_b)
-
-[10:01:30] goal_received (0%)
-[10:01:31] skill_selected (10%)
-[10:01:32] precondition_check (20%)
-[10:01:33] safety_check (30%)
-[10:01:34] executing_grasp (40%)
-[10:01:37] executing_place (70%)
-[10:01:38] postcondition_check (90%)
-[10:01:38] completed (100%)
-
-[OK] SUCCESS
-  Success: 1/1
-```
-
-### 7.5 显式 task run 形式
-
-```bash
-robot task run pick_place red_cube zone_b
-```
-
-> `robot run` 是 `robot task run` 的 shorthand，两者完全等价。
-
-### 7.6 调试模式
-
-```bash
-robot run pick_place red_cube zone_b --debug
-```
-
-预期输出：
-```
-=== Debug Mode: pick_place(red_cube zone_b) ===
-
-[debug] Building TaskGoal...
-  action_type: pick_place
-  arm_name: arm1
-  object_id: red_cube
-  zone_name: zone_b
-  approach: top
-
-[debug] Checking preconditions...
-  [OK] object_id: red_cube
-  [OK] zone_name: zone_b
-  Checking object 'red_cube' in world model...
-    [OK] Object found: red_cube
-    position: [0.50, 0.15, 0.05]
-    grasp_state: FREE
-    confidence: 0.94
-
-[debug] Submitting task...
-
-[debug] Result analysis:
-  success: True
-  success_count: 1
-  total_count: 1
-```
-
-### 7.7 指定 arm2 执行
-
-```bash
-robot run move ready --arm arm2
-```
-
-### 7.8 静默模式（不显示 Trace）
-
-```bash
-robot run move home --no-trace
+  home, ready, extended, scan, inspect, place_high, place_low
 ```
 
 ---
 
-## 第八步：DIAGNOSE — 查看执行历史 (2分钟)
+## 第七步：行动 (ACT) — 6 种任务类型
 
-### 8.1 查看 Episode 历史
-
-```bash
-robot episode list
-```
-
-预期输出：
-```
-Recent Episodes (3):
-  episode_00003  move            [OK]   3.20s  0 recovery
-  episode_00002  pick_place      [OK]   7.44s  0 recovery
-  episode_00001  move            [OK]   2.80s  0 recovery
-```
-
-> **向后兼容**: `robot episodes` 也可用，等价于 `robot episode list`。
-
-### 8.2 查看 Episode 详情
+### 7.1 移动到预设位置
 
 ```bash
-robot episode show episode_00002
+robot> run move ready
+robot> run move home
+robot> run move extended
+robot> run move scan
 ```
 
-预期输出：
-```
-Episode: episode_00002
-  Task:       pick_place
-  Skill:      pick_object
-  Robot:      arm1
-  Result:     [OK] SUCCESS
-  Duration:   7.44s
-  Recovery:   0 attempts
-
-Steps (6):
-  [1] 0.1s  skill_select              [OK]
-  [2] 0.0s  precondition              [OK]
-  [3] 0.1s  safety_check              [OK]
-  [4] 2.3s  execute_grasp             [OK]
-  [5] 2.1s  execute_place             [OK]
-  [6] 0.0s  postcondition             [OK]
-
-World State (initial):
-  red_cube         [0.50, 0.15, 0.05]  FREE
-
-World State (final):
-  red_cube         [0.30, -0.20, 0.10]  PLACED
-```
-
-> **向后兼容**: `robot episode episode_00002` 也可用，等价于 `robot episode show episode_00002`。
-
-### 8.3 深度分析（AI Debugger）
+### 7.2 Pick-Place（最常用）
 
 ```bash
-robot analyze episode_00002
+robot> run pick_place red_cube zone_b
+robot> run pick blue_cylinder zone_a
+robot> run place_zone green_box zone_c   # 当前持有的物体放到 zone_c
 ```
 
-预期输出：
-```
-=== Episode Analysis ===
-  ID: episode_00002
-  Task: pick_place
-  Skill: pick_object
-  Result: SUCCESS
-  Duration: 7.44s
-
-  No failure detected — episode succeeded.
-
-  Performance Breakdown:
-    [1] skill_select              0.10s (1%)
-    [2] precondition              0.00s (0%)
-    [3] safety_check              0.10s (1%)
-    [4] execute_grasp             2.30s (31%) ######
-    [5] execute_place             2.10s (28%) #####
-    [6] postcondition             0.00s (0%)
-
-  World State Changes:
-    red_cube: FREE -> PLACED
-    red_cube moved: dx=-0.200 dy=-0.350 dz=0.050
-
-  No improvements suggested — execution looks healthy.
-```
-
-### 8.4 查看失败案例
+### 7.3 指定臂（arm1 或 arm2）
 
 ```bash
-robot episode list --failures-only
+robot> run pick_place red_cube zone_b --arm arm1
+robot> run pick_place blue_cylinder zone_a --arm arm2
 ```
 
-如果有失败 Episode，用 `robot analyze` 深度分析：
+### 7.4 完整任务流程示例
+
 ```bash
-robot analyze episode_00041
-```
+# arm1: 把红方块放到 zone_b
+robot> run pick_place red_cube zone_b --arm arm1
 
-预期输出（失败分析）：
-```
-=== Episode Analysis ===
-  ID: episode_00041
-  Task: pick_place
-  Result: FAILURE
-  Duration: 7.18s
+# arm2: 把蓝圆柱放到 zone_a（并行）
+robot> run pick_place blue_cylinder zone_a --arm arm2
 
-  Failure Point:
-    Step 4: execute_grasp
-
-    Context (previous steps):
-      [2] precondition [OK]
-      [3] safety_check [OK]
-
-  Recovery Analysis (2 attempts):
-    [1] grasp_failed -> strategy: retry [FAIL]
-    [2] grasp_failed -> strategy: change_approach [FAIL]
-
-  Suggested Improvements:
-    -> Grasp failure: Increase perception frequency or adjust grasp tolerance
-    -> High recovery count (2): Consider improving initial perception quality
+# 移回 home
+robot> run move home
 ```
 
 ---
 
-## 第九步：ACT — 安全操作 (1分钟)
+## 第八步：诊断 (DIAGNOSE) — 23 项系统检查
 
-### 9.1 查看安全状态
-
-```bash
-robot safety status
-```
-
-预期输出：
-```
-SAFETY
-----------------------------------------
-  Supervisor       ● ACTIVE
-  Speed scale      1.00
-  Message          OK
-
-Authority:
-  Safety > Coordinator > Skill > Task
-```
-
-### 9.2 安全检查
+### 8.1 完整诊断
 
 ```bash
-robot safety check
+robot> doctor
 ```
 
-### 9.3 紧急停止（最高优先级）
+**输出**（节选）：
+```
+=== Robot Runtime Diagnosis ===
 
-**`robot safety stop` 直接调用 SafetySupervisor，绕过 RuntimeApi/Coordinator/Skill pipeline。**
+  ✓ ROS2: DDS communication (distro=jazzy)
+  ✓ Gazebo: Binary gz available
+  ✓ Build: 17 packages installed
+  ✓ Nodes: 24 active nodes
+  ✓ Controllers: arm1 JTC + arm2 JTC active
+  ✓ MoveIt: move_group ready
+  ✓ WorldModel: Query service available
+  ✓ Safety: Supervisor online
+  ✓ Runtime API: 6 services available
+  ✓ Experience: Query service available
+  ✓ Perception: ColorDetector online
+  ✓ Evaluation: Engine ready
+  ✓ Runtime Health: Session clean
+
+Score: 23/23 (100%)
+```
+
+### 8.2 安全状态
 
 ```bash
-robot safety stop
-echo $?
+robot> safety status
 ```
 
-预期输出：
-```
-[OK] Emergency stop activated
-2
+### 8.3 安全检查
+
+```bash
+robot> safety check
 ```
 
-> **退出码 2 = Safety**: 这是退出码契约的安全专用码。
+### 8.4 紧急停止（慎用！）
 
-> **架构保证**:
-> ```
-> CLI → SafetySupervisor → STOP MOTION
-> ```
-> 而非：
-> ```
-> CLI → RuntimeApi → Task → Coordinator → Safety
-> ```
-> 这体现了 Safety 独立性架构约束 — SafetySupervisor 拥有最终停止权，不依赖 Coordinator 运行。
+```bash
+robot> safety stop
+```
+
+> ⚠️ `safety stop` 直接给 SafetySupervisor 发 E-Stop，会停掉所有运动。需 `robot restart` 才能恢复。
 
 ---
 
-## 第十步：实时监控仪表盘 (可选)
+## 第九步：回顾 (REFLECT) — Episode & Trace
 
-### 10.1 启动实时监控
-
-```bash
-robot watch
-```
-
-预期输出（实时刷新，类似 htop）：
-```
-=== Robot Runtime Monitor ===
-  Uptime: 5.2s  |  Press Ctrl+C to stop
-
-  Robot State:
-    arm1:
-      shoulder_pan_joint       35.2deg [#####-----]
-      shoulder_lift_joint     -20.1deg [----##----]
-      elbow_joint              80.3deg [######----]
-      wrist_1_joint             0.0deg [-----#----]
-      wrist_2_joint            45.0deg [######----]
-      wrist_3_joint            10.2deg [-----#----]
-    arm2:
-      shoulder_pan_joint       0.0deg [-----#----]
-      ...
-
-  Legend: [#####-----] joint angle (-180 to +180)
-```
-
-按 `Ctrl+C` 退出。
-
-### 10.2 限定时长监控
+### 9.1 查看执行历史
 
 ```bash
-robot watch --duration 10
+robot> episodes
 ```
 
-监控 10 秒后自动退出。
+```
+EPISODE ID                  TASK              RESULT      DURATION
+  ep-20260813-101234        pick_place       SUCCESS     18.4s
+  ep-20260813-101220        move             SUCCESS     5.2s
+  ep-20260813-101200        pick_place       FAILURE     22.1s
+```
 
----
+**只看失败用例**：
+```bash
+robot> episodes --failures-only
+```
 
-## 第十一步：运行 Benchmark 与独立评估 (2分钟)
+**最近 N 条**：
+```bash
+robot> episodes --recent 5
+```
 
-### 11.1 批量执行 10 次 move 任务
+### 9.2 深入分析单个 Episode
 
 ```bash
-robot benchmark move --count 10
+robot> analyze ep-20260813-101234
 ```
 
-预期输出：
+**输出**：
 ```
-Running 10x move...
-[########################################] 10/10
+Episode: ep-20260813-101234
+Task: pick_place red_cube zone_b
+Result: SUCCESS
+Duration: 18.4s
 
-Results:
-  Total:        10
-  Success:       10  (100.0%)
-  Failure:        0  (0.0%)
-  Avg duration:  3.20s
-  Min/Max:       2.80s / 4.10s
+Skill Trace:
+  1. detect(red_cube)        0.5s   ✓
+  2. grasp(red_cube)         5.2s   ✓
+  3. move(zone_b)            8.1s   ✓
+  4. place(zone_b, red_cube) 4.6s   ✓
+
+Recovery Actions: 0
+Collision Events: 0
+Safety Rejections: 0
+
+World State Snapshot:
+  Before: red_cube at (0.50, 0.00, 0.43), arm1 at home
+  After:  red_cube at (0.30, 0.20, 0.44), arm1 at zone_b
 ```
 
-### 11.2 批量执行并保存结果
+### 9.3 Trace 详情
 
 ```bash
-robot benchmark pick_place --count 20 --output /tmp/bench.json
+robot> traces --recent 10
+robot> trace trace-20260813-101234
 ```
 
-### 11.3 独立评估
+### 9.4 Benchmark（批量执行）
 
 ```bash
-robot evaluate
+robot> benchmark pick_place --count 20
 ```
 
-> **`robot evaluate` 是什么**: 独立评估层，不参与决策链，只做事后验收。M7.FINAL 的 15 场景 + 7 不变量就是通过独立评估层验证的。
+**输出**：
+```
+Benchmark: pick_place, 20 episodes
+═══════════════════════════════════════
+1/20  ✓ SUCCESS  17.2s
+2/20  ✓ SUCCESS  18.5s
+...
+20/20 ✓ SUCCESS  16.8s
 
----
+Success Rate: 20/20 (100%)
+Avg Duration: 17.6s
+P50: 17.2s
+P95: 22.3s
+Failures: 0
+```
 
-## 第十二步：停止仿真 (1分钟)
-
+**保存到 JSON**：
 ```bash
-robot sim stop
-```
-
-预期输出：
-```
-Stopping Robot Runtime...
-  [OK] Runtime API stopped
-  [OK] Simulation stopped
+robot> benchmark pick_place --count 50 --output /tmp/bench.json
 ```
 
 ---
 
-## 退出码契约
-
-CLI v2 冻结的退出码契约，可用于脚本自动化：
-
-| Code | Meaning | 示例 |
-|------|---------|------|
-| 0 | Success | 任务成功 |
-| 1 | Error | 服务不可用、任务失败 |
-| 2 | Safety | 紧急停止、安全违规 |
-| 3 | Timeout | 服务超时 |
+## 第十步：实时监控 (WATCH)
 
 ```bash
-robot run move ready --no-trace
-case $? in
-  0) echo "Success" ;;
-  1) echo "Error" ;;
-  2) echo "Safety stop" ;;
-  3) echo "Timeout" ;;
-esac
+robot> watch --duration 30
+```
+
+每 2 秒刷新一次系统状态（机器人+世界+Skills），类似 `top` 命令。
+
+---
+
+## 第十一步：场景与配置进阶
+
+### 11.1 场景系统
+
+系统内置 4 个场景：
+
+| 场景 | 描述 | launch 文件 |
+|------|------|-------------|
+| `tabletop` | 桌面物体摆放（默认） | `m6_pick_place_sim.launch.py` |
+| `lab` | 实验室环境 | `m6_pick_place_sim.launch.py` |
+| `warehouse` | 仓库货架 | `m6_pick_place_sim.launch.py` |
+| `home` | 家居场景 | `m6_pick_place_sim.launch.py` |
+
+**查看场景详情**：
+```bash
+robot> scene show tabletop
+```
+
+### 11.2 配置文件位置
+
+所有配置都用 YAML 驱动，更改无需重新编译：
+
+| 配置 | 路径 | 作用 |
+|------|------|------|
+| `robots.yaml` | `src/multi_arm_core/config/robots.yaml` | 机械臂配置（双臂、控制器、Zone） |
+| `robot.yaml` | `src/multi_arm_robot_description/config/robot.yaml` | 机器人结构（URDF 生成） |
+| `capability.yaml` | `src/multi_arm_robot_description/config/capability.yaml` | 静态能力 |
+| `safety_config.yaml` | `src/multi_arm_safety/config/safety_config.yaml` | 安全限制（速度、空间） |
+| `perception_config.yaml` | `src/multi_arm_perception/config/perception_config.yaml` | 感知管线 |
+| `domain_randomization.yaml` | `src/multi_arm_simulation/config/domain_randomization.yaml` | 域随机化 |
+
+**双臂配置**（`robots.yaml`）：
+```yaml
+robots:
+  - name: arm1
+    type: ur5e
+    namespace: /arm1
+    capabilities:
+      payload_kg: 5.0
+      reachable_zones: [zone_a, zone_b, home]
+  - name: arm2
+    type: ur5e
+    namespace: /arm2
+    capabilities:
+      payload_kg: 5.0
+      reachable_zones: [zone_a, zone_c, home]
+```
+
+**添加新臂**：只需在 `robots.yaml` 加一项，无需改代码。
+
+### 11.3 安全配置（`safety_config.yaml`）
+
+```yaml
+max_velocity_scale: 1.0      # 速度比例（0.0-1.0）
+workspace_bounds: [[-0.8, 0.8], [-0.8, 0.8], [0.0, 1.2]]
+collision_distance_threshold: 0.05
+emergency_stop_timeout: 5.0
 ```
 
 ---
 
-## 完整流程速查
+## 第十二步：完整场景演练
+
+### 场景 A：双臂协作 Pick-Place
 
 ```bash
-# === 一次性复制粘贴版 ===
+robot> start --gui --scene tabletop
 
-# 1. 环境
-source /opt/ros/jazzy/setup.bash
-export ROS_HOME=/tmp/ros_home HOME=/tmp PATH=/usr/bin:$PATH
-export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib/gz-sim-8/plugins
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-cd ~/multi_arm_line_ws
+# 1. 观察
+robot> world
+robot> world --relations
 
-# 2. 构建（如已构建可跳过）
-colcon build --packages-select multi_arm_interfaces multi_arm_core multi_arm_safety multi_arm_world_model multi_arm_task_planner multi_arm_moveit_config multi_arm_robot_description multi_arm_perception multi_arm_manipulation multi_arm_skill_runtime multi_arm_runtime_api multi_arm_experience multi_arm_simulation multi_arm_tools ur_simulation_gz
-source install/setup.bash
-export PATH="$PATH:$(ros2 pkg prefix multi_arm_tools)/lib/multi_arm_tools"
+# 2. arm1 抓红方块到 zone_b
+robot> run pick_place red_cube zone_b --arm arm1
 
-# 3. 单元测试
-python3 -m pytest src/multi_arm_tools/test/ -v
+# 3. arm2 抓蓝圆柱到 zone_a（并行）
+robot> run pick_place blue_cylinder zone_a --arm arm2
 
-# 4. 一键启动仿真
-robot sim start
+# 4. 全部完成后回到 home
+robot> run move home --arm arm1
+robot> run move home --arm arm2
 
-# 5. OBSERVE: 诊断+查询
-robot doctor
-robot status
-robot status --json
+# 5. 回顾
+robot> episodes
+robot> analyze ep-XXX
 
-# 6. DIAGNOSE: 世界+感知
-robot world
-robot world red_cube
-robot world --relations
-robot vision status
-robot vision objects
-robot skills
-robot capability
+# 6. 停止
+robot> stop
+robot> exit
+```
 
-# 7. ACT: 执行任务
-robot task list
-robot task positions
-robot run move ready
-robot run pick_place red_cube zone_b
-robot run pick_place red_cube zone_b --debug
-robot run move ready --arm arm2
+### 场景 B：批量 Benchmark
 
-# 8. DIAGNOSE: 历史+分析
-robot episode list
-robot episode list --failures-only
-robot episode show episode_00001
-robot analyze episode_00001
+```bash
+robot> start
 
-# 9. ACT: 安全
-robot safety status
-robot safety check
-# robot safety stop    # 紧急停止（取消注释执行）
+# 跑 20 次 Pick-Place
+robot> benchmark pick_place --count 20
 
-# 10. 监控
-robot watch --duration 10
+# 查看结果
+robot> episodes --recent 20
 
-# 11. Benchmark + 评估
-robot benchmark move --count 10
-robot benchmark pick_place --count 20 --output /tmp/bench.json
-robot evaluate
+# 跑 10 次复杂双任务
+robot> benchmark pick_place --count 10 --arm arm1
 
-# 12. 停止
-robot sim stop
+robot> stop
+robot> exit
+```
+
+### 场景 C：故障注入与恢复
+
+```bash
+robot> start
+
+# 1. 正常任务
+robot> run pick_place red_cube zone_b
+
+# 2. 故意指定不存在的物体（应失败+恢复）
+robot> run pick_place black_hole zone_b
+
+# 3. 查看失败案例
+robot> episodes --failures-only
+
+# 4. 分析失败原因
+robot> analyze ep-XXX
+
+# 5. 清空失败记录
+robot> stop
+robot> exit
+```
+
+### 场景 D：E-Stop 紧急停止
+
+```bash
+robot> start
+
+# 1. 启动一个长任务
+robot> run pick_place red_cube zone_b &
+
+# 2. 紧急停止
+robot> safety stop
+
+# 3. 查看状态（应显示 ERROR）
+robot> status
+
+# 4. 恢复
+robot> restart
+robot> exit
+```
+
+### 场景 E：WorldModel 深度查询
+
+```bash
+robot> start
+
+# 1. 看所有物体
+robot> world
+
+# 2. 看某个物体的协方差和不确定性
+robot> world red_cube
+
+# 3. 看关系图
+robot> world --relations
+
+# 4. JSON 格式（给脚本用）
+robot> world --json
+
+# 5. JSON 看能力
+robot> capability --json
 ```
 
 ---
 
-## Agent / 脚本自动化示例
+## 第十三步：完整命令清单
 
-### Python 消费 JSON
+### 生命周期
 
-```python
-import subprocess, json
+| 命令 | 做什么 |
+|------|--------|
+| `start [--gui] [--scene NAME] [--domain N]` | 启动仿真（可选 GUI/场景/Domain） |
+| `stop` | 停止仿真（清理进程树） |
+| `restart [--gui] [--scene NAME]` | 重启仿真 |
+| `status` | 查看当前 session |
+| `doctor` | 23 项系统诊断 |
+| `repair` | 自动修复 Runtime 问题 |
 
-# 系统状态
-result = subprocess.run(["robot", "status", "--json"], capture_output=True)
-status = json.loads(result.stdout)
-if status["world"]["conflicts"] > 0:
-    print("WARNING: WorldModel conflicts detected")
+### 仿真
 
-# 提交任务
-result = subprocess.run(
-    ["robot", "run", "pick_place", "red_cube", "zone_b", "--no-trace"],
-    capture_output=True
-)
-if result.returncode == 0:
-    print("Task succeeded")
-elif result.returncode == 2:
-    print("Safety stop triggered")
-```
+| 命令 | 做什么 |
+|------|--------|
+| `sim start [--gui]` | 启动仿真（底层） |
+| `sim stop` | 停止仿真（底层） |
+| `sim status` | 仿真状态 |
+| `scene list` | 列出所有场景 |
+| `scene show NAME` | 查看场景详情 |
 
-### Shell CI/CD 集成
+### 观察
 
-```bash
-#!/bin/bash
-# CI/CD 集成
-robot doctor || exit 1
-robot run move ready --no-trace || exit 1
-robot run pick_place red_cube zone_b --no-trace || exit 1
-robot benchmark move --count 10 --output bm.json
-robot evaluate
-```
+| 命令 | 做什么 |
+|------|--------|
+| `world [OBJECT_ID] [--relations]` | 世界模型状态 |
+| `world --json` | JSON 输出 |
+| `vision status` | 感知管线状态 |
+| `vision objects` | 检测到的物体 |
+| `skills` | 已注册的 Skills |
+| `capability` | 三层能力 |
+| `task list` | 任务类型列表 |
+| `task positions` | 预设位置列表 |
 
-### jq 查询示例
+### 行动
 
-```bash
-# 所有不确定的物体
-robot world --json | jq '.objects[] | select(.uncertain == true)'
+| 命令 | 做什么 |
+|------|--------|
+| `run pick_place OBJECT ZONE [--arm ARM]` | Pick-Place |
+| `run pick OBJECT` | 抓取 |
+| `run place ZONE` | 放置 |
+| `run move POSITION` | 移动 |
+| `run lift POSITION` | 抬起 |
+| `run retract POSITION` | 收回 |
+| `run inspect POSITION` | 检查 |
+| `run grasp OBJECT` | 抓取（别名） |
 
-# 最近失败的Episode
-robot episode list --json | jq '.episodes[] | select(.result == "failure")'
+### 回顾
 
-# Capability可用率
-robot capability --json | jq '.capabilities | map(.available) | add / length'
-```
+| 命令 | 做什么 |
+|------|--------|
+| `episode [ID]` | 单个 Episode 详情 |
+| `episode list` | Episode 列表 |
+| `episode show ID` | 显示 Episode |
+| `episodes [--failures-only] [--recent N]` | Episode 历史 |
+| `analyze EPISODE_ID` | 深度分析 |
+| `traces [--recent N]` | Trace 列表 |
+| `trace TRACE_ID` | Trace 详情 |
+
+### 安全
+
+| 命令 | 做什么 |
+|------|--------|
+| `safety status` | 安全状态 |
+| `safety check` | 安全检查 |
+| `safety stop` | 紧急停止 |
+
+### 批量化
+
+| 命令 | 做什么 |
+|------|--------|
+| `benchmark TASK --count N [--output FILE]` | 跑 N 次任务 |
+| `watch --duration N` | 实时监控 N 秒 |
+| `evaluate` | 系统评估 |
+
+### Shell
+
+| 命令 | 做什么 |
+|------|--------|
+| `help` | 查看所有命令 |
+| `exit` / `quit` | 退出 Shell |
 
 ---
 
-## 常见问题
+## 故障排查
 
-### Q1: `robot: command not found`
+### 问题 1: `robot: command not found`
 
+**原因**: PATH 没设好。
+
+**解决**:
 ```bash
-source /opt/ros/jazzy/setup.bash
-colcon build --packages-select multi_arm_tools
 source install/setup.bash
 export PATH="$PATH:$(ros2 pkg prefix multi_arm_tools)/lib/multi_arm_tools"
 ```
 
-### Q2: `robot sim start` 后节点未就绪
+### 问题 2: Shell 启动时显示 "Auto-repair? [Y/n]"
+
+**原因**: 之前有残留进程。
+
+**解决**: 输入 `y` 让它自动清理。
+
+### 问题 3: `robot start --gui` 没弹出 GUI
+
+**原因**: 没有 X server 或 DISPLAY 没设。
+
+**解决**:
+```bash
+# WSL2 检查 WSLg
+echo $DISPLAY   # 应有值
+
+# 或安装 VcXsrv
+export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+```
+
+**或用 headless 模式**：
+```bash
+robot> start   # 不要 --gui
+```
+
+### 问题 4: `robot run` 返回 "Skill not found or not READY"
+
+**原因**: DDS 路由到了不存在的旧 node（ghost node）。
+
+**解决**:
+```bash
+robot> repair
+```
+
+这会杀重复进程 + 重启 DDS daemon。
+
+### 问题 5: `robot start` 卡在 "Waiting for nodes to initialize"
+
+**原因**: Gazebo 启动慢（首次约 60s）。
+
+**解决**: 等待 60 秒。如果还卡着，按 Ctrl+C 然后 `robot status` 查看详细状态。
+
+### 问题 6: 服务调用返回 "context invalid"
+
+**原因**: runtime_api_node 后端服务不响应（DDS 问题）。
+
+**解决**:
+```bash
+robot> repair
+robot> restart
+```
+
+### 问题 7: 一切正常但想"完全重置"
 
 ```bash
-# 检查环境
-robot doctor
+# 退出 Shell
+robot> exit
 
-# 查看仿真状态
-robot sim status
+# 清理所有 session 和进程
+pkill -9 -f 'gz sim' 2>/dev/null
+pkill -9 -f 'ros2' 2>/dev/null
+sleep 3
+rm -rf ~/.robot/runtime/current
 
-# 查看ROS2节点
-ros2 node list
+# 重新进入
+robot
 ```
 
-### Q3: Gazebo 黑屏 / 无法启动
+> ⚠️ **慎用 `pkill`**: 这是最后的手段。正常情况下 `robot stop` + `robot repair` 就够了。
 
-使用 headless 模式（默认）：
+### 问题 8: Gazebo 启动失败 "Address already in use"
+
+**原因**: 端口被占用。
+
+**解决**:
 ```bash
-robot sim start
-```
+# 查找占用端口的进程
+lsof -i :11345
 
-### Q4: `robot run` 卡住不动
-
-```bash
-# 诊断环境
-robot doctor
-
-# 检查控制器
-ros2 control list_controllers
-
-# 检查move_group
-ros2 node list | grep move_group
-```
-
-### Q5: 任务执行失败
-
-```bash
-# 查看失败Episode
-robot episode list --failures-only
-
-# 深度分析失败原因
-robot analyze <失败的episode_id>
-
-# 查看世界状态（物体可能漂移）
-robot world red_cube
-```
-
-### Q6: `robot doctor` 显示某些服务不可用
-
-按 doctor 的建议修复：
-```
-[Runtime API] [FAIL] Services available
-  Problem: Only 0 /runtime/* services found
-  Suggested fix: Run: ros2 run multi_arm_runtime_api runtime_api_node
-```
-
-### Q7: `robot safety stop` 失败
-
-```
-✗ Emergency stop failed: Safety service not available
-```
-
-**解决**: 确认 SafetySupervisor 正在运行。
-
-```bash
-ros2 node list | grep safety
-```
-
-### Q8: DDS 通信问题
-
-```bash
-# 切换到 CycloneDDS
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-
-# 验证
-ros2 daemon stop
-ros2 daemon start
+# 杀掉
+kill -9 <PID>
 ```
 
 ---
 
-## 命令速查表
+## 验证状态表 (2026-08-13)
 
-```bash
-# OBSERVE 层
-robot status                          # 系统总览
-robot status --json                   # 机器可读
-robot doctor                          # 系统诊断
-
-# DIAGNOSE 层
-robot world                           # 世界模型
-robot world red_cube                  # 物体详情 (belief/health)
-robot world --relations               # 关系图
-robot vision status                   # 感知状态
-robot vision objects                  # 检测结果
-robot skills                          # Skill列表
-robot capability                      # 三层能力
-robot episode list                    # Episode历史
-robot episode list --failures-only    # 失败Episode
-robot episode show <id>               # Episode详情
-robot traces                          # Trace历史
-robot trace <id>                      # Trace详情
-
-# ACT 层
-robot task list                       # 可用任务
-robot task positions                  # 预设位置
-robot task run <task> [args]          # 显式任务提交
-robot run <task> [args]               # shorthand
-robot run <task> --debug              # 调试模式
-robot run <task> --no-trace           # 静默模式
-robot run <task> --arm arm2           # 指定机械臂
-robot safety status                   # 安全状态
-robot safety check                    # 安全检查
-robot safety stop                     # 紧急停止 (exit code 2)
-robot benchmark <task> --count N      # 批量执行
-robot evaluate                        # 独立评估
-
-# 仿真管理
-robot sim start [--gui]               # 一键启动
-robot sim stop                        # 停止
-robot sim status                      # 状态
-
-# 监控
-robot watch [--duration N]            # 实时仪表盘
-
-# 深度分析
-robot analyze <id>                    # AI Debugger
-
-# GLOBAL
---json                                # 机器可读输出
-```
-
----
-
-## 向后兼容
-
-| 旧命令 | 新命令 | 状态 |
-|--------|--------|------|
-| `robot run <task>` | `robot task run <task>` | 两者都可用 |
-| `robot episodes` | `robot episode list` | 两者都可用 |
-| `robot episode <id>` | `robot episode show <id>` | 两者都可用 |
-| `robot world <obj>` | `robot world <obj>` | 不变（增强） |
-| `robot status` | `robot status` | 增强（+--json） |
-| `robot doctor` | `robot doctor` | 增强（+Perception/Evaluation） |
+| 命令 | 状态 | 备注 |
+|------|------|------|
+| `robot` (无参数) | ✅ | 进入 Robot OS Shell |
+| `robot --help` | ✅ | 24 个命令 |
+| `robot> start` | ✅ | Session 创建 (domain=40) |
+| `robot> start --gui` | ✅ | Gazebo 窗口弹出 |
+| `robot> start --scene lab` | ✅ | 切换场景 |
+| `robot> stop` | ✅ | 清理进程树 |
+| `robot> repair` | ✅ | 杀重复 + 重启 DDS |
+| `robot> doctor` | ✅ | 23 项检查 |
+| `robot> status` | ✅ | 系统概览 |
+| `robot> world` | ✅ | 世界模型 |
+| `robot> world red_cube` | ✅ | 单物体详情 |
+| `robot> world --relations` | ✅ | 关系图 |
+| `robot> vision status` | ✅ | 感知状态 |
+| `robot> skills` | ✅ | Skills 列表 |
+| `robot> capability` | ✅ | 三层能力 |
+| `robot> task list` | ✅ | 任务类型 |
+| `robot> run move ready` | ✅ | 移动 |
+| `robot> run pick_place red_cube zone_b` | ✅ | Pick-Place |
+| `robot> run pick_place red_cube zone_b --arm arm1` | ✅ | 指定臂 |
+| `robot> safety status` | ✅ | 安全状态 |
+| `robot> safety stop` | ✅ | E-Stop |
+| `robot> episodes` | ✅ | Episode 历史 |
+| `robot> analyze ep-XXX` | ✅ | 深度分析 |
+| `robot> benchmark pick_place --count 10` | ✅ | 批量 |
+| `robot> watch` | ✅ | 实时监控 |
+| `python3 -m pytest test_cli.py` | ✅ | 22/22 pass |
 
 ---
 
@@ -1187,5 +966,7 @@ robot analyze <id>                    # AI Debugger
 
 - **完整 CLI 文档**: `docs/architecture/M7_CLI_v2_usage_guide.md`
 - **设计文档**: `docs/architecture/M7_CLI_v2_operator_interface.md`
-- **M7.FINAL 验证报告**: `docs/validation/M7_FINAL_validation_report.md`
-- **M6.6 验证报告**: `docs/validation/M6_6_validation_report.md`
+- **Runtime Manager 设计**: `docs/architecture/Robot_OS_Shell_design.md`
+- **Runtime Manager 验证**: `docs/validation/Robot_OS_Shell_validation_report.md`
+- **场景系统**: `src/multi_arm_simulation/scenes/`
+- **配置驱动**: `src/multi_arm_core/config/robots.yaml`

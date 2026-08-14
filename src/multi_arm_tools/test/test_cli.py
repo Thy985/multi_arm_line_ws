@@ -263,9 +263,11 @@ def test_cli_argparse_json_flag():
             assert args.json_output is True
 
 
-def test_cli_no_command_fails():
-    """Test that no command fails."""
+def test_cli_no_command_enters_shell():
+    """Test that no command enters interactive shell (exits on EOF)."""
     from multi_arm_tools.cli import main
     with patch.object(sys, "argv", ["robot"]):
-        with pytest.raises(SystemExit):
-            main()
+        with patch("builtins.input", side_effect=EOFError):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0

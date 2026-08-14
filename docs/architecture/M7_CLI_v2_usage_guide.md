@@ -2,16 +2,90 @@
 
 **包**: `multi_arm_tools`
 **命令**: `robot`
-**版本**: 2.0.0
-**定位**: Robot Control & Observ2.0.0
-**定位**: Robot Control & Observability CLI — M7/M8 Operator Interface
+**版本**: 2.1.0 — Robot OS Shell (Runtime Manager 集成)
+**定位**: Robot Operating Interface — M7/M8 Entry Point
 
 ---
 
 ## 1. 概述
 
-CLI v2 从"API调试器"升级为**Operator Interface**，围绕操作者的认知模型设计：
+CLI v2.1 从"Operator Interface"升级为**Robot OS Shell** — 机器人操作系统入口。
 
+```
+$ robot
+```
+
+无参数启动即进入交互环境，自动 bootstrap + auto-repair，提供 `robot>` 提示符。
+
+### 架构层次
+
+```
+            HUMAN
+              │
+        ┌─────┴─────┐
+        │           │
+   ROBOT OS     AGENT/DEV
+   SHELL        TOOL
+        │           │
+  ┌─────┴─────┐    │
+  │           │    │
+  start    status │
+  stop     doctor │
+  repair   run    │
+```
+
+### 三大冻结契约
+
+| 契约 | 内容 |
+|------|------|
+| **Command** | 固定子命令层次：lifecycle(顶层) → OBSERVE/DIAGNOSE/ACT |
+| **Output** | 人可读(默认) / 机可读(`--json`) |
+| **Exit Code** | 0=success, 1=error, 2=safety, 3=timeout |
+
+---
+
+## 2. 快速开始
+
+### 2.1 前置条件
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+export PATH="/usr/bin:$PATH"
+export ROS_HOME=/tmp/ros_home
+export HOME=/tmp
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib/gz-sim-8/plugins
+```
+
+### 2.2 方式 A: Robot OS Shell（推荐）
+
+```bash
+robot
+```
+
+无参数启动，进入交互环境。首次启动会自动 bootstrap 环境检测。
+
+### 2.3 方式 B: 一级命令
+
+```bash
+robot start              # 启动仿真 session
+robot run move ready     # 执行任务
+robot doctor             # 系统诊断
+robot stop               # 停止仿真
+```
+
+### 2.4 Session 管理
+
+每次 `robot start` 创建一个独立 session，自动分配 DDS domain 40-59：
+
+```
+~/.robot/runtime/
+  current -> session-20260813-101954/
+  session-20260813-101954/
+    manifest.yaml    # session 元数据 + PID 树
+    pid.lock         # launch 进程 PID
+    logs/launch.log  # stdout/stderr
 ```
              HUMAN
                │
@@ -106,6 +180,95 @@ $ robot status --json
 ---
 
 ## 3. 命令详解
+
+### 3.0 生命周期层（顶层）
+
+v2.1 新增生命周期命令，位于所有其他命令之上。
+
+#### `robot` — 进入 Robot OS Shell
+
+无参数启动即进入交互环境：
+
+```bash
+$ robot
+```
+
+输出：
+
+```
+  ╭──────────────────────────────────────────╮
+  │   M7 Embodied Robot OS                   │
+  ╰──────────────────────────────────────────╯
+
+Checking environment...
+  ✓ ROS2: ROS_DISTRO=jazzy
+  ✓ Workspace: install/setup.bash
+  ✓ DDS: CycloneDDS
+  ✓ Runtime: no active session
+  Ready.
+
+robot>
+```
+
+Shell 内可用命令：`start`, `stop`, `status`, `repair`, `doctor`, `run`, `world`, `skills`, `safety`, `help`, `exit`。
+
+#### `robot start` — 启动 Session
+
+```bash
+robot start [--gui] [--scene NAME] [--domain ID]
+```
+
+创建 Runtime session，自动分配 DDS domain (40-59)。
+
+**输出示例**：
+
+```
+  Session: session-20260813-101954
+  Domain:  40
+  Scene:   tabletop
+  Launching simulation...
+  PID:     88287
+  Waiting for nodes to initialize (30s)...
+  [OK] Session started.
+```
+
+#### `robot stop` — 停止 Session
+
+```bash
+robot stop
+```
+
+停止活跃 session，清理进程树（不影响其他 session）。
+
+#### `robot repair` — 自动修复
+
+```bash
+robot repair
+```
+
+检测并修复：
+- 僵尸进程（ppid=1）
+- 重复进程（保留最新，杀其余）
+- DDS ghost nodes（重启 daemon）
+- Stale sessions
+
+**输出示例**：
+
+```
+  Detecting runtime issues...
+  ✓ Killed 2 duplicate process(es):
+    gazebo (PID 83751)
+    gazebo (PID 83753)
+  ✓ DDS daemon restarted (ghost nodes cleared)
+```
+
+#### `robot restart` — 重启 Session
+
+```bash
+robot restart [--gui] [--scene NAME]
+```
+
+等价于 `robot stop` + `robot start`。
 
 ### 3.1 OBSERVE 层
 

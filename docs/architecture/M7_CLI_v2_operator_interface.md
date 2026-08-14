@@ -1,40 +1,56 @@
-# Robot Runtime CLI v2 — Operator Interface
+# Robot Runtime CLI v2 — Operator Interface (Robot OS Shell)
 
 ## 概述
 
-CLI v2 从"API调试器"升级为**Robot Control & Observability CLI** — M7/M8的操作面。
+CLI v2.1 从"Operator Interface"升级为**Robot OS Shell** — 机器人操作系统入口。
 
-三层认知模型：
+引入 **Runtime Manager** 架构，解决 ROS2 默认缺乏"运行时所有权"的问题：
+- 残留进程无人认领 → Session manifest + PID 树
+- 用户手动 killall → 只杀自己拥有的进程树
+- DDS 路由冲突 → 每个 session 独立 ROS_DOMAIN_ID
+- 重复 action server → `robot repair` 自动检测+修复
+
+四层架构：
 
 ```
              HUMAN
                │
        ┌───────┴────────┐
        │                │
-   OBSERVE            ACT
+   ROBOT OS         AGENT/
+   SHELL           DEVTOOL
        │                │
- status/doctor      task/safety
-       │
-    DIAGNOSE
-       │
- world/vision/episode
+   ┌───┴────┐      ┌────┴────┐
+   │        │      │         │
+LIFECYCLE OBSERVE  DIAGNOSE  ACT
+   │        │      │         │
+ start    status  world     run
+ stop     doctor  vision    safety
+ repair           episode
+ restart          skills
 ```
+
+`robot` 无参数启动 = 进入 Robot OS Shell（交互环境 + bootstrap + auto-repair）。
 
 ## 冻结的三大契约
 
 ### Command Contract
 
 ```text
-robot
-├── status              # 系统总览
-├── doctor              # 系统诊断
-├── world [object]      # 世界模型
-├── vision              # 感知
+robot                                  # 进入 Robot OS Shell
+├── start [--gui] [--scene NAME]       # 启动 Runtime Session
+├── stop                               # 停止 Session
+├── restart                            # 重启 Session
+├── repair                             # 自动修复 Runtime 问题
+├── status                             # 系统总览
+├── doctor                             # 系统诊断（23 项，含 Runtime/DDS 检查）
+├── world [object]                     # 世界模型
+├── vision                             # 感知
 │   ├── status
 │   └── objects
-├── skills              # Skill列表
-├── capability          # Capability Graph
-├── task                # 任务
+├── skills                             # Skill 列表
+├── capability                         # Capability Graph
+├── task                               # 任务
 │   ├── list
 │   ├── positions
 │   ├── run <task> [args]

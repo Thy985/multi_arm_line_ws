@@ -77,8 +77,9 @@ def main() -> None:
     )
     parser.add_argument("--json", dest="json_output", action="store_true",
                         help="Machine-readable JSON output")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
+    _add_lifecycle_commands(subparsers)
     _add_sim_commands(subparsers)
     _add_scene_commands(subparsers)
     _add_doctor_commands(subparsers)
@@ -96,10 +97,27 @@ def main() -> None:
     _add_evaluate_commands(subparsers)
 
     args = parser.parse_args()
+
+    if args.command is None:
+        from multi_arm_tools.interactive_shell import InteractiveShell
+        sys.exit(InteractiveShell().run())
+
     json_sub = getattr(args, "json_subjson", False)
     args.json_output = getattr(args, "json_output", False) or json_sub
     exit_code = _dispatch(args)
     sys.exit(exit_code)
+
+
+def _add_lifecycle_commands(subparsers: argparse._SubParsersAction) -> None:
+    p_start = subparsers.add_parser("start", help="Start robot runtime session")
+    p_start.add_argument("--gui", action="store_true", help="Show Gazebo GUI")
+    p_start.add_argument("--scene", default="tabletop", help="Scene name")
+    p_start.add_argument("--domain", type=int, default=None, help="DDS domain ID")
+    subparsers.add_parser("stop", help="Stop robot runtime session")
+    subparsers.add_parser("repair", help="Auto-repair runtime issues")
+    p_restart = subparsers.add_parser("restart", help="Restart robot runtime")
+    p_restart.add_argument("--gui", action="store_true")
+    p_restart.add_argument("--scene", default="tabletop")
 
 
 def _add_sim_commands(subparsers: argparse._SubParsersAction) -> None:
@@ -234,6 +252,8 @@ def _dispatch(args: argparse.Namespace) -> int:
     """Dispatch command. Returns exit code."""
     json_output = getattr(args, "json_output", False)
 
+    if args.command in ("start", "stop", "repair", "restart"):
+        return _dispatch_lifecycle(args)
     if args.command == "sim":
         return _dispatch_sim(args)
     if args.command == "scene":
@@ -258,6 +278,7 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     client = RuntimeClient()
     try:
+
         if args.command == "status":
             return _cmd_status(client, json_output)
         elif args.command == "world":
@@ -293,6 +314,102 @@ def _dispatch(args: argparse.Namespace) -> int:
         return EXIT_ERROR
     finally:
         client.shutdown()
+
+    return EXIT_ERROR
+
+
+def _dispatch_lifecycle(args: argparse.Namespace) -> int:
+    """Handle start/stop/repair/restart lifecycle commands."""
+    from multi_arm_tools.runtime_manager import RuntimeManager
+    mgr = RuntimeManager()
+
+    if args.command == "start":
+        existing = mgr.get_active_session()
+        if existing and existing.status == "running":
+            print(f"\n  Session already active: {existing.session_id}")
+            print(f"  Domain: {existing.domain_id}, Scene: {existing.scene}")
+            print(f"  Use 'robot stop' first.\n")
+            return EXIT_ERROR
+        if existing and existing.status == "stale":
+            print("\n  Stale session detected, auto-repairing...")
+            mgr.repair()
+            print()
+        try:
+            manifest = mgr.create_session(
+                scene=getattr(args, "scene", "tabletop"),
+                gui=getattr(args, "gui", False),
+                domain_id=getattr(args, "domain", None),
+            )
+        except RuntimeError as e:
+            print(f"\n  Error: {e}\n")
+            return EXIT_ERROR
+        print(f"\n  Session: {manifest.session_id}")
+        print(f"  Domain:  {manifest.domain_id}")
+        print(f"  Scene:   {manifest.scene}")
+        print(f"  Launching simulation...")
+        proc = mgr.start_session(manifest)
+        if proc is None:
+            print("  [FAIL] Could not start launch process.\n")
+            return EXIT_ERROR
+        print(f"  PID:     {proc.pid}")
+        print("  Waiting for nodes to initialize (30s)...")
+        time.sleep(30)
+        print("  [OK] Session started.\n")
+        return EXIT_SUCCESS
+
+    if args.command == "stop":
+        session = mgr.get_active_session()
+        if session is None:
+            print("\n  No active session.\n")
+            return EXIT_ERROR
+        print(f"\n  Stopping session {session.session_id}...")
+        mgr.stop_session(session)
+        print("  [OK] Session stopped.\n")
+        return EXIT_SUCCESS
+
+    if args.command == "repair":
+        print("\n  Detecting runtime issues...")
+        report = mgr.repair()
+        killed = report.get("killed_zombies", [])
+        dupes = report.get("killed_duplicates", [])
+        cleaned = report.get("cleaned_sessions", [])
+        dds_reset = report.get("dds_reset", False)
+        errors = report.get("errors", [])
+        if killed:
+            print(f"\n  ✓ Killed {len(killed)} zombie process(es):")
+            for z in killed:
+                print(f"    {z['name']} (PID {z['pid']})")
+        if dupes:
+            print(f"  ✓ Killed {len(dupes)} duplicate process(es):")
+            for z in dupes:
+                print(f"    {z['name']} (PID {z['pid']})")
+        if dds_reset:
+            print("  ✓ DDS daemon restarted (ghost nodes cleared)")
+        if cleaned:
+            print(f"  ✓ Cleaned {len(cleaned)} stale session(s)")
+        if errors:
+            print(f"  ⚠ {len(errors)} error(s):")
+            for e in errors:
+                print(f"    {e}")
+        if not killed and not dupes and not cleaned and not errors and not dds_reset:
+            print("  No issues found. Runtime is clean.")
+        print()
+        return EXIT_SUCCESS
+
+    if args.command == "restart":
+        session = mgr.get_active_session()
+        if session:
+            print("\n  Stopping current session...")
+            mgr.stop_session(session)
+            time.sleep(2)
+        return _dispatch_lifecycle(
+            argparse.Namespace(
+                command="start",
+                gui=getattr(args, "gui", False),
+                scene=getattr(args, "scene", "tabletop"),
+                domain=None,
+            )
+        )
 
     return EXIT_ERROR
 

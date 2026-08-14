@@ -12,7 +12,7 @@ setup(
         ("share/" + package_name, ["package.xml"]),
 
     ],
-    install_requires=["setuptools"],
+    install_requires=["setuptools", "pyyaml"],
     zip_safe=True,
     maintainer="MultiArm Team",
     maintainer_email="dev@example.com",

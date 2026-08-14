@@ -409,6 +409,26 @@ def launch_setup(context, *args, **kwargs):
     )
     nodes.append(TimerAction(period=10.0, actions=[task_planner_node]))
 
+    # === Skill Runtime Node (provides /skill/execute action server) ===
+    skill_runtime_node = Node(
+        package="multi_arm_skill_runtime",
+        executable="skill_node",
+        name="skill_runtime_node",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+    )
+    nodes.append(TimerAction(period=10.0, actions=[skill_runtime_node]))
+
+    # === Runtime API Node (unified /runtime/* API gateway) ===
+    runtime_api_node = Node(
+        package="multi_arm_runtime_api",
+        executable="runtime_api_node",
+        name="runtime_api_node",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+    )
+    nodes.append(TimerAction(period=12.0, actions=[runtime_api_node]))
+
     return nodes
 
 

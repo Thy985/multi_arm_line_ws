@@ -11,6 +11,7 @@
   <depend>multi_arm_interfaces</depend>
   <depend>multi_arm_runtime_api</depend>
   <depend>multi_arm_experience</depend>
+  <depend>python3-yaml</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

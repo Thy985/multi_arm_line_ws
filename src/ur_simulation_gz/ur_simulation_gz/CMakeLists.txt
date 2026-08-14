@@ -10,8 +10,9 @@ option(
   OFF
 )
 
-install(DIRECTORY config launch urdf rviz
+install(DIRECTORY config launch urdf rviz meshes scripts
   DESTINATION share/${PROJECT_NAME}
+  PATTERN ".git" EXCLUDE
 )
 
 if(BUILD_TESTING)

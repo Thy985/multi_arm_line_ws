@@ -9,5 +9,10 @@
   <material name="led_green"><color rgba="0.0 0.8 0.0 1.0"/></material>
   <material name="torso_white"><color rgba="0.8 0.8 0.8 1.0"/></material>
   <material name="head_dark"><color rgba="0.15 0.15 0.15 1.0"/></material>
+  <material name="camera_lens"><color rgba="0.05 0.05 0.05 1.0"/></material>
+  <material name="led_ring"><color rgba="0.0 0.6 1.0 1.0"/></material>
+  <material name="display_panel"><color rgba="0.0 0.0 0.0 0.85"/></material>
+  <material name="metal_dark"><color rgba="0.2 0.2 0.22 1.0"/></material>
+  <material name="metal_light"><color rgba="0.7 0.7 0.72 1.0"/></material>
 
 </robot>
