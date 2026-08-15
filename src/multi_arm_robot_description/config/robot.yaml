@@ -5,7 +5,7 @@ robot:
 
 components:
   arms:
-    - name: arm1
+    - name: left_arm
       type: ur5e
       urdf: ur5e_macro.xacro
       prefix: arm1_
@@ -17,7 +17,7 @@ components:
       safety:
         max_velocity_scale: 1.0
         max_acceleration_scale: 1.0
-    - name: arm2
+    - name: right_arm
       type: ur5e
       urdf: ur5e_macro.xacro
       prefix: arm2_
@@ -32,7 +32,7 @@ components:
         max_acceleration_scale: 1.0
 
   body:
-    type: humanoid_upper
+    type: industrial_dual_arm_mobile_manipulator
     torso:
       link: torso_link
       joint: torso_yaw_joint
@@ -52,7 +52,7 @@ components:
     design_notes:
       - "Arms stay on base pillars (torso rotates independently)"
       - "Head parent is torso_link (head follows torso rotation)"
-      - "IMU on torso_link (body attitude, not head)"
+      - "IMU on head_link / head_imu_frame (per robot_sensor_layout v1.0)"
       - "torso_controller != head_controller (body != perception attention)"
 
   sensors:
@@ -73,12 +73,12 @@ components:
       fps: 30
       depth_range: [0.1, 10.0]
       description: "M7.1 head RGB-D camera for perception attention"
-    - name: torso_imu
+    - name: head_imu
       type: imu
-      parent: torso_link
-      topic: /torso/imu
-      frame: torso_link
-      description: "M7.1 torso IMU (body attitude, not head)"
+      parent: head_link
+      topic: /head/imu
+      frame: head_imu_frame
+      description: "Head IMU per robot_sensor_layout v1.0 (head_imu_frame)"
 
   end_effectors:
     - name: arm1_gripper
