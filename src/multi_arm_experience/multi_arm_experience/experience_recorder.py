@@ -47,7 +47,7 @@ class ExperienceRecorder:
         self,
         task_type: str,
         skill_name: str,
-        robot_id: str = "dual_ur5e",
+        robot_id: str = "embodied_robot",
         initial_world: WorldStateSnapshot | None = None,
     ) -> Episode:
         """Start recording a new episode.

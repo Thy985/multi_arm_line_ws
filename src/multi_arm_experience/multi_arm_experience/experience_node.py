@@ -91,7 +91,7 @@ class ExperienceNode(Node):
         episode = self._recorder.start_episode(
             task_type=request.task_type,
             skill_name=request.skill_name,
-            robot_id="dual_ur5e",
+            robot_id="embodied_robot",
         )
 
         try:
