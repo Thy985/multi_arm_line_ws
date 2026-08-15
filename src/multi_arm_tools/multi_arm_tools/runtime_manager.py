@@ -24,6 +24,7 @@ Session directory layout::
 from __future__ import annotations
 
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -37,6 +38,40 @@ RUNTIME_DIR = Path(os.environ.get("HOME", "/tmp")) / ".robot" / "runtime"
 SESSION_PREFIX = "session"
 DEFAULT_DOMAIN_ID = 0
 DOMAIN_POOL = list(range(40, 60))  # domain IDs 40-59 for runtime sessions
+
+# Directories guaranteed on PATH so bare subprocess calls (ros2/ps/pgrep) resolve
+# even when the calling environment has an empty or minimal PATH.
+FALLBACK_PATH = ":".join([
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/local/sbin",
+    "/usr/sbin",
+    "/opt/ros/jazzy/bin",
+    str(Path.home() / ".local" / "share" / "mise" / "shims"),
+])
+
+
+def safe_env() -> dict[str, str]:
+    """Return a copy of the environment with a reliable PATH.
+
+    If PATH is missing/empty, fall back to FALLBACK_PATH. Otherwise keep the
+    existing PATH and append any fallback dirs not already present, so bare
+    commands like ``ros2``/``ps`` resolve regardless of how this process was
+    launched (e.g. an agent shell with an empty PATH).
+    """
+    env = dict(os.environ)
+    current = env.get("PATH", "")
+    if not current.strip():
+        env["PATH"] = FALLBACK_PATH
+    else:
+        parts = [p for p in current.split(":") if p]
+        for d in FALLBACK_PATH.split(":"):
+            if d not in parts:
+                parts.append(d)
+        env["PATH"] = ":".join(parts)
+    return env
+
 
 LAUNCH_PACKAGE = "multi_arm_simulation"
 LAUNCH_FILE = "m6_pick_place_sim.launch.py"
@@ -207,8 +242,6 @@ class RuntimeManager:
         for name, pid in list(manifest.processes.items()):
             if self._pid_alive(pid):
                 killed_any |= self._kill_process_tree(pid)
-        extra_killed = self._kill_owned_processes(manifest)
-        killed_any = killed_any or extra_killed
         manifest.status = "stopped"
         self._save_manifest(manifest)
         current = self._dir / "current"
@@ -224,7 +257,7 @@ class RuntimeManager:
         result: list[ProcessInfo] = []
         try:
             output = subprocess.check_output(
-                ["ps", "aux"], text=True, timeout=5
+                ["ps", "aux"], text=True, timeout=5, env=safe_env()
             )
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return result
@@ -271,6 +304,7 @@ class RuntimeManager:
                 text=True,
                 timeout=10,
                 stderr=subprocess.DEVNULL,
+                env=safe_env(),
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
             return []
@@ -307,21 +341,25 @@ class RuntimeManager:
                         report["killed_duplicates"].append({"name": name, "pid": p.pid})
                     except ProcessLookupError:
                         pass
+                    except PermissionError:
+                        report["errors"].append(
+                            f"Cannot kill duplicate {name} PID {p.pid}: permission denied"
+                        )
                 time.sleep(0.5)
                 for p in procs[1:]:
                     if self._pid_alive(p.pid):
                         try:
                             os.kill(p.pid, signal.SIGKILL)
-                        except ProcessLookupError:
+                        except (ProcessLookupError, PermissionError):
                             pass
         if duplicates:
             time.sleep(1)
             try:
                 subprocess.run(["ros2", "daemon", "stop"], timeout=5,
-                              capture_output=True)
+                              capture_output=True, env=safe_env())
                 time.sleep(2)
                 subprocess.run(["ros2", "daemon", "start"], timeout=5,
-                              capture_output=True)
+                              capture_output=True, env=safe_env())
                 report["dds_reset"] = True
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 report["errors"].append("Failed to restart DDS daemon")
@@ -369,10 +407,31 @@ class RuntimeManager:
             return True
 
     def _kill_process_tree(self, pid: int) -> bool:
+        """Terminate the whole process group rooted at ``pid``.
+
+        Sessions are launched with ``start_new_session=True``, so ``pid`` is the
+        session leader and its process group contains every descendant node
+        (gz sim, controller_manager, move_group, ...). Killing the group is
+        sufficient and never touches processes outside this session. A
+        recursive /proc-based fallback handles edge cases where the group
+        lookup fails.
+        """
+        killed = False
+        try:
+            pgid = os.getpgid(pid)
+        except (ProcessLookupError, PermissionError):
+            pgid = pid
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+            killed = True
+        except (ProcessLookupError, PermissionError):
+            pass
+        time.sleep(0.5)
         children = self._find_children(pid)
         for child_pid in children:
             try:
                 os.kill(child_pid, signal.SIGTERM)
+                killed = True
             except ProcessLookupError:
                 pass
         time.sleep(0.5)
@@ -380,64 +439,52 @@ class RuntimeManager:
             if self._pid_alive(child_pid):
                 try:
                     os.kill(child_pid, signal.SIGKILL)
+                    killed = True
                 except ProcessLookupError:
                     pass
         try:
             os.kill(pid, signal.SIGTERM)
+            killed = True
         except ProcessLookupError:
-            return False
+            return killed
         time.sleep(0.5)
         if self._pid_alive(pid):
             try:
                 os.kill(pid, signal.SIGKILL)
+                killed = True
             except ProcessLookupError:
                 pass
-        return True
+        return killed
 
     def _find_children(self, parent_pid: int) -> list[int]:
+        """Recursively find child PIDs of ``parent_pid`` by scanning /proc.
+
+        Uses /proc/<pid>/stat instead of ``ps`` so it works even when PATH is
+        empty. Returns a flat list of all transitive descendants.
+        """
         children: list[int] = []
         try:
-            output = subprocess.check_output(
-                ["ps", "--ppid", str(parent_pid), "-o", "pid=", "--no-headers"],
-                text=True, timeout=3,
-            )
-            for line in output.strip().splitlines():
-                try:
-                    children.append(int(line.strip()))
-                except ValueError:
-                    pass
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-            pass
-        recursive: list[int] = []
-        for child in children:
-            recursive.append(child)
-            recursive.extend(self._find_children(child))
-        return recursive
+            entries = os.listdir("/proc")
+        except FileNotFoundError:
+            return children
+        for entry in entries:
+            if not entry.isdigit():
+                continue
+            cpid = int(entry)
+            try:
+                with open(f"/proc/{cpid}/stat") as f:
+                    stat = f.read().split()
+                ppid = int(stat[3])
+            except (FileNotFoundError, ValueError, IndexError, OSError):
+                continue
+            if ppid == parent_pid:
+                children.append(cpid)
+                children.extend(self._find_children(cpid))
+        return children
 
     def _find_zombie_processes(self) -> list[ProcessInfo]:
         all_procs = self.discover_processes()
         return [p for p in all_procs if p.is_orphan]
-
-    def _kill_owned_processes(self, manifest: SessionManifest) -> bool:
-        killed = False
-        procs = self.discover_processes()
-        for p in procs:
-            if p.name in ("gazebo", "controller_manager", "move_group",
-                          "ros_gz_bridge", "robot_state_publisher",
-                          "ground_truth", "synthetic_camera", "color_detector"):
-                try:
-                    os.kill(p.pid, signal.SIGTERM)
-                    killed = True
-                except ProcessLookupError:
-                    pass
-        time.sleep(1)
-        for p in procs:
-            if self._pid_alive(p.pid):
-                try:
-                    os.kill(p.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-        return killed
 
     def _allocate_domain(self) -> int:
         used: set[int] = set()
@@ -456,7 +503,7 @@ class RuntimeManager:
         return DEFAULT_DOMAIN_ID
 
     def _build_env(self, domain_id: int) -> dict[str, str]:
-        env = dict(os.environ)
+        env = safe_env()
         env["ROS_DOMAIN_ID"] = str(domain_id)
         env["RMW_IMPLEMENTATION"] = "rmw_cyclonedds_cpp"
         env.setdefault("ROS_HOME", "/tmp/ros_home")

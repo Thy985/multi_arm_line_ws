@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from multi_arm_tools.paths import get_install_dir
+from multi_arm_tools.runtime_manager import safe_env
 
 
 class Doctor:
@@ -60,6 +61,7 @@ class Doctor:
             ["pgrep", "-f", "gz sim"],
             capture_output=True,
             timeout=3,
+            env=safe_env(),
         )
         if result.returncode == 0:
             self._pass("Simulation", "Gazebo running")
@@ -122,6 +124,7 @@ class Doctor:
                 capture_output=True,
                 text=True,
                 timeout=30,
+                env=safe_env(),
             )
         except subprocess.TimeoutExpired:
             self._fail(
@@ -282,6 +285,7 @@ class Doctor:
             result = subprocess.run(
                 ["ros2", "topic", "list"],
                 capture_output=True, text=True, timeout=5,
+                env=safe_env(),
             )
             if result.returncode == 0:
                 return [
@@ -385,6 +389,7 @@ class Doctor:
                 capture_output=True,
                 text=True,
                 timeout=5,
+                env=safe_env(),
             )
             if result.returncode == 0:
                 return [
@@ -404,6 +409,7 @@ class Doctor:
                 capture_output=True,
                 text=True,
                 timeout=5,
+                env=safe_env(),
             )
             if result.returncode == 0:
                 return [
