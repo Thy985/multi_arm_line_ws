@@ -135,39 +135,39 @@ def main():
     results["1.1_js_available"] = "PASS"
     node.get_logger().info(f"JS received: {len(node.js_data)} joints")
 
-    arm1_ready = {
-        "arm1_shoulder_pan_joint": 0.0,
-        "arm1_shoulder_lift_joint": -1.57,
-        "arm1_elbow_joint": 1.57,
-        "arm1_wrist_1_joint": 0.0,
-        "arm1_wrist_2_joint": 0.0,
-        "arm1_wrist_3_joint": 0.0,
+    left_arm_ready = {
+        "left_arm_shoulder_pan_joint": 0.0,
+        "left_arm_shoulder_lift_joint": -1.57,
+        "left_arm_elbow_joint": 1.57,
+        "left_arm_wrist_1_joint": 0.0,
+        "left_arm_wrist_2_joint": 0.0,
+        "left_arm_wrist_3_joint": 0.0,
     }
 
-    ok, msg = node.plan_and_execute("arm1", arm1_ready, "ready")
-    results[f"1.2_arm1_plan_ready"] = "PASS" if ok else "FAIL"
-    node.get_logger().info(f"arm1 plan ready: {msg}")
+    ok, msg = node.plan_and_execute("left_arm", left_arm_ready, "ready")
+    results[f"1.2_left_arm_plan_ready"] = "PASS" if ok else "FAIL"
+    node.get_logger().info(f"left_arm plan ready: {msg}")
 
     if ok:
-        vok = node.verify_position(arm1_ready)
-        results["1.3_arm1_verify_ready"] = "PASS" if vok else "FAIL"
+        vok = node.verify_position(left_arm_ready)
+        results["1.3_left_arm_verify_ready"] = "PASS" if vok else "FAIL"
 
-    arm2_ready = {
-        "arm2_shoulder_pan_joint": 0.0,
-        "arm2_shoulder_lift_joint": -1.57,
-        "arm2_elbow_joint": 1.57,
-        "arm2_wrist_1_joint": 0.0,
-        "arm2_wrist_2_joint": 0.0,
-        "arm2_wrist_3_joint": 0.0,
+    right_arm_ready = {
+        "right_arm_shoulder_pan_joint": 0.0,
+        "right_arm_shoulder_lift_joint": -1.57,
+        "right_arm_elbow_joint": 1.57,
+        "right_arm_wrist_1_joint": 0.0,
+        "right_arm_wrist_2_joint": 0.0,
+        "right_arm_wrist_3_joint": 0.0,
     }
 
-    ok2, msg2 = node.plan_and_execute("arm2", arm2_ready, "ready")
-    results["1.4_arm2_plan_ready"] = "PASS" if ok2 else "FAIL"
-    node.get_logger().info(f"arm2 plan ready: {msg2}")
+    ok2, msg2 = node.plan_and_execute("right_arm", right_arm_ready, "ready")
+    results["1.4_right_arm_plan_ready"] = "PASS" if ok2 else "FAIL"
+    node.get_logger().info(f"right_arm plan ready: {msg2}")
 
     if ok2:
-        vok2 = node.verify_position(arm2_ready)
-        results["1.5_arm2_verify_ready"] = "PASS" if vok2 else "FAIL"
+        vok2 = node.verify_position(right_arm_ready)
+        results["1.5_right_arm_verify_ready"] = "PASS" if vok2 else "FAIL"
 
     _print_results(results)
     rclpy.shutdown()

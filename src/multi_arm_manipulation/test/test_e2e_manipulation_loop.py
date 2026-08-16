@@ -106,7 +106,7 @@ class TestPerceptionDrivenManipulationLoop:
 
         # === Phase 1: Gazebo场景设置 ===
         perception.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
-        gripper.register_gripper("arm1")
+        gripper.register_gripper("left_arm")
 
         # === Phase 2: Perception → WorldModel ===
         detections = perception.detect()
@@ -140,27 +140,27 @@ class TestPerceptionDrivenManipulationLoop:
         assert grasp_pose.approach_position[2] > grasp_pose.grasp_position[2]
 
         # 4b. Gripper close
-        success, msg = gripper.close("arm1", force=30.0)
+        success, msg = gripper.close("left_arm", force=30.0)
         assert success, f"Gripper close failed: {msg}"
-        assert gripper.is_closed("arm1")
+        assert gripper.is_closed("left_arm")
 
         # 4c. Attach (Gazebo物理附着)
-        success, msg = gripper.attach("arm1", "red_cube")
+        success, msg = gripper.attach("left_arm", "red_cube")
         assert success, f"Attach failed: {msg}"
 
         # 4d. WorldModel更新: Relation Layer反馈
-        relations.set_attached("red_cube", "arm1_gripper")
+        relations.set_attached("red_cube", "left_arm_gripper")
         history.record("red_cube", {"position": list(obj.position), "state": "ATTACHED"})
 
         # === Phase 5: 验证闭环 — WorldModel反映ATTACHED ===
         # Reality: gripper holds red_cube
-        assert gripper.has_object("arm1")
-        assert gripper.get_attached_object("arm1") == "red_cube"
+        assert gripper.has_object("left_arm")
+        assert gripper.get_attached_object("left_arm") == "red_cube"
 
         # WorldModel: relation reflects reality
         assert relations.is_attached("red_cube")
-        assert relations.is_attached("red_cube", "arm1_gripper")
-        assert relations.has_relation("red_cube", "attached_to", "arm1_gripper")
+        assert relations.is_attached("red_cube", "left_arm_gripper")
+        assert relations.has_relation("red_cube", "attached_to", "left_arm_gripper")
 
         # === Phase 6: Lift — 物体位置变化 ===
         lifted_position = [0.5, 0.0, 0.5]
@@ -176,26 +176,26 @@ class TestPerceptionDrivenManipulationLoop:
         place_position = [-0.5, 0.0, 0.04]
 
         # 7a. Detach
-        success, msg = gripper.detach("arm1")
+        success, msg = gripper.detach("left_arm")
         assert success, f"Detach failed: {msg}"
 
         # 7b. WorldModel更新: 物体在新位置, state=FREE
         db.update_object_pose("red_cube", tuple(place_position))
-        relations.set_detached("red_cube", "arm1_gripper")
+        relations.set_detached("red_cube", "left_arm_gripper")
         history.record("red_cube", {"position": place_position, "state": "FREE"})
 
         # 7c. Gripper open
-        success, msg = gripper.open("arm1")
+        success, msg = gripper.open("left_arm")
         assert success, f"Gripper open failed: {msg}"
 
         # === Phase 8: 验证闭环 — WorldModel反映新的Reality ===
         # Reality: gripper empty
-        assert not gripper.has_object("arm1")
-        assert gripper.is_open("arm1")
+        assert not gripper.has_object("left_arm")
+        assert gripper.is_open("left_arm")
 
         # WorldModel: relation reflects reality
         assert not relations.is_attached("red_cube")
-        assert not relations.has_relation("red_cube", "attached_to", "arm1_gripper")
+        assert not relations.has_relation("red_cube", "attached_to", "left_arm_gripper")
 
         # WorldModel: object at new position
         obj_after = db.get_object("red_cube")
@@ -220,7 +220,7 @@ class TestPerceptionDrivenManipulationLoop:
         gripper = e2e_setup["gripper"]
 
         perception.register_object("blue_cylinder", "cylinder", [0.3, 0.2, 0.04])
-        gripper.register_gripper("arm1")
+        gripper.register_gripper("left_arm")
 
         # State: FREE
         sync_perception_to_db(perception.detect(), db)
@@ -234,16 +234,16 @@ class TestPerceptionDrivenManipulationLoop:
         assert get_grasp_state("blue_cylinder") == "FREE"
 
         # Transition: FREE → ATTACHED
-        gripper.close("arm1")
-        gripper.attach("arm1", "blue_cylinder")
-        relations.set_attached("blue_cylinder", "arm1_gripper")
+        gripper.close("left_arm")
+        gripper.attach("left_arm", "blue_cylinder")
+        relations.set_attached("blue_cylinder", "left_arm_gripper")
 
         assert get_grasp_state("blue_cylinder") == "ATTACHED"
 
         # Transition: ATTACHED → FREE
-        gripper.detach("arm1")
-        relations.set_detached("blue_cylinder", "arm1_gripper")
-        gripper.open("arm1")
+        gripper.detach("left_arm")
+        relations.set_detached("blue_cylinder", "left_arm_gripper")
+        gripper.open("left_arm")
 
         assert get_grasp_state("blue_cylinder") == "FREE"
 
@@ -260,7 +260,7 @@ class TestPerceptionDrivenManipulationLoop:
         gripper = e2e_setup["gripper"]
 
         perception.register_object("green_box", "box", [0.0, -0.3, 0.04])
-        gripper.register_gripper("arm2")
+        gripper.register_gripper("right_arm")
 
         # Perception → WorldModel
         sync_perception_to_db(perception.detect(), db)
@@ -278,9 +278,9 @@ class TestPerceptionDrivenManipulationLoop:
         assert not check_precondition("green_box")
 
         # Grasp
-        gripper.close("arm2")
-        gripper.attach("arm2", "green_box")
-        relations.set_attached("green_box", "arm2_gripper")
+        gripper.close("right_arm")
+        gripper.attach("right_arm", "green_box")
+        relations.set_attached("green_box", "right_arm_gripper")
 
         # After grasp: precondition met
         assert check_precondition("green_box")
@@ -288,9 +288,9 @@ class TestPerceptionDrivenManipulationLoop:
         # Place
         place_pos = [0.0, 0.3, 0.04]
         db.update_object_pose("green_box", tuple(place_pos))
-        gripper.detach("arm2")
-        relations.set_detached("green_box", "arm2_gripper")
-        gripper.open("arm2")
+        gripper.detach("right_arm")
+        relations.set_detached("green_box", "right_arm_gripper")
+        gripper.open("right_arm")
 
         # Update relations for new position
         objects = {"green_box": {"position": place_pos}}
@@ -308,7 +308,7 @@ class TestPerceptionDrivenManipulationLoop:
         gripper = e2e_setup["gripper"]
 
         perception.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
-        gripper.register_gripper("arm1")
+        gripper.register_gripper("left_arm")
 
         # Phase 1: detected, FREE
         for det in perception.detect():
@@ -320,16 +320,16 @@ class TestPerceptionDrivenManipulationLoop:
             history.record("red_cube", {"position": det.position, "state": "FREE"})
 
         # Phase 2: grasped, ATTACHED
-        gripper.close("arm1")
-        gripper.attach("arm1", "red_cube")
+        gripper.close("left_arm")
+        gripper.attach("left_arm", "red_cube")
         history.record("red_cube", {"position": [0.5, 0.0, 0.04], "state": "ATTACHED"})
 
         # Phase 3: lifted
         history.record("red_cube", {"position": [0.5, 0.0, 0.5], "state": "ATTACHED"})
 
         # Phase 4: placed, FREE
-        gripper.detach("arm1")
-        gripper.open("arm1")
+        gripper.detach("left_arm")
+        gripper.open("left_arm")
         history.record("red_cube", {"position": [-0.5, 0.0, 0.04], "state": "FREE"})
 
         # Verify history
@@ -379,8 +379,8 @@ class TestPerceptionDrivenManipulationLoop:
         perception.register_object("red_cube", "cube", [0.3, 0.0, 0.04])
         perception.register_object("blue_cyl", "cylinder", [-0.3, 0.2, 0.04])
         perception.register_object("green_box", "box", [0.0, -0.3, 0.04])
-        gripper.register_gripper("arm1")
-        gripper.register_gripper("arm2")
+        gripper.register_gripper("left_arm")
+        gripper.register_gripper("right_arm")
 
         # Perception → WorldModel
         detections = perception.detect()
@@ -397,28 +397,28 @@ class TestPerceptionDrivenManipulationLoop:
         assert "blue_cyl" in object_ids
         assert "green_box" in object_ids
 
-        # arm1 picks red_cube
-        gripper.close("arm1")
-        gripper.attach("arm1", "red_cube")
-        relations.set_attached("red_cube", "arm1_gripper")
+        # left_arm picks red_cube
+        gripper.close("left_arm")
+        gripper.attach("left_arm", "red_cube")
+        relations.set_attached("red_cube", "left_arm_gripper")
 
-        # arm2 picks blue_cyl
-        gripper.close("arm2")
-        gripper.attach("arm2", "blue_cyl")
-        relations.set_attached("blue_cyl", "arm2_gripper")
+        # right_arm picks blue_cyl
+        gripper.close("right_arm")
+        gripper.attach("right_arm", "blue_cyl")
+        relations.set_attached("blue_cyl", "right_arm_gripper")
 
         # Verify both attached
-        assert relations.is_attached("red_cube", "arm1_gripper")
-        assert relations.is_attached("blue_cyl", "arm2_gripper")
+        assert relations.is_attached("red_cube", "left_arm_gripper")
+        assert relations.is_attached("blue_cyl", "right_arm_gripper")
         assert not relations.is_attached("green_box")
 
-        # arm1 releases
-        gripper.detach("arm1")
-        relations.set_detached("red_cube", "arm1_gripper")
-        gripper.open("arm1")
+        # left_arm releases
+        gripper.detach("left_arm")
+        relations.set_detached("red_cube", "left_arm_gripper")
+        gripper.open("left_arm")
 
         assert not relations.is_attached("red_cube")
-        assert relations.is_attached("blue_cyl", "arm2_gripper")
+        assert relations.is_attached("blue_cyl", "right_arm_gripper")
 
     def test_grasp_planner_integration(self, e2e_setup: dict) -> None:
         """验证GraspPlanner与WorldModel集成."""
@@ -451,7 +451,7 @@ class TestPerceptionDrivenManipulationLoop:
         gripper = e2e_setup["gripper"]
 
         perception.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
-        gripper.register_gripper("arm1")
+        gripper.register_gripper("left_arm")
 
         # Initial state
         sync_perception_to_db(perception.detect(), db)
@@ -462,23 +462,23 @@ class TestPerceptionDrivenManipulationLoop:
         assert len(attached_before) == 0
 
         # Grasp
-        gripper.close("arm1")
-        gripper.attach("arm1", "red_cube")
-        relations.set_attached("red_cube", "arm1_gripper")
+        gripper.close("left_arm")
+        gripper.attach("left_arm", "red_cube")
+        relations.set_attached("red_cube", "left_arm_gripper")
 
         # Query: relations after grasp
         attached_after = relations.query(predicate="attached_to")
         assert len(attached_after) == 1
         assert attached_after[0].subject == "red_cube"
-        assert attached_after[0].object == "arm1_gripper"
+        assert attached_after[0].object == "left_arm_gripper"
 
         # Query: specific relation
         specific = relations.query(subject="red_cube", predicate="attached_to")
         assert len(specific) == 1
 
         # Release
-        gripper.detach("arm1")
-        relations.set_detached("red_cube", "arm1_gripper")
+        gripper.detach("left_arm")
+        relations.set_detached("red_cube", "left_arm_gripper")
 
         # Query: no more attached
         attached_final = relations.query(predicate="attached_to")

@@ -450,7 +450,7 @@ def make_instrumented_pick(env: M6FullChainEnvironment, episode: Episode):
 
     def execute(
         object_id: str = "red_cube",
-        arm_name: str = "arm1",
+        arm_name: str = "left_arm",
         **kwargs: Any,
     ) -> bool:
         """Pick: plan → close → attach → update WorldModel → record.
@@ -549,7 +549,7 @@ def make_instrumented_place(env: M6FullChainEnvironment, episode: Episode):
 
     def execute(
         object_id: str = "red_cube",
-        arm_name: str = "arm1",
+        arm_name: str = "left_arm",
         target_position: list | None = None,
         **kwargs: Any,
     ) -> bool:
@@ -804,7 +804,7 @@ def run_full_chain_pick_place(
 def full_env() -> M6FullChainEnvironment:
     """Create full-chain environment with one object and one arm."""
     env = M6FullChainEnvironment()
-    env.register_arm("arm1")
+    env.register_arm("left_arm")
     env.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
     env.detect_and_sync()
     return env
@@ -814,8 +814,8 @@ def full_env() -> M6FullChainEnvironment:
 def dual_arm_env() -> M6FullChainEnvironment:
     """Create full-chain environment with two arms and two objects."""
     env = M6FullChainEnvironment()
-    env.register_arm("arm1")
-    env.register_arm("arm2")
+    env.register_arm("left_arm")
+    env.register_arm("right_arm")
     env.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
     env.register_object("blue_cyl", "cylinder", [-0.5, 0.2, 0.04])
     env.detect_and_sync()
@@ -842,7 +842,7 @@ class TestFullChainSingleObject:
         episode, success = run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[-0.5, 0.0, 0.04],
         )
 
@@ -850,8 +850,8 @@ class TestFullChainSingleObject:
         assert episode.result == "success"
         assert len(episode.execution_steps) >= 7
 
-        assert full_env.gripper.is_open("arm1")
-        assert not full_env.gripper.has_object("arm1")
+        assert full_env.gripper.is_open("left_arm")
+        assert not full_env.gripper.has_object("left_arm")
 
         assert not full_env.relations.is_attached("red_cube")
 
@@ -873,7 +873,7 @@ class TestFullChainSingleObject:
         episode, _ = run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[-0.3, 0.1, 0.04],
         )
 
@@ -898,13 +898,13 @@ class TestFullChainSingleObject:
         episode, success = run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[0.3, -0.2, 0.04],
         )
 
         assert success
 
-        gripper_holds = full_env.gripper.has_object("arm1")
+        gripper_holds = full_env.gripper.has_object("left_arm")
         relation_attached = full_env.relations.is_attached("red_cube")
 
         assert gripper_holds == relation_attached
@@ -924,7 +924,7 @@ class TestFullChainSingleObject:
         run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[-0.4, 0.0, 0.04],
         )
 
@@ -953,7 +953,7 @@ class TestFullChainDualArm:
         """Two arms pick-place two objects independently.
 
         Verifies:
-            - arm1 picks red_cube, arm2 picks blue_cyl
+            - left_arm picks red_cube, right_arm picks blue_cyl
             - Both grippers hold different objects simultaneously
             - Both place at different target positions
             - WorldModel tracks both objects correctly
@@ -962,25 +962,25 @@ class TestFullChainDualArm:
         ep1, success1 = run_full_chain_pick_place(
             dual_arm_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[0.3, 0.3, 0.04],
-            task_label="pick_place_arm1",
+            task_label="pick_place_left_arm",
         )
 
         assert success1
-        assert dual_arm_env.gripper.is_open("arm1")
+        assert dual_arm_env.gripper.is_open("left_arm")
         assert not dual_arm_env.relations.is_attached("red_cube")
 
         ep2, success2 = run_full_chain_pick_place(
             dual_arm_env,
             object_id="blue_cyl",
-            arm_name="arm2",
+            arm_name="right_arm",
             place_position=[-0.3, -0.3, 0.04],
-            task_label="pick_place_arm2",
+            task_label="pick_place_right_arm",
         )
 
         assert success2
-        assert dual_arm_env.gripper.is_open("arm2")
+        assert dual_arm_env.gripper.is_open("right_arm")
         assert not dual_arm_env.relations.is_attached("blue_cyl")
 
         cube = dual_arm_env.db.get_object("red_cube")
@@ -1018,25 +1018,25 @@ class TestFullChainDualArm:
 
         r1 = runtime.execute(
             pick_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         assert r1.status == ExecutionStatus.SUCCESS
 
         r2 = runtime.execute(
             pick_id,
-            parameters={"object_id": "blue_cyl", "arm_name": "arm2"},
-            context={"object_id": "blue_cyl", "arm_name": "arm2"},
+            parameters={"object_id": "blue_cyl", "arm_name": "right_arm"},
+            context={"object_id": "blue_cyl", "arm_name": "right_arm"},
         )
         assert r2.status == ExecutionStatus.SUCCESS
 
-        assert env.gripper.has_object("arm1")
-        assert env.gripper.get_attached_object("arm1") == "red_cube"
-        assert env.gripper.has_object("arm2")
-        assert env.gripper.get_attached_object("arm2") == "blue_cyl"
+        assert env.gripper.has_object("left_arm")
+        assert env.gripper.get_attached_object("left_arm") == "red_cube"
+        assert env.gripper.has_object("right_arm")
+        assert env.gripper.get_attached_object("right_arm") == "blue_cyl"
 
-        assert env.relations.is_attached("red_cube", "arm1_gripper")
-        assert env.relations.is_attached("blue_cyl", "arm2_gripper")
+        assert env.relations.is_attached("red_cube", "left_arm_gripper")
+        assert env.relations.is_attached("blue_cyl", "right_arm_gripper")
 
         env.recorder.finish_episode(
             episode, result="success", duration=1.0,
@@ -1063,7 +1063,7 @@ class TestFullChainFailureRecovery:
         episode = env.recorder.start_episode(
             task_type="pick_nonexistent",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
             initial_world=env.capture_world_snapshot(),
         )
 
@@ -1080,14 +1080,14 @@ class TestFullChainFailureRecovery:
 
         result = runtime.execute(
             pick_id,
-            parameters={"object_id": "ghost", "arm_name": "arm1"},
-            context={"object_id": "ghost", "arm_name": "arm1"},
+            parameters={"object_id": "ghost", "arm_name": "left_arm"},
+            context={"object_id": "ghost", "arm_name": "left_arm"},
         )
 
         assert result.status == ExecutionStatus.FAILURE
 
-        assert env.gripper.is_open("arm1")
-        assert not env.gripper.has_object("arm1")
+        assert env.gripper.is_open("left_arm")
+        assert not env.gripper.has_object("left_arm")
 
         env.recorder.finish_episode(
             episode, result="failure", duration=0.001,
@@ -1108,7 +1108,7 @@ class TestFullChainFailureRecovery:
         episode = env.recorder.start_episode(
             task_type="pick_with_failure",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
             initial_world=env.capture_world_snapshot(),
         )
 
@@ -1168,7 +1168,7 @@ class TestExperienceDatasetExport:
         episode, success = run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[-0.5, 0.0, 0.04],
         )
         assert success
@@ -1205,14 +1205,14 @@ class TestExperienceDatasetExport:
         run_full_chain_pick_place(
             dual_arm_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[0.3, 0.3, 0.04],
             task_label="task_a",
         )
         run_full_chain_pick_place(
             dual_arm_env,
             object_id="blue_cyl",
-            arm_name="arm2",
+            arm_name="right_arm",
             place_position=[-0.3, -0.3, 0.04],
             task_label="task_b",
         )
@@ -1245,7 +1245,7 @@ class TestPredictionLayerIntegration:
         episode, success = run_full_chain_pick_place(
             full_env,
             object_id="red_cube",
-            arm_name="arm1",
+            arm_name="left_arm",
             place_position=[-0.5, 0.0, 0.04],
         )
         assert success
@@ -1276,7 +1276,7 @@ class TestCompositeSkillFullChain:
         episode = env.recorder.start_episode(
             task_type="composite_pick_place",
             skill_name="pick_and_place",
-            robot_id="arm1",
+            robot_id="left_arm",
             initial_world=env.capture_world_snapshot(),
         )
 
@@ -1303,17 +1303,17 @@ class TestCompositeSkillFullChain:
             composer.compose("pick_and_place")
             .add_step(
                 pick_id,
-                parameters={"object_id": "red_cube", "arm_name": "arm1"},
+                parameters={"object_id": "red_cube", "arm_name": "left_arm"},
             )
             .add_step(
                 place_id,
                 parameters={
                     "object_id": "red_cube",
-                    "arm_name": "arm1",
+                    "arm_name": "left_arm",
                     "target_position": [-0.4, 0.1, 0.04],
                 },
             )
-            .execute(context={"object_id": "red_cube", "arm_name": "arm1"})
+            .execute(context={"object_id": "red_cube", "arm_name": "left_arm"})
         )
 
         env.recorder.finish_episode(
@@ -1326,7 +1326,7 @@ class TestCompositeSkillFullChain:
         assert result.success
         assert result.completed_steps == 2
 
-        assert env.gripper.is_open("arm1")
+        assert env.gripper.is_open("left_arm")
         assert not env.relations.is_attached("red_cube")
 
         obj = env.db.get_object("red_cube")

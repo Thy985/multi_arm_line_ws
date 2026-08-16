@@ -375,7 +375,7 @@ class TestSubmitTaskGoalsChain:
 
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.zone_name = "zone_a"
         task_goal.position_name = "ready"
         task_goal.object_id = "red_cube"
@@ -443,7 +443,7 @@ class TestSubmitTaskGoalsChain:
         for action_type in ["pick_place", "move", "place"]:
             tg = TaskGoal()
             tg.action_type = action_type
-            tg.arm_name = "arm1"
+            tg.arm_name = "left_arm"
             goals.append(tg)
 
         goal = SubmitTaskGoals.Goal()
@@ -474,7 +474,7 @@ class TestSubmitTaskGoalsChain:
 
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.constraints = TaskConstraint()
         task_goal.constraints.max_time = 10.0
         task_goal.constraints.priority = 2

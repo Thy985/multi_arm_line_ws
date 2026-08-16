@@ -52,7 +52,7 @@ def get_controller_node_name(node, controller_mgr, controller_name):
 def main():
     if len(sys.argv) < 4:
         print("Usage: loader.py <controller_manager> <controller_name> <yaml_dict>")
-        print("  controller_manager: e.g., /arm1/controller_manager")
+        print("  controller_manager: e.g., /left_arm/controller_manager")
         print("  controller_name: e.g., joint_trajectory_controller")
         print("  yaml_dict: JSON string with ros__parameters content")
         sys.exit(1)

@@ -16,7 +16,7 @@ def generate_launch_description() -> LaunchDescription:
 
     """
     return LaunchDescription([
-        DeclareLaunchArgument("arm_names", default_value="[arm1,arm2]"),
+        DeclareLaunchArgument("arm_names", default_value="[left_arm,right_arm]"),
         Node(
             package="multi_arm_manipulation",
             executable="manipulation_node",

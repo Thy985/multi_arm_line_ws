@@ -59,7 +59,7 @@ class WorldModelNode(Node):
         self._belief_updater = BeliefUpdater(base_variance=0.05, gt_variance=0.001)
 
         self._arm_names = self.declare_parameter(
-            "arm_names", ["arm1", "arm2"]
+            "arm_names", ["left_arm", "right_arm"]
         ).value
 
         self._min_confidence = self.declare_parameter(

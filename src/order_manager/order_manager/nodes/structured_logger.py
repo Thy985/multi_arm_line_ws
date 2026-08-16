@@ -12,7 +12,7 @@ Features:
 Usage:
     from order_manager.nodes.structured_logger import StructuredLogger
     logger = StructuredLogger(node)
-    logger.info('Arm moved', arm='arm1', component='coordinator', data={'zone': 'zone_a'})
+    logger.info('Arm moved', arm='left_arm', component='coordinator', data={'zone': 'zone_a'})
     logger.set_level('DEBUG')
 """
 

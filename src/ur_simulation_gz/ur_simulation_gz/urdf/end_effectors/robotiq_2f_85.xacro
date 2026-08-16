@@ -4,8 +4,8 @@
   Simplified Robotiq 2F-85 parallel gripper for Gazebo simulation.
 
   Params:
-    prefix  - tf prefix (e.g. "arm1_")
-    parent  - parent link (e.g. "arm1_tool0")
+    prefix  - tf prefix (e.g. "left_arm_")
+    parent  - parent link (e.g. "left_arm_tool0")
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 

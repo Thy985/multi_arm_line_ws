@@ -74,7 +74,7 @@ class TestCrossPackageInterfaces:
         """SafetyCheck.srv has correct request/response fields."""
         from multi_arm_interfaces.srv import SafetyCheck
         req = SafetyCheck.Request()
-        req.arm_names = ["arm1"]
+        req.arm_names = ["left_arm"]
         req.trajectory_duration = 3.0
         resp = SafetyCheck.Response()
         resp.approved = True
@@ -110,18 +110,18 @@ class TestCoreInterfacesIntegration:
 
         mgr = ResourceManager()
         mgr.register(Resource(
-            name="arm1", resource_type=ResourceType.ROBOT,
+            name="left_arm", resource_type=ResourceType.ROBOT,
             capabilities={"payload_kg": 5.0, "reachable_zones": ["zone_a", "zone_b"]},
         ))
         mgr.register(Resource(
-            name="arm2", resource_type=ResourceType.ROBOT,
+            name="right_arm", resource_type=ResourceType.ROBOT,
             capabilities={"payload_kg": 5.0, "reachable_zones": ["zone_a", "zone_c"]},
         ))
         matcher = CapabilityMatcher()
         robots = mgr.get_robots()
         matches = matcher.match({"reachable_zones": ["zone_c"]}, robots, ResourceType.ROBOT)
         assert len(matches) == 1
-        assert matches[0].name == "arm2"
+        assert matches[0].name == "right_arm"
 
     def test_coordinator_is_thin_orchestrator(self) -> None:
         """I-03: Coordinator only orchestrates, logic in sub-modules."""
@@ -192,12 +192,12 @@ class TestSafetyPlaneIntegration:
         """I-12: Workspace boundary check (L2)."""
         from multi_arm_safety.workspace_limiter import WorkspaceLimiter, WorkspaceBounds
         limiter = WorkspaceLimiter()
-        limiter.set_bounds("arm1", WorkspaceBounds(
+        limiter.set_bounds("left_arm", WorkspaceBounds(
             x_min=-0.8, x_max=0.8, y_min=-0.3, y_max=0.8, z_min=0.0, z_max=1.2
         ))
-        within, _ = limiter.check_position("arm1", 0.0, 0.5, 0.5)
+        within, _ = limiter.check_position("left_arm", 0.0, 0.5, 0.5)
         assert within
-        within, _ = limiter.check_position("arm1", 0.0, 0.5, 1.5)
+        within, _ = limiter.check_position("left_arm", 0.0, 0.5, 1.5)
         assert not within
 
     def test_collision_monitor_proximity(self) -> None:
@@ -205,13 +205,13 @@ class TestSafetyPlaneIntegration:
         from multi_arm_safety.collision_monitor import CollisionMonitor
         monitor = CollisionMonitor(
             arm_configs={
-                "arm1": {"base_offset": (0.0, 0.5, 0.0)},
-                "arm2": {"base_offset": (0.0, -0.5, 0.0)},
+                "left_arm": {"base_offset": (0.0, 0.5, 0.0)},
+                "right_arm": {"base_offset": (0.0, -0.5, 0.0)},
             },
         )
-        monitor.update_joint_positions("arm1", [0.0, -1.57, 1.57, 0.0, 0.0, 0.0])
-        monitor.update_joint_positions("arm2", [0.0, -1.57, 1.57, 0.0, 0.0, 0.0])
-        dist, is_collision = monitor.check_arm_proximity("arm1", "arm2")
+        monitor.update_joint_positions("left_arm", [0.0, -1.57, 1.57, 0.0, 0.0, 0.0])
+        monitor.update_joint_positions("right_arm", [0.0, -1.57, 1.57, 0.0, 0.0, 0.0])
+        dist, is_collision = monitor.check_arm_proximity("left_arm", "right_arm")
         assert not is_collision
         assert dist > 0.1
 
@@ -248,15 +248,15 @@ class TestWorldModelIntegration:
     def test_500hz_not_in_world_model(self) -> None:
         """I-21: 500Hz joint_states do NOT enter WorldModel."""
         from multi_arm_world_model.state_database import CachedRobotState
-        state = CachedRobotState(arm_name="arm1", last_updated=100.0)
+        state = CachedRobotState(arm_name="left_arm", last_updated=100.0)
         assert state.is_stale(max_age=0.002)  # 2ms = 500Hz period
 
     def test_world_model_caches_robot_state_1_10hz(self) -> None:
         """I-22: WorldModel caches RobotState at 1-10Hz."""
         from multi_arm_world_model.state_database import StateDatabase
         db = StateDatabase()
-        db.update_robot_state("arm1", [0.0] * 6)
-        state = db.get_robot_state("arm1")
+        db.update_robot_state("left_arm", [0.0] * 6)
+        state = db.get_robot_state("left_arm")
         assert state is not None
         assert not state.is_stale(max_age=1.0)  # 1Hz = 1s
 
@@ -319,7 +319,7 @@ class TestBTPickPlaceE2E:
         bt.register_plugins(PLUGIN_REGISTRY)
         bt.load_xml(xml_path)
 
-        bt.blackboard.set("arm_name", "arm1")
+        bt.blackboard.set("arm_name", "left_arm")
         bt.blackboard.set("target_position", "zone_a")
         bt.blackboard.set("object_id", "box1")
         bt.blackboard.set("target_zone", "zone_b")
@@ -368,7 +368,7 @@ class TestFullDataFlow:
         from multi_arm_core.scheduler.scheduler import Scheduler, Task, TaskPriority, TaskStatus
 
         mgr = ResourceManager()
-        mgr.register(Resource(name="arm1", resource_type=ResourceType.ROBOT,
+        mgr.register(Resource(name="left_arm", resource_type=ResourceType.ROBOT,
                               capabilities={"reachable_zones": ["zone_a"]}))
         mgr.register(Resource(name="zone_a", resource_type=ResourceType.ZONE))
 
@@ -377,7 +377,7 @@ class TestFullDataFlow:
         scheduler.submit(task)
         plan = scheduler.schedule_all()
         assert len(plan.scheduled) == 1
-        assert plan.scheduled[0].assigned_arm == "arm1"
+        assert plan.scheduled[0].assigned_arm == "left_arm"
 
     def test_safety_check_before_execution(self) -> None:
         """Safety check must pass before trajectory is sent."""
@@ -402,12 +402,12 @@ class TestFullDataFlow:
         """I-07: Adding a new arm only requires YAML change."""
         yaml_content = """
 robots:
-  - name: arm1
+  - name: left_arm
     type: ur5e
     capabilities:
       payload_kg: 5.0
       reachable_zones: [zone_a, home]
-  - name: arm2
+  - name: right_arm
     type: ur5e
     capabilities:
       payload_kg: 5.0
@@ -450,7 +450,7 @@ resources:
 
         bb = Blackboard()
         bb.set("object_id", "target_box")
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("target_zone", "zone_b")
         bb.set("safety_approved", True)
 

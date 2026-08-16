@@ -1,5 +1,5 @@
 robots:
-  - name: arm1
+  - name: left_arm
     type: ur5e
     safety:
       max_velocity_scale: 1.0
@@ -12,7 +12,7 @@ robots:
         wrist_2_joint: 3.14
         wrist_3_joint: 3.14
 
-  - name: arm2
+  - name: right_arm
     type: ur5e
     safety:
       max_velocity_scale: 1.0

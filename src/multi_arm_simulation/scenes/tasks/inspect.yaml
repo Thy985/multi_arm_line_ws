@@ -29,5 +29,5 @@ success_criteria:
 parameters:
   object_id: ""
   inspection_pose: "above_object"
-  arm_name: "arm1"
+  arm_name: "left_arm"
   time_limit_s: 15.0

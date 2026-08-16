@@ -9,7 +9,7 @@ Components:
     3. ros_gz_bridge (clock + object poses)
     4. GazeboGroundTruthNode (ObjectPose from Gazebo)
     5. WorldModelNode (receives object poses + joint states)
-    6. SafetySupervisor (safety checks, arm1 only)
+    6. SafetySupervisor (safety checks, left_arm only)
     7. CoordinatorNode (task orchestration, JTC direct)
 """
 
@@ -127,31 +127,31 @@ def launch_setup(context, *args, **kwargs):
     )
     nodes.append(jsb_spawner)
 
-    arm1_jtc_spawner = Node(
+    left_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm1_joint_trajectory_controller",
+            "left_arm_joint_trajectory_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
 
-    arm2_jtc_spawner = Node(
+    right_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm2_joint_trajectory_controller",
+            "right_arm_joint_trajectory_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
 
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=jsb_spawner, on_exit=[arm1_jtc_spawner])
+        OnProcessExit(target_action=jsb_spawner, on_exit=[left_arm_jtc_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm1_jtc_spawner, on_exit=[arm2_jtc_spawner])
+        OnProcessExit(target_action=left_arm_jtc_spawner, on_exit=[right_arm_jtc_spawner])
     ))
 
     ground_truth_node = Node(
@@ -184,7 +184,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             {"use_sim_time": True},
-            {"arm_names": ["arm1"]},
+            {"arm_names": ["left_arm"]},
         ],
     )
     nodes.append(TimerAction(period=6.0, actions=[safety_node]))

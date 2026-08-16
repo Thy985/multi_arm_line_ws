@@ -47,8 +47,8 @@ class TestTaskManager:
     def test_assign_arm(self) -> None:
         tm = TaskManager()
         task = tm.create_task(zone_name="zone_a")
-        assert tm.assign_arm(task.task_id, "arm1")
-        assert task.assigned_arm == "arm1"
+        assert tm.assign_arm(task.task_id, "left_arm")
+        assert task.assigned_arm == "left_arm"
 
     def test_get_active_tasks(self) -> None:
         tm = TaskManager()

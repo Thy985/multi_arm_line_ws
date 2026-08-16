@@ -116,7 +116,7 @@ class TimeManager:
         """Schedule a new time window for an arm to occupy a zone.
 
         Args:
-            arm_name: Which arm (e.g. 'arm1').
+            arm_name: Which arm (e.g. 'left_arm').
             zone_name: Target zone (e.g. 'zone_a').
             duration: How long the arm will occupy the zone.
             position_name: Target position (for duration estimation).

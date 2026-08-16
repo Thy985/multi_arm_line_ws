@@ -146,8 +146,8 @@ class TimeManager:
     Usage:
         tm = TimeManager()
         
-        # Schedule arm1 to enter zone_a in 2 seconds
-        result = tm.schedule('arm1', 'zone_a', start_delay=2.0, 
+        # Schedule left_arm to enter zone_a in 2 seconds
+        result = tm.schedule('left_arm', 'zone_a', start_delay=2.0, 
                             position_name='ready', duration=3.0)
         
         if result.conflict:
@@ -176,7 +176,7 @@ class TimeManager:
         Schedule a new time window for an arm to occupy a zone.
         
         Args:
-            arm_name: Which arm (e.g. 'arm1')
+            arm_name: Which arm (e.g. 'left_arm')
             zone_name: Target zone (e.g. 'zone_a')
             duration: How long the arm will occupy the zone
             position_name: Target position (for duration estimation)

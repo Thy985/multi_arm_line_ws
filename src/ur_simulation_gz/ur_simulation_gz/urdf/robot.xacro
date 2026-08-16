@@ -67,10 +67,10 @@
 
   <!-- 5. Sensors -->
   <xacro:wrist_camera
-    prefix="arm1_"
-    parent_link="arm1_wrist_3_link"
-    sensor_name="arm1_wrist_camera"
-    topic="arm1/camera/image_raw"/>
+    prefix="left_arm_"
+    parent_link="left_arm_wrist_3_link"
+    sensor_name="left_arm_wrist_camera"
+    topic="left_arm/camera/image_raw"/>
   <xacro:imu_sensor parent_link="torso_link" sensor_name="torso_imu"/>
 
   <!-- 6. ros2_control (16 joints: 12 arm + 2 gripper + 1 torso + 1 head) -->

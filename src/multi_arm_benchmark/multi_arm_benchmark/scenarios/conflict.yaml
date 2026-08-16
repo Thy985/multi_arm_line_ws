@@ -1,14 +1,14 @@
 name: conflict
 description: Resource conflict scenario — both arms compete for same zone
 tasks:
-  - task_id: conflict_arm1_zone_a
-    arm_name: arm1
+  - task_id: conflict_left_arm_zone_a
+    arm_name: left_arm
     action_type: move
     zone_name: zone_a
     position_name: ready
     timeout: 30.0
-  - task_id: conflict_arm2_zone_a
-    arm_name: arm2
+  - task_id: conflict_right_arm_zone_a
+    arm_name: right_arm
     action_type: move
     zone_name: zone_a
     position_name: ready

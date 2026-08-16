@@ -37,7 +37,7 @@ class M4SingleArmTest(Node):
 
         self._js_sub = self.create_subscription(
             JointState,
-            "/arm1/joint_states",
+            "/left_arm/joint_states",
             self._on_joint_state,
             10,
         )
@@ -62,8 +62,8 @@ class M4SingleArmTest(Node):
         self._wm_state_received = True
 
     def test_joint_state_received(self) -> bool:
-        """Test: /arm1/joint_states is being published."""
-        self.get_logger().info("Test 1: Checking /arm1/joint_states...")
+        """Test: /left_arm/joint_states is being published."""
+        self.get_logger().info("Test 1: Checking /left_arm/joint_states...")
         start = time.time()
         while not self._js_received and (time.time() - start) < 10.0:
             rclpy.spin_once(self, timeout_sec=0.1)
@@ -82,7 +82,7 @@ class M4SingleArmTest(Node):
         self.get_logger().info("Test 2: Checking JTC action server...")
         client = ActionClient(
             self, FollowJointTrajectory,
-            "/arm1/joint_trajectory_controller/follow_joint_trajectory",
+            "/left_arm/joint_trajectory_controller/follow_joint_trajectory",
         )
         available = client.wait_for_server(timeout_sec=10.0)
         client.destroy()
@@ -99,7 +99,7 @@ class M4SingleArmTest(Node):
         self.get_logger().info("Test 3: Sending trajectory home -> ready -> home...")
         client = ActionClient(
             self, FollowJointTrajectory,
-            "/arm1/joint_trajectory_controller/follow_joint_trajectory",
+            "/left_arm/joint_trajectory_controller/follow_joint_trajectory",
         )
         if not client.wait_for_server(timeout_sec=10.0):
             self.get_logger().error("  FAIL: JTC not available")
@@ -107,12 +107,12 @@ class M4SingleArmTest(Node):
             return False
 
         joint_names = [
-            "arm1_shoulder_pan_joint",
-            "arm1_shoulder_lift_joint",
-            "arm1_elbow_joint",
-            "arm1_wrist_1_joint",
-            "arm1_wrist_2_joint",
-            "arm1_wrist_3_joint",
+            "left_arm_shoulder_pan_joint",
+            "left_arm_shoulder_lift_joint",
+            "left_arm_elbow_joint",
+            "left_arm_wrist_1_joint",
+            "left_arm_wrist_2_joint",
+            "left_arm_wrist_3_joint",
         ]
 
         home = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -175,8 +175,8 @@ class M4SingleArmTest(Node):
     def test_joint_positions_changed(self) -> bool:
         """Test: Joint positions actually changed after trajectory."""
         self.get_logger().info("Test 4: Checking joint positions after trajectory...")
-        if "arm1_shoulder_lift_joint" in self._joint_positions:
-            pos = self._joint_positions["arm1_shoulder_lift_joint"]
+        if "left_arm_shoulder_lift_joint" in self._joint_positions:
+            pos = self._joint_positions["left_arm_shoulder_lift_joint"]
             if abs(pos) < 0.3:
                 self.get_logger().info(
                     f"  PASS: shoulder_lift={pos:.3f} (near home=0)"

@@ -19,18 +19,18 @@ def robot_yaml(tmp_path: Path) -> Path:
         "components": {
             "arms": [
                 {
-                    "name": "arm1",
+                    "name": "left_arm",
                     "type": "ur5e",
-                    "prefix": "arm1_",
-                    "controller": "arm1_joint_trajectory_controller",
-                    "joint_state_broadcaster": "arm1_joint_state_broadcaster",
+                    "prefix": "left_arm_",
+                    "controller": "left_arm_joint_trajectory_controller",
+                    "joint_state_broadcaster": "left_arm_joint_state_broadcaster",
                 },
                 {
-                    "name": "arm2",
+                    "name": "right_arm",
                     "type": "ur5e",
-                    "prefix": "arm2_",
-                    "controller": "arm2_joint_trajectory_controller",
-                    "joint_state_broadcaster": "arm2_joint_state_broadcaster",
+                    "prefix": "right_arm_",
+                    "controller": "right_arm_joint_trajectory_controller",
+                    "joint_state_broadcaster": "right_arm_joint_state_broadcaster",
                     "origin": [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 },
             ],
@@ -63,8 +63,8 @@ class TestRobotDescriptionGenerator:
         gen = RobotDescriptionGenerator(robot_yaml)
         result = gen.generate_urdf()
         assert "dual_ur5e_test" in result.content
-        assert "arm1_" in result.content
-        assert "arm2_" in result.content
+        assert "left_arm_" in result.content
+        assert "right_arm_" in result.content
         assert "ur_macro.xacro" in result.content
 
     def test_generate_controllers(self, robot_yaml: Path) -> None:
@@ -72,24 +72,24 @@ class TestRobotDescriptionGenerator:
         result = gen.generate_controllers()
         config = yaml.safe_load(result.content)
         cm = config["controller_manager"]["ros__parameters"]
-        assert "arm1_joint_trajectory_controller" in cm
-        assert "arm2_joint_trajectory_controller" in cm
+        assert "left_arm_joint_trajectory_controller" in cm
+        assert "right_arm_joint_trajectory_controller" in cm
         assert cm["update_rate"] == 500
 
     def test_generate_controllers_joint_names(self, robot_yaml: Path) -> None:
         gen = RobotDescriptionGenerator(robot_yaml)
         result = gen.generate_controllers()
         config = yaml.safe_load(result.content)
-        jtc = config["arm1_joint_trajectory_controller"]["ros__parameters"]
-        assert "arm1_shoulder_pan_joint" in jtc["joints"]
+        jtc = config["left_arm_joint_trajectory_controller"]["ros__parameters"]
+        assert "left_arm_shoulder_pan_joint" in jtc["joints"]
         assert len(jtc["joints"]) == 6
 
     def test_generate_kinematics(self, robot_yaml: Path) -> None:
         gen = RobotDescriptionGenerator(robot_yaml)
         result = gen.generate_kinematics()
         config = yaml.safe_load(result.content)
-        assert "arm1" in config
-        assert "arm2" in config
+        assert "left_arm" in config
+        assert "right_arm" in config
         assert "dual_arm" in config
 
     def test_generate_all(self, robot_yaml: Path, tmp_path: Path) -> None:
@@ -106,11 +106,11 @@ class TestRobotDescriptionGenerator:
             "components": {
                 "arms": [
                     {
-                        "name": "arm1",
+                        "name": "left_arm",
                         "type": "ur5e",
-                        "prefix": "arm1_",
-                        "controller": "arm1_jtc",
-                        "joint_state_broadcaster": "arm1_jsb",
+                        "prefix": "left_arm_",
+                        "controller": "left_arm_jtc",
+                        "joint_state_broadcaster": "left_arm_jsb",
                     }
                 ],
             },
@@ -124,5 +124,5 @@ class TestRobotDescriptionGenerator:
 
         kinematics = gen.generate_kinematics()
         config = yaml.safe_load(kinematics.content)
-        assert "arm1" in config
+        assert "left_arm" in config
         assert "dual_arm" not in config

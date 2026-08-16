@@ -9,48 +9,48 @@ trajectory_execution:
 
 moveit_simple_controller_manager:
   controller_names:
-    - arm1_joint_trajectory_controller
-    - arm2_joint_trajectory_controller
-    - arm1_gripper_controller
-    - arm2_gripper_controller
+    - left_arm_joint_trajectory_controller
+    - right_arm_joint_trajectory_controller
+    - left_arm_gripper_controller
+    - right_arm_gripper_controller
     - torso_controller
     - head_controller
 
-  arm1_joint_trajectory_controller:
+  left_arm_joint_trajectory_controller:
     type: FollowJointTrajectory
     action_ns: follow_joint_trajectory
     default: true
     joints:
-      - arm1_shoulder_pan_joint
-      - arm1_shoulder_lift_joint
-      - arm1_elbow_joint
-      - arm1_wrist_1_joint
-      - arm1_wrist_2_joint
-      - arm1_wrist_3_joint
+      - left_arm_shoulder_pan_joint
+      - left_arm_shoulder_lift_joint
+      - left_arm_elbow_joint
+      - left_arm_wrist_1_joint
+      - left_arm_wrist_2_joint
+      - left_arm_wrist_3_joint
 
-  arm2_joint_trajectory_controller:
+  right_arm_joint_trajectory_controller:
     type: FollowJointTrajectory
     action_ns: follow_joint_trajectory
     default: true
     joints:
-      - arm2_shoulder_pan_joint
-      - arm2_shoulder_lift_joint
-      - arm2_elbow_joint
-      - arm2_wrist_1_joint
-      - arm2_wrist_2_joint
-      - arm2_wrist_3_joint
+      - right_arm_shoulder_pan_joint
+      - right_arm_shoulder_lift_joint
+      - right_arm_elbow_joint
+      - right_arm_wrist_1_joint
+      - right_arm_wrist_2_joint
+      - right_arm_wrist_3_joint
 
-  arm1_gripper_controller:
+  left_arm_gripper_controller:
     type: GripperCommand
     action_ns: gripper_cmd
     joints:
-      - arm1_robotiq_left_knuckle_joint
+      - left_arm_robotiq_left_knuckle_joint
 
-  arm2_gripper_controller:
+  right_arm_gripper_controller:
     type: GripperCommand
     action_ns: gripper_cmd
     joints:
-      - arm2_robotiq_left_knuckle_joint
+      - right_arm_robotiq_left_knuckle_joint
 
   torso_controller:
     type: FollowJointTrajectory

@@ -171,11 +171,11 @@ def main():
     # Step 4: Check controllers
     print("[4/6] Checking controllers...")
     ctrl_output = check_controllers()
-    has_arm1_jtc = "arm1_joint_trajectory_controller" in ctrl_output and "active" in ctrl_output
-    has_arm2_jtc = "arm2_joint_trajectory_controller" in ctrl_output and "active" in ctrl_output
+    has_left_arm_jtc = "left_arm_joint_trajectory_controller" in ctrl_output and "active" in ctrl_output
+    has_right_arm_jtc = "right_arm_joint_trajectory_controller" in ctrl_output and "active" in ctrl_output
     has_jsb = "joint_state_broadcaster" in ctrl_output and "active" in ctrl_output
-    results["4_controllers_active"] = "PASS" if (has_arm1_jtc and has_arm2_jtc and has_jsb) else "FAIL"
-    print(f"  JSB: {has_jsb}, arm1_JTC: {has_arm1_jtc}, arm2_JTC: {has_arm2_jtc}")
+    results["4_controllers_active"] = "PASS" if (has_left_arm_jtc and has_right_arm_jtc and has_jsb) else "FAIL"
+    print(f"  JSB: {has_jsb}, left_arm_JTC: {has_left_arm_jtc}, right_arm_JTC: {has_right_arm_jtc}")
 
     # Step 5: Check joint states
     print("[5/6] Checking joint_states...")
@@ -185,24 +185,24 @@ def main():
     print(f"  Joint states received: {has_js} ({len(js_output)} bytes)")
 
     # Step 6: MoveIt planning test
-    print("[6/6] Testing MoveIt arm1 planning (home -> ready)...")
-    arm1_ready = {
-        "arm1_shoulder_pan_joint": 0.0,
-        "arm1_shoulder_lift_joint": -1.57,
-        "arm1_elbow_joint": 1.57,
-        "arm1_wrist_1_joint": 0.0,
-        "arm1_wrist_2_joint": 0.0,
-        "arm1_wrist_3_joint": 0.0,
+    print("[6/6] Testing MoveIt left_arm planning (home -> ready)...")
+    left_arm_ready = {
+        "left_arm_shoulder_pan_joint": 0.0,
+        "left_arm_shoulder_lift_joint": -1.57,
+        "left_arm_elbow_joint": 1.57,
+        "left_arm_wrist_1_joint": 0.0,
+        "left_arm_wrist_2_joint": 0.0,
+        "left_arm_wrist_3_joint": 0.0,
     }
-    stdout, stderr, rc = run_moveit_test("arm1", arm1_ready)
+    stdout, stderr, rc = run_moveit_test("left_arm", left_arm_ready)
     test_result = "FAIL"
     for line in stdout.split("\n"):
         if line.startswith("RESULT:"):
             parts = line.split("|")
             test_result = parts[0].replace("RESULT:", "")
             detail = parts[2] if len(parts) > 2 else ""
-            print(f"  arm1 plan+execute: {test_result} ({detail})")
-    results["6_arm1_moveit_plan"] = test_result
+            print(f"  left_arm plan+execute: {test_result} ({detail})")
+    results["6_left_arm_moveit_plan"] = test_result
 
     # Cleanup
     print("\nCleaning up...")

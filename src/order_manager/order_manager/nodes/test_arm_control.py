@@ -67,7 +67,7 @@ def main(args=None):
     
     if len(sys.argv) < 2:
         print("Usage: test_arm_control.py <arm_name>")
-        print("Example: test_arm_control.py arm1")
+        print("Example: test_arm_control.py left_arm")
         return
     
     arm_name = sys.argv[1]

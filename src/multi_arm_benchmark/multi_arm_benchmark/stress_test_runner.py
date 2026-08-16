@@ -108,7 +108,7 @@ class StressTestRunner:
         scenario = self._injector.inject_planning_failure()
 
         record_id = self._recorder.record_task_start(
-            run_id, f"inject_{scenario['injection_id']}", "arm1",
+            run_id, f"inject_{scenario['injection_id']}", "left_arm",
             "move", scenario["description"]
         )
 
@@ -169,7 +169,7 @@ class StressTestRunner:
         scenario = self._injector.inject_safety_violation()
 
         record_id = self._recorder.record_task_start(
-            run_id, f"inject_{scenario['injection_id']}", "arm1",
+            run_id, f"inject_{scenario['injection_id']}", "left_arm",
             "move", scenario["description"]
         )
 
@@ -209,7 +209,7 @@ class StressTestRunner:
         scenario = self._injector.inject_controller_failure()
 
         record_id = self._recorder.record_task_start(
-            run_id, f"inject_{scenario['injection_id']}", "arm1",
+            run_id, f"inject_{scenario['injection_id']}", "left_arm",
             "move", scenario["description"]
         )
 

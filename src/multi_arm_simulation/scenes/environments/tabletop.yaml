@@ -64,7 +64,7 @@ sensors:
     resolution: [640, 480]
     fps: 30
     depth_range: [0.1, 10.0]
-  arm1_wrist_camera:
+  left_arm_wrist_camera:
     type: camera
     active: true
     rgb: true

@@ -199,7 +199,7 @@ class TestChain1CapabilityQuery:
         req = GetCapability.Request()
         req.capability_name = "all"
         req.include_dynamic = True
-        req.context = "arm1"
+        req.context = "left_arm"
 
         future = client.call_async(req)
         assert _wait_future(future, 5.0)
@@ -290,7 +290,7 @@ class TestChain4SubmitTaskGoals:
 
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.zone_name = "zone_a"
         task_goal.position_name = "ready"
         task_goal.object_id = "red_cube"
@@ -325,7 +325,7 @@ class TestChain4SubmitTaskGoals:
         for action_type in ["pick_place", "move", "place"]:
             tg = TaskGoal()
             tg.action_type = action_type
-            tg.arm_name = "arm1"
+            tg.arm_name = "left_arm"
             goals.append(tg)
 
         goal = SubmitTaskGoals.Goal()
@@ -356,7 +356,7 @@ class TestChain4SubmitTaskGoals:
 
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm2"
+        task_goal.arm_name = "right_arm"
         task_goal.zone_name = "zone_b"
         task_goal.position_name = "ready"
         task_goal.object_id = "blue_box"
@@ -524,7 +524,7 @@ class TestChain7FullIntegration:
 
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.zone_name = "zone_a"
         task_goal.object_id = "red_cube"
 
@@ -598,7 +598,7 @@ class TestChain7FullIntegration:
     def test_dual_arm_task_submission(
         self, m6_env: M6SystemEnvironment
     ) -> None:
-        """Test submitting tasks for both arm1 and arm2."""
+        """Test submitting tasks for both left_arm and right_arm."""
         action_client = ActionClient(
             m6_env.api_node, SubmitTaskGoals, "/runtime/submit_task_goals"
         )
@@ -606,13 +606,13 @@ class TestChain7FullIntegration:
 
         goal1 = TaskGoal()
         goal1.action_type = "pick_place"
-        goal1.arm_name = "arm1"
+        goal1.arm_name = "left_arm"
         goal1.zone_name = "zone_a"
         goal1.object_id = "red_cube"
 
         goal2 = TaskGoal()
         goal2.action_type = "pick_place"
-        goal2.arm_name = "arm2"
+        goal2.arm_name = "right_arm"
         goal2.zone_name = "zone_b"
         goal2.object_id = "blue_box"
 

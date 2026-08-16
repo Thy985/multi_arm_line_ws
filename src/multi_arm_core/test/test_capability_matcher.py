@@ -13,7 +13,7 @@ class TestCapabilityMatcher:
         self.matcher = CapabilityMatcher()
         self.robots = [
             Resource(
-                name="arm1",
+                name="left_arm",
                 resource_type=ResourceType.ROBOT,
                 capabilities={
                     "payload_kg": 5.0,
@@ -23,7 +23,7 @@ class TestCapabilityMatcher:
                 },
             ),
             Resource(
-                name="arm2",
+                name="right_arm",
                 resource_type=ResourceType.ROBOT,
                 capabilities={
                     "payload_kg": 5.0,
@@ -58,13 +58,13 @@ class TestCapabilityMatcher:
         requirements = {"reachable_zones": ["zone_b"]}
         matches = self.matcher.match(requirements, self.robots, ResourceType.ROBOT)
         assert len(matches) == 1
-        assert matches[0].name == "arm1"
+        assert matches[0].name == "left_arm"
 
     def test_match_by_zone_c(self) -> None:
         requirements = {"reachable_zones": ["zone_c"]}
         matches = self.matcher.match(requirements, self.robots, ResourceType.ROBOT)
         assert len(matches) == 1
-        assert matches[0].name == "arm2"
+        assert matches[0].name == "right_arm"
 
     def test_match_by_shared_zone(self) -> None:
         requirements = {"reachable_zones": ["zone_a"]}
@@ -75,7 +75,7 @@ class TestCapabilityMatcher:
         requirements = {"payload_kg": 3.0, "precision_mm": 0.05}
         matches = self.matcher.match(requirements, self.robots, ResourceType.ROBOT)
         assert len(matches) == 1
-        assert matches[0].name == "arm2"
+        assert matches[0].name == "right_arm"
 
     def test_missing_capability_disqualifies(self) -> None:
         requirements = {"nonexistent_cap": True}
@@ -86,7 +86,7 @@ class TestCapabilityMatcher:
         requirements = {"reachable_zones": ["zone_c"], "payload_kg": 3.0}
         best = self.matcher.find_best_robot(requirements, self.robots)
         assert best is not None
-        assert best.name == "arm2"
+        assert best.name == "right_arm"
 
     def test_find_best_robot_no_match(self) -> None:
         requirements = {"reachable_zones": ["zone_x"]}
@@ -109,4 +109,4 @@ class TestCapabilityMatcher:
         }
         matches = self.matcher.match(requirements, self.robots, ResourceType.ROBOT)
         assert len(matches) == 1
-        assert matches[0].name == "arm1"
+        assert matches[0].name == "left_arm"

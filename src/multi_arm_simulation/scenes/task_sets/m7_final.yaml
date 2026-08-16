@@ -49,7 +49,7 @@ tasks:
   - task_id: FINAL-001
     description: "Vision -> Pick -> Place complete closed loop"
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     object_id: red_cube
     zone_name: zone_b
     approach: top
@@ -73,7 +73,7 @@ tasks:
   - task_id: FINAL-003
     description: "Low Confidence — uncertainty handling"
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     object_id: red_cube
     zone_name: zone_b
     approach: top
@@ -89,7 +89,7 @@ tasks:
   - task_id: FINAL-004
     description: "High-confidence Hallucination defense"
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     object_id: hallucinated_object
     zone_name: zone_b
     approach: top
@@ -155,12 +155,12 @@ tasks:
   - task_id: FINAL-009
     description: "Failure Recovery — Experience loop"
     action_type: move
-    arm_name: arm1
+    arm_name: left_arm
     position_name: nonexistent_position
     timeout: 60.0
     followed_by:
       action_type: move
-      arm_name: arm1
+      arm_name: left_arm
       position_name: ready
     acceptance:
       - "first task fails (invalid position)"
@@ -170,12 +170,12 @@ tasks:
   - task_id: FINAL-010
     description: "Retry — system recovers after a failure"
     action_type: move
-    arm_name: arm1
+    arm_name: left_arm
     position_name: nonexistent_position
     timeout: 60.0
     followed_by:
       action_type: move
-      arm_name: arm1
+      arm_name: left_arm
       position_name: ready
     acceptance:
       - "system state is recoverable after failure"
@@ -185,7 +185,7 @@ tasks:
   - task_id: FINAL-011
     description: "Safety Abort — safety interrupts execution"
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     object_id: red_cube
     zone_name: zone_b
     timeout: 60.0
@@ -213,10 +213,10 @@ tasks:
     action_type: multi_task
     repetitions: 10
     sequence:
-      - {action_type: move, arm_name: arm1, position_name: ready}
-      - {action_type: move, arm_name: arm1, position_name: home}
-      - {action_type: move, arm_name: arm2, position_name: ready}
-      - {action_type: move, arm_name: arm2, position_name: home}
+      - {action_type: move, arm_name: left_arm, position_name: ready}
+      - {action_type: move, arm_name: left_arm, position_name: home}
+      - {action_type: move, arm_name: right_arm, position_name: ready}
+      - {action_type: move, arm_name: right_arm, position_name: home}
     timeout: 600.0
     acceptance:
       - "success_rate >= 0.8"
@@ -226,7 +226,7 @@ tasks:
   - task_id: FINAL-014
     description: "Episode Integrity — experience fully recorded"
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     object_id: red_cube
     zone_name: zone_b
     timeout: 120.0

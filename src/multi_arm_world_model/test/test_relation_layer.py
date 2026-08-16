@@ -48,14 +48,14 @@ class TestRelationLayer:
 
     def test_set_attached(self) -> None:
         layer = RelationLayer()
-        layer.set_attached("red_cube", "arm1_gripper")
+        layer.set_attached("red_cube", "left_arm_gripper")
         assert layer.is_attached("red_cube")
-        assert layer.is_attached("red_cube", "arm1_gripper")
+        assert layer.is_attached("red_cube", "left_arm_gripper")
 
     def test_set_detached(self) -> None:
         layer = RelationLayer()
-        layer.set_attached("red_cube", "arm1_gripper")
-        layer.set_detached("red_cube", "arm1_gripper")
+        layer.set_attached("red_cube", "left_arm_gripper")
+        layer.set_detached("red_cube", "left_arm_gripper")
         assert not layer.is_attached("red_cube")
 
     def test_clear_relations_for_entity(self) -> None:

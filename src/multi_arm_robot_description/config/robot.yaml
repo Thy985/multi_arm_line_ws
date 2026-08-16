@@ -8,9 +8,9 @@ components:
     - name: left_arm
       type: ur5e
       urdf: ur5e_macro.xacro
-      prefix: arm1_
-      controller: arm1_joint_trajectory_controller
-      joint_state_broadcaster: arm1_joint_state_broadcaster
+      prefix: left_arm_
+      controller: left_arm_joint_trajectory_controller
+      joint_state_broadcaster: left_arm_joint_state_broadcaster
       initial_position: ready
       workspace_bounds: [[-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14],
                          [-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14]]
@@ -20,9 +20,9 @@ components:
     - name: right_arm
       type: ur5e
       urdf: ur5e_macro.xacro
-      prefix: arm2_
-      controller: arm2_joint_trajectory_controller
-      joint_state_broadcaster: arm2_joint_state_broadcaster
+      prefix: right_arm_
+      controller: right_arm_joint_trajectory_controller
+      joint_state_broadcaster: right_arm_joint_state_broadcaster
       initial_position: ready
       origin: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       workspace_bounds: [[-3.14, 3.14], [-3.14, 3.14], [-3.14, 3.14],
@@ -56,10 +56,10 @@ components:
       - "torso_controller != head_controller (body != perception attention)"
 
   sensors:
-    - name: arm1_wrist_camera
+    - name: left_arm_wrist_camera
       type: camera
-      parent: arm1_wrist_3_link
-      topic: arm1/camera/image_raw
+      parent: left_arm_wrist_3_link
+      topic: left_arm/camera/image_raw
       rgb: true
       resolution: [640, 480]
       fps: 10
@@ -81,17 +81,17 @@ components:
       description: "Head IMU per robot_sensor_layout v1.0 (head_imu_frame)"
 
   end_effectors:
-    - name: arm1_gripper
+    - name: left_arm_gripper
       type: robotiq_2f_85
-      parent: arm1_tool0
-      controller: arm1_gripper_controller
-      joint: arm1_robotiq_left_knuckle_joint
+      parent: left_arm_tool0
+      controller: left_arm_gripper_controller
+      joint: left_arm_robotiq_left_knuckle_joint
       max_opening_mm: 85
-    - name: arm2_gripper
+    - name: right_arm_gripper
       type: robotiq_2f_85
-      parent: arm2_tool0
-      controller: arm2_gripper_controller
-      joint: arm2_robotiq_left_knuckle_joint
+      parent: right_arm_tool0
+      controller: right_arm_gripper_controller
+      joint: right_arm_robotiq_left_knuckle_joint
       max_opening_mm: 85
 
 generation:

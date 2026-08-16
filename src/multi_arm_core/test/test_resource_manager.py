@@ -16,7 +16,7 @@ class TestResource:
     """Tests for the Resource dataclass."""
 
     def test_initial_state_is_free(self) -> None:
-        r = Resource(name="arm1", resource_type=ResourceType.ROBOT)
+        r = Resource(name="left_arm", resource_type=ResourceType.ROBOT)
         assert r.state == ResourceState.FREE
         assert r.allocated_to is None
         assert r.is_available()
@@ -76,15 +76,15 @@ class TestResourceManager:
 
     def test_register_and_get(self) -> None:
         mgr = ResourceManager()
-        r = Resource(name="arm1", resource_type=ResourceType.ROBOT)
+        r = Resource(name="left_arm", resource_type=ResourceType.ROBOT)
         mgr.register(r)
-        assert mgr.get("arm1") is r
+        assert mgr.get("left_arm") is r
         assert mgr.get("nonexistent") is None
 
     def test_get_by_type(self) -> None:
         mgr = ResourceManager()
-        mgr.register(Resource(name="arm1", resource_type=ResourceType.ROBOT))
-        mgr.register(Resource(name="arm2", resource_type=ResourceType.ROBOT))
+        mgr.register(Resource(name="left_arm", resource_type=ResourceType.ROBOT))
+        mgr.register(Resource(name="right_arm", resource_type=ResourceType.ROBOT))
         mgr.register(Resource(name="zone_a", resource_type=ResourceType.ZONE))
         robots = mgr.get_robots()
         assert len(robots) == 2
@@ -106,16 +106,16 @@ class TestResourceManager:
     def test_from_yaml(self) -> None:
         yaml_content = """
 robots:
-  - name: arm1
+  - name: left_arm
     type: ur5e
-    namespace: /arm1
+    namespace: /left_arm
     capabilities:
       payload_kg: 5.0
       gripper: robotiq_2f85
       reachable_zones: [zone_a, zone_b, home]
-  - name: arm2
+  - name: right_arm
     type: ur5e
-    namespace: /arm2
+    namespace: /right_arm
     capabilities:
       payload_kg: 5.0
       gripper: robotiq_2f85
@@ -134,8 +134,8 @@ resources:
             mgr = ResourceManager.from_yaml(yaml_path)
             assert len(mgr.get_robots()) == 2
             assert len(mgr.get_zones()) == 4
-            assert mgr.get("arm1").capabilities["payload_kg"] == 5.0
-            assert mgr.get("arm2").capabilities["reachable_zones"] == [
+            assert mgr.get("left_arm").capabilities["payload_kg"] == 5.0
+            assert mgr.get("right_arm").capabilities["reachable_zones"] == [
                 "zone_a",
                 "zone_c",
                 "home",
@@ -146,7 +146,7 @@ resources:
     def test_from_yaml_with_detailed_resources(self) -> None:
         yaml_content = """
 robots:
-  - name: arm1
+  - name: left_arm
     type: ur5e
     capabilities:
       payload_kg: 5.0
@@ -175,15 +175,15 @@ resources:
 
     def test_get_all_status(self) -> None:
         mgr = ResourceManager()
-        mgr.register(Resource(name="arm1", resource_type=ResourceType.ROBOT))
+        mgr.register(Resource(name="left_arm", resource_type=ResourceType.ROBOT))
         status = mgr.get_all_status()
-        assert "arm1" in status
-        assert status["arm1"]["type"] == "ROBOT"
-        assert status["arm1"]["state"] == "FREE"
+        assert "left_arm" in status
+        assert status["left_arm"]["type"] == "ROBOT"
+        assert status["left_arm"]["state"] == "FREE"
 
     def test_five_resource_types(self) -> None:
         mgr = ResourceManager()
-        mgr.register(Resource(name="arm1", resource_type=ResourceType.ROBOT))
+        mgr.register(Resource(name="left_arm", resource_type=ResourceType.ROBOT))
         mgr.register(Resource(name="zone_a", resource_type=ResourceType.ZONE))
         mgr.register(Resource(name="gripper", resource_type=ResourceType.TOOL))
         mgr.register(Resource(name="camera", resource_type=ResourceType.SENSOR))
@@ -197,6 +197,6 @@ resources:
 
     def test_resource_names(self) -> None:
         mgr = ResourceManager()
-        mgr.register(Resource(name="arm1", resource_type=ResourceType.ROBOT))
+        mgr.register(Resource(name="left_arm", resource_type=ResourceType.ROBOT))
         mgr.register(Resource(name="zone_a", resource_type=ResourceType.ZONE))
-        assert sorted(mgr.resource_names) == ["arm1", "zone_a"]
+        assert sorted(mgr.resource_names) == ["left_arm", "zone_a"]

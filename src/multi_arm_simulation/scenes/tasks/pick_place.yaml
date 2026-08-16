@@ -38,5 +38,5 @@ parameters:
   object_id: ""
   source_zone: "zone_a"
   target_zone: "zone_b"
-  arm_name: "arm1"
+  arm_name: "left_arm"
   time_limit_s: 30.0

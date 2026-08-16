@@ -90,8 +90,8 @@
       <child link="status_led"/>
     </joint>
 
-    <!-- arm1 mounting pillar -->
-    <link name="arm1_pillar">
+    <!-- left_arm mounting pillar -->
+    <link name="left_arm_pillar">
       <visual>
         <origin xyz="0 0 0.1" rpy="0 0 0"/>
         <geometry>
@@ -109,14 +109,14 @@
         <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.02"/>
       </inertial>
     </link>
-    <joint name="base_to_arm1_pillar" type="fixed">
+    <joint name="base_to_left_arm_pillar" type="fixed">
       <origin xyz="0 0 0.3" rpy="0 0 0"/>
       <parent link="${prefix}base_link"/>
-      <child link="arm1_pillar"/>
+      <child link="left_arm_pillar"/>
     </joint>
 
-    <!-- arm2 mounting pillar -->
-    <link name="arm2_pillar">
+    <!-- right_arm mounting pillar -->
+    <link name="right_arm_pillar">
       <visual>
         <origin xyz="0 0 0.1" rpy="0 0 0"/>
         <geometry>
@@ -134,10 +134,10 @@
         <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.02"/>
       </inertial>
     </link>
-    <joint name="base_to_arm2_pillar" type="fixed">
+    <joint name="base_to_right_arm_pillar" type="fixed">
       <origin xyz="1.0 0 0.3" rpy="0 0 0"/>
       <parent link="${prefix}base_link"/>
-      <child link="arm2_pillar"/>
+      <child link="right_arm_pillar"/>
     </joint>
 
     <!-- 4 wheels (fixed joint, M7.6 will make revolute) -->

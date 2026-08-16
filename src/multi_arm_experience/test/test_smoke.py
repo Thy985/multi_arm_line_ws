@@ -26,7 +26,7 @@ def test_basic_episode_recording(tmp_path) -> None:
     """Test basic episode recording and export."""
     recorder = ExperienceRecorder()
 
-    ep = recorder.start_episode("pick_place", "pick_object", "arm1")
+    ep = recorder.start_episode("pick_place", "pick_object", "left_arm")
     recorder.record_step(ep, "grasp", success=True, duration=1.0)
     recorder.finish_episode(ep, result="success", duration=2.0)
 

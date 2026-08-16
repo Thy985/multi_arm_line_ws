@@ -272,8 +272,8 @@ class M6EpisodeRecordingE2E(Node):
         task_results = []
 
         for i, task in enumerate(tasks):
-            task["arm_name"] = "arm1"
-            task["description"] = f"arm1:{task['zone_name']}:{task['position_name']}"
+            task["arm_name"] = "left_arm"
+            task["description"] = f"left_arm:{task['zone_name']}:{task['position_name']}"
 
             self.get_logger().info(
                 f"  [{i+1}/{n}] {task['description']} (pos={task['position_name']})"

@@ -34,7 +34,7 @@ class FailureInjector:
             "injection_id": self._injection_count,
             "failure_type": "planning_failure",
             "method": "unreachable_target",
-            "description": "arm1:zone_invalid:unreachable_pose",
+            "description": "left_arm:zone_invalid:unreachable_pose",
             "expected_recovery": ["relax_constraints", "change_grasp_pose", "release_resources", "safe_abort"],
             "expected_outcome": "recovered_or_aborted",
             "timestamp": _time.time(),

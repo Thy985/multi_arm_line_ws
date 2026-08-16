@@ -9,7 +9,7 @@ Verifies all 10 acceptance criteria from the M7.1 spec:
     5. Controller split: torso_controller ≠ head_controller
     6. ros2_control: 16 joints
     7. SRDF torso group: independent
-    8. SRDF no full-body group: arm1_full does not exist
+    8. SRDF no full-body group: left_arm_full does not exist
     9. Gazebo startup: no errors
    10. Controllers active: torso + head in list
 """
@@ -141,8 +141,8 @@ class TestM71Srdf:
         assert '<joint name="torso_yaw_joint"/>' in srdf
 
     def test_08_srdf_no_full_body_group(self, srdf: str) -> None:
-        """SRDF does NOT have arm1_full or similar full-body group."""
-        assert "arm1_full" not in srdf
+        """SRDF does NOT have left_arm_full or similar full-body group."""
+        assert "left_arm_full" not in srdf
         assert "whole_body" not in srdf
         assert "full_body" not in srdf
 

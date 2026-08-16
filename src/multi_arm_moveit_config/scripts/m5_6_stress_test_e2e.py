@@ -319,7 +319,7 @@ class StressTestE2E(Node):
             return self._results["level3_safety"]
 
         request = SafetyCheck.Request()
-        request.arm_names = ["arm1"]
+        request.arm_names = ["left_arm"]
         request.trajectory_joint_names = []
         request.trajectory_positions = []
         request.trajectory_duration = 3.0

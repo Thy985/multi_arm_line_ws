@@ -2,8 +2,8 @@
 """M4 full integration test: WorldModel + Safety + Gazebo.
 
 Validates:
-1. WorldModel receives /arm1/joint_states and caches robot state
-2. SafetySupervisor receives /arm1/joint_states for collision monitoring
+1. WorldModel receives /left_arm/joint_states and caches robot state
+2. SafetySupervisor receives /left_arm/joint_states for collision monitoring
 3. SafetyCheck service works with real joint states
 4. E-Stop stops JTC via controller_manager/switch_controller
 5. E-Stop release reactivates JTC
@@ -11,8 +11,8 @@ Validates:
 Prerequisites:
   ros2 launch ur_simulation_gz multi_arm_sim.launch.py ur_type:=ur5e gazebo_gui:=false
   # Wait for controllers active, then also start:
-  ros2 run multi_arm_world_model world_model_node --ros-args -p arm_names:=[\"arm1\"]
-  ros2 run multi_arm_safety safety_supervisor --ros-args -p arm_names:=[\"arm1\"]
+  ros2 run multi_arm_world_model world_model_node --ros-args -p arm_names:=[\"left_arm\"]
+  ros2 run multi_arm_safety safety_supervisor --ros-args -p arm_names:=[\"left_arm\"]
 """
 
 import sys
@@ -36,7 +36,7 @@ class M4IntegrationTest(Node):
         self._safety_status_received = False
 
         self._js_sub = self.create_subscription(
-            JointState, "/arm1/joint_states", self._on_js, 10
+            JointState, "/left_arm/joint_states", self._on_js, 10
         )
         self._wm_sub = self.create_subscription(
             JointState, "/world_model/state", self._on_wm, 10
@@ -73,11 +73,11 @@ class M4IntegrationTest(Node):
                 return True
 
             req = SafetyCheck.Request()
-            req.arm_names = ["arm1"]
+            req.arm_names = ["left_arm"]
             req.trajectory_joint_names = [
-                "arm1_shoulder_pan_joint", "arm1_shoulder_lift_joint",
-                "arm1_elbow_joint", "arm1_wrist_1_joint",
-                "arm1_wrist_2_joint", "arm1_wrist_3_joint",
+                "left_arm_shoulder_pan_joint", "left_arm_shoulder_lift_joint",
+                "left_arm_elbow_joint", "left_arm_wrist_1_joint",
+                "left_arm_wrist_2_joint", "left_arm_wrist_3_joint",
             ]
             req.trajectory_positions = [0.0, -1.57, 1.57, 0.0, 0.0, 0.0]
             req.trajectory_duration = 3.0
@@ -116,7 +116,7 @@ class M4IntegrationTest(Node):
 
             jtc_client = ActionClient(
                 self, FollowJointTrajectory,
-                "/arm1/joint_trajectory_controller/follow_joint_trajectory",
+                "/left_arm/joint_trajectory_controller/follow_joint_trajectory",
             )
             if not jtc_client.wait_for_server(timeout_sec=5.0):
                 self.get_logger().warn("  SKIP: JTC not available")
@@ -127,9 +127,9 @@ class M4IntegrationTest(Node):
             # Send a long trajectory
             trajectory = JointTrajectory()
             trajectory.joint_names = [
-                "arm1_shoulder_pan_joint", "arm1_shoulder_lift_joint",
-                "arm1_elbow_joint", "arm1_wrist_1_joint",
-                "arm1_wrist_2_joint", "arm1_wrist_3_joint",
+                "left_arm_shoulder_pan_joint", "left_arm_shoulder_lift_joint",
+                "left_arm_elbow_joint", "left_arm_wrist_1_joint",
+                "left_arm_wrist_2_joint", "left_arm_wrist_3_joint",
             ]
             pt = JointTrajectoryPoint()
             pt.positions = [0.0, -1.57, 1.57, 0.0, 0.0, 0.0]
@@ -159,7 +159,7 @@ class M4IntegrationTest(Node):
                 from controller_manager_msgs.srv import ListControllers
 
                 list_client = self.create_client(
-                    ListControllers, "/arm1/controller_manager/list_controllers"
+                    ListControllers, "/left_arm/controller_manager/list_controllers"
                 )
                 if list_client.wait_for_service(timeout_sec=3.0):
                     list_req = ListControllers.Request()

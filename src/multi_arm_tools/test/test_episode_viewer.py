@@ -57,7 +57,7 @@ def test_episode_detail_render(capsys):
         "episode_id": "ep_00003",
         "task_type": "pick_place",
         "skill_name": "pick_object",
-        "robot_id": "arm1",
+        "robot_id": "left_arm",
         "result": "success",
         "duration": 7.44,
         "recovery": {"count": 0, "attempts": []},
@@ -84,7 +84,7 @@ def test_episode_detail_render(capsys):
     assert "ep_00003" in captured.out
     assert "pick_place" in captured.out
     assert "pick_object" in captured.out
-    assert "arm1" in captured.out
+    assert "left_arm" in captured.out
     assert "skill_select" in captured.out
     assert "execute_grasp" in captured.out
     assert "red_cube" in captured.out

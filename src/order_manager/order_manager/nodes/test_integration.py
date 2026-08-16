@@ -62,62 +62,62 @@ def wait_for_state_change(coordinator, arm_name, from_state, timeout=15.0):
 # ============================================================
 
 def test_single_arm_movement(coord, result, timeout):
-    """Send arm1 to 'ready' position and verify it reaches WORKING then IDLE."""
+    """Send left_arm to 'ready' position and verify it reaches WORKING then IDLE."""
     # Ensure arm is idle
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1 not IDLE before test (state={coord.arm_status['arm1'].state})"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm not IDLE before test (state={coord.arm_status['left_arm'].state})"
 
     # Send to position (no zone lock)
-    success = coord.send_to_position('arm1', 'ready', duration=2.0)
+    success = coord.send_to_position('left_arm', 'ready', duration=2.0)
     assert success, "send_to_position returned False"
 
     # Verify arm enters WORKING state
     time.sleep(0.5)
-    state = coord.arm_status['arm1'].state
+    state = coord.arm_status['left_arm'].state
     assert state == ArmState.WORKING, \
-        f"arm1 should be WORKING after send_to_position, got {state}"
+        f"left_arm should be WORKING after send_to_position, got {state}"
 
-    print(f"    arm1 state: {state.name}")
+    print(f"    left_arm state: {state.name}")
 
     # Wait for completion
-    reached, final_state = wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
-    assert reached, f"arm1 did not leave WORKING within {timeout}s"
+    reached, final_state = wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
+    assert reached, f"left_arm did not leave WORKING within {timeout}s"
     assert final_state == ArmState.IDLE, \
-        f"arm1 should return to IDLE after completion, got {final_state}"
+        f"left_arm should return to IDLE after completion, got {final_state}"
 
-    print(f"    arm1 final state: {final_state.name}")
+    print(f"    left_arm final state: {final_state.name}")
 
 # ============================================================
 # Test 2: Zone Locking
 # ============================================================
 
 def test_zone_locking(coord, result, timeout):
-    """Send arm1 to zone_a, verify zone is locked, then release."""
+    """Send left_arm to zone_a, verify zone is locked, then release."""
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1 not IDLE (state={coord.arm_status['arm1'].state})"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm not IDLE (state={coord.arm_status['left_arm'].state})"
 
     zone = coord.zones['zone_a']
     assert zone.is_free(), "zone_a should be free before test"
 
     # Send to zone
-    granted = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=2.0)
+    granted = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=2.0)
     assert granted, "Zone should be granted (zone was free)"
 
     # Verify zone locked
     assert not zone.is_free(), "zone_a should be occupied"
-    assert zone.occupied_by == 'arm1', f"zone_a occupied_by should be arm1, got {zone.occupied_by}"
-    assert coord.arm_status['arm1'].state == ArmState.WORKING
+    assert zone.occupied_by == 'left_arm', f"zone_a occupied_by should be left_arm, got {zone.occupied_by}"
+    assert coord.arm_status['left_arm'].state == ArmState.WORKING
 
     print(f"    zone_a occupied_by: {zone.occupied_by}")
 
     # Wait for completion
-    reached, final_state = wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
-    assert reached, f"arm1 did not leave WORKING within {timeout}s"
+    reached, final_state = wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
+    assert reached, f"left_arm did not leave WORKING within {timeout}s"
 
     # Verify zone released
     assert zone.is_free(), "zone_a should be free after completion"
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
 
     print(f"    zone_a after release: free={zone.is_free()}")
 
@@ -126,50 +126,50 @@ def test_zone_locking(coord, result, timeout):
 # ============================================================
 
 def test_dual_arm_zone_conflict(coord, result, timeout):
-    """arm1 and arm2 both request zone_a — second should queue (via TimeManager or zone lock)."""
+    """left_arm and right_arm both request zone_a — second should queue (via TimeManager or zone lock)."""
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     zone = coord.zones['zone_a']
     assert zone.is_free()
 
-    # arm1 gets the zone
-    granted1 = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=3.0)
-    assert granted1, "arm1 should get zone_a"
+    # left_arm gets the zone
+    granted1 = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=3.0)
+    assert granted1, "left_arm should get zone_a"
     time.sleep(0.5)
-    assert coord.arm_status['arm1'].state == ArmState.WORKING
+    assert coord.arm_status['left_arm'].state == ArmState.WORKING
 
-    # arm2 requests same zone — should be queued (via TimeManager time conflict OR zone lock)
-    granted2 = coord.send_to_zone('arm2', 'zone_a', 'ready', duration=3.0)
-    assert not granted2, "arm2 should be queued (zone occupied or time conflict)"
-    assert coord.arm_status['arm2'].state == ArmState.QUEUED, \
-        f"arm2 should be QUEUED, got {coord.arm_status['arm2'].state.name}"
+    # right_arm requests same zone — should be queued (via TimeManager time conflict OR zone lock)
+    granted2 = coord.send_to_zone('right_arm', 'zone_a', 'ready', duration=3.0)
+    assert not granted2, "right_arm should be queued (zone occupied or time conflict)"
+    assert coord.arm_status['right_arm'].state == ArmState.QUEUED, \
+        f"right_arm should be QUEUED, got {coord.arm_status['right_arm'].state.name}"
 
-    print(f"    arm1: {coord.arm_status['arm1'].state.name}")
-    print(f"    arm2: {coord.arm_status['arm2'].state.name}")
+    print(f"    left_arm: {coord.arm_status['left_arm'].state.name}")
+    print(f"    right_arm: {coord.arm_status['right_arm'].state.name}")
 
-    # Wait for arm1 to finish
-    reached, _ = wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
-    assert reached, f"arm1 did not finish within {timeout}s"
+    # Wait for left_arm to finish
+    reached, _ = wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
+    assert reached, f"left_arm did not finish within {timeout}s"
 
-    # After arm1 finishes, arm2 should be triggered
+    # After left_arm finishes, right_arm should be triggered
     time.sleep(1.0)  # Give callback time to fire
-    assert coord.arm_status['arm2'].state == ArmState.WORKING, \
-        f"arm2 should be WORKING after arm1 release, got {coord.arm_status['arm2'].state}"
+    assert coord.arm_status['right_arm'].state == ArmState.WORKING, \
+        f"right_arm should be WORKING after left_arm release, got {coord.arm_status['right_arm'].state}"
 
-    print(f"    arm2 after arm1 release: {coord.arm_status['arm2'].state.name}")
+    print(f"    right_arm after left_arm release: {coord.arm_status['right_arm'].state.name}")
 
-    # Wait for arm2 to finish
-    reached, _ = wait_for_state_change(coord, 'arm2', ArmState.WORKING, timeout=timeout)
-    assert reached, f"arm2 did not finish within {timeout}s"
+    # Wait for right_arm to finish
+    reached, _ = wait_for_state_change(coord, 'right_arm', ArmState.WORKING, timeout=timeout)
+    assert reached, f"right_arm did not finish within {timeout}s"
 
     # Both should be idle, zone free
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     assert zone.is_free()
 
-    print(f"    final: arm1={coord.arm_status['arm1'].state.name}, "
-          f"arm2={coord.arm_status['arm2'].state.name}, "
+    print(f"    final: left_arm={coord.arm_status['left_arm'].state.name}, "
+          f"right_arm={coord.arm_status['right_arm'].state.name}, "
           f"zone_free={zone.is_free()}")
 
 # ============================================================
@@ -180,12 +180,12 @@ def test_state_machine(coord, result, timeout):
     """Verify all state transitions happen in correct order."""
     transitions = []
     
-    # Monitor arm1 state changes — start BEFORE sending trajectory
-    state_holder = {'prev': coord.arm_status['arm1'].state}
+    # Monitor left_arm state changes — start BEFORE sending trajectory
+    state_holder = {'prev': coord.arm_status['left_arm'].state}
     
     def monitor():
         for _ in range(int(timeout * 10)):
-            curr = coord.arm_status['arm1'].state
+            curr = coord.arm_status['left_arm'].state
             if curr != state_holder['prev']:
                 transitions.append((state_holder['prev'].name, curr.name))
                 state_holder['prev'] = curr
@@ -199,7 +199,7 @@ def test_state_machine(coord, result, timeout):
     time.sleep(0.1)
     
     # Trigger state change: IDLE -> WORKING -> IDLE
-    coord.send_to_position('arm1', 'extended', duration=2.0)
+    coord.send_to_position('left_arm', 'extended', duration=2.0)
     monitor_thread.join(timeout=timeout + 2)
     
     print(f"    transitions: {transitions}")
@@ -219,11 +219,11 @@ def test_state_machine(coord, result, timeout):
 def test_invalid_inputs(coord, result, timeout):
     """Verify that invalid position/zone names are rejected."""
     # Invalid position
-    ret = coord.send_to_position('arm1', 'nonexistent_position')
+    ret = coord.send_to_position('left_arm', 'nonexistent_position')
     assert ret == False, "Should reject invalid position"
     
     # Invalid zone
-    ret = coord.send_to_zone('arm1', 'nonexistent_zone')
+    ret = coord.send_to_zone('left_arm', 'nonexistent_zone')
     assert ret == False, "Should reject invalid zone"
     
     print("    Invalid position: rejected ✓")
@@ -235,26 +235,26 @@ def test_invalid_inputs(coord, result, timeout):
 
 def test_busy_arm_rejection(coord, result, timeout):
     """Verify that commands to a busy arm are rejected."""
-    # Ensure arm1 is idle
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    # Ensure left_arm is idle
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
-    # Send arm1 to position (makes it WORKING)
-    coord.send_to_position('arm1', 'ready', duration=3.0)
+    # Send left_arm to position (makes it WORKING)
+    coord.send_to_position('left_arm', 'ready', duration=3.0)
     time.sleep(0.3)
-    assert coord.arm_status['arm1'].state == ArmState.WORKING
+    assert coord.arm_status['left_arm'].state == ArmState.WORKING
     
     # Try to send another command — should be rejected
-    ret = coord.send_to_position('arm1', 'home')
+    ret = coord.send_to_position('left_arm', 'home')
     assert ret == False, "Should reject command to busy arm"
     
-    ret = coord.send_to_zone('arm1', 'zone_a')
+    ret = coord.send_to_zone('left_arm', 'zone_a')
     assert ret == False, "Should reject zone request to busy arm"
     
     print("    Busy arm position: rejected ✓")
     print("    Busy arm zone: rejected ✓")
     
-    # Wait for arm1 to finish
-    wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
+    # Wait for left_arm to finish
+    wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
 
 # ============================================================
 # Test 7: Zone Free After Error Recovery
@@ -263,23 +263,23 @@ def test_busy_arm_rejection(coord, result, timeout):
 def test_zone_release_on_error(coord, result, timeout):
     """Verify zone is released when arm enters ERROR state."""
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     zone = coord.zones['zone_a']
     assert zone.is_free()
     
-    # Send arm1 to zone_a
-    granted = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=2.0)
+    # Send left_arm to zone_a
+    granted = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=2.0)
     assert granted, "Zone should be granted"
     time.sleep(0.3)
-    assert zone.occupied_by == 'arm1'
+    assert zone.occupied_by == 'left_arm'
     
     # Wait for completion
-    wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
+    wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
     
     # Zone should be free after completion
-    assert zone.is_free(), "Zone should be free after arm1 completes"
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert zone.is_free(), "Zone should be free after left_arm completes"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     print("    Zone released after completion ✓")
 
@@ -288,29 +288,29 @@ def test_zone_release_on_error(coord, result, timeout):
 # ============================================================
 
 def test_different_zones_no_conflict(coord, result, timeout):
-    """arm1 -> zone_a and arm2 -> zone_b should both succeed (no conflict)."""
+    """left_arm -> zone_a and right_arm -> zone_b should both succeed (no conflict)."""
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     
-    # arm1 -> zone_a
-    granted1 = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=2.0)
-    assert granted1, "arm1 should get zone_a"
+    # left_arm -> zone_a
+    granted1 = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=2.0)
+    assert granted1, "left_arm should get zone_a"
     
-    # arm2 -> zone_b (different zone, should succeed)
-    granted2 = coord.send_to_zone('arm2', 'zone_b', 'ready', duration=2.0)
-    assert granted2, "arm2 should get zone_b (different zone)"
+    # right_arm -> zone_b (different zone, should succeed)
+    granted2 = coord.send_to_zone('right_arm', 'zone_b', 'ready', duration=2.0)
+    assert granted2, "right_arm should get zone_b (different zone)"
     
     # Both should be WORKING
-    assert coord.arm_status['arm1'].state == ArmState.WORKING
-    assert coord.arm_status['arm2'].state == ArmState.WORKING
+    assert coord.arm_status['left_arm'].state == ArmState.WORKING
+    assert coord.arm_status['right_arm'].state == ArmState.WORKING
     
-    print("    arm1 -> zone_a: granted ✓")
-    print("    arm2 -> zone_b: granted ✓")
+    print("    left_arm -> zone_a: granted ✓")
+    print("    right_arm -> zone_b: granted ✓")
     
     # Wait for both to finish
-    wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
-    wait_for_state_change(coord, 'arm2', ArmState.WORKING, timeout=timeout)
+    wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
+    wait_for_state_change(coord, 'right_arm', ArmState.WORKING, timeout=timeout)
 
 # ============================================================
 # Test 9: Task Scheduling Integration
@@ -321,7 +321,7 @@ def test_task_scheduling(coord, result, timeout):
     from order_manager.nodes.task_scheduler import Task, TaskPriority
     
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # Submit a task
     task = Task(
@@ -342,11 +342,11 @@ def test_task_scheduling(coord, result, timeout):
     
     # Wait for execution
     time.sleep(1)
-    assert coord.arm_status['arm1'].state == ArmState.WORKING, \
-        f"arm1 should be WORKING after task execution, got {coord.arm_status['arm1'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.WORKING, \
+        f"left_arm should be WORKING after task execution, got {coord.arm_status['left_arm'].state.name}"
     
     # Wait for completion
-    wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
+    wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
 
 # ============================================================
 # Test 10: Reset Arm from ERROR State
@@ -355,20 +355,20 @@ def test_task_scheduling(coord, result, timeout):
 def test_reset_arm(coord, result, timeout):
     """Test reset_arm API for ERROR→IDLE recovery."""
     # Ensure clean state
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # Simulate ERROR state manually
-    coord.arm_status['arm1'].state = ArmState.ERROR
-    coord.arm_status['arm1'].error_message = "Test error"
+    coord.arm_status['left_arm'].state = ArmState.ERROR
+    coord.arm_status['left_arm'].error_message = "Test error"
     
     # reset_arm should succeed
-    ret = coord.reset_arm('arm1')
+    ret = coord.reset_arm('left_arm')
     assert ret == True, "reset_arm should return True"
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1 should be IDLE after reset, got {coord.arm_status['arm1'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm should be IDLE after reset, got {coord.arm_status['left_arm'].state.name}"
     
     # reset_arm on IDLE arm should fail
-    ret = coord.reset_arm('arm1')
+    ret = coord.reset_arm('left_arm')
     assert ret == False, "reset_arm on IDLE arm should return False"
     
     print("    ERROR→IDLE reset: ✓")
@@ -403,16 +403,16 @@ def main():
     # Run tests
     results = []
     
-    print("[Test 1] Single arm movement (arm1 -> ready)")
+    print("[Test 1] Single arm movement (left_arm -> ready)")
     results.append(run_test("single_arm_movement", test_single_arm_movement, coordinator))
     
-    print("[Test 2] Zone locking (arm1 -> zone_a)")
+    print("[Test 2] Zone locking (left_arm -> zone_a)")
     results.append(run_test("zone_locking", test_zone_locking, coordinator))
     
-    print("[Test 3] Dual arm zone conflict (arm1 + arm2 -> zone_a)")
+    print("[Test 3] Dual arm zone conflict (left_arm + right_arm -> zone_a)")
     results.append(run_test("dual_arm_conflict", test_dual_arm_zone_conflict, coordinator))
     
-    print("[Test 4] State machine transitions (arm1 -> extended)")
+    print("[Test 4] State machine transitions (left_arm -> extended)")
     results.append(run_test("state_machine", test_state_machine, coordinator))
     
     print("[Test 5] Invalid inputs rejection")
@@ -424,7 +424,7 @@ def main():
     print("[Test 7] Zone release after completion")
     results.append(run_test("zone_release_on_error", test_zone_release_on_error, coordinator))
     
-    print("[Test 8] Different zones no conflict (arm1->zone_a, arm2->zone_b)")
+    print("[Test 8] Different zones no conflict (left_arm->zone_a, right_arm->zone_b)")
     results.append(run_test("different_zones_no_conflict", test_different_zones_no_conflict, coordinator))
     
     print("[Test 9] Task scheduling integration")

@@ -72,6 +72,6 @@ def test_gripper_config_exists() -> None:
 def test_world_model_ownership_boundary() -> None:
     """Verify WorldModel does NOT own real-time control state."""
     from multi_arm_world_model.state_database import CachedRobotState
-    state = CachedRobotState(arm_name="arm1")
+    state = CachedRobotState(arm_name="left_arm")
     assert state.last_updated > 0
     assert not state.is_stale(max_age=1.0)

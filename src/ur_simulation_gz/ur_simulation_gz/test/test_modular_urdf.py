@@ -109,15 +109,15 @@ class TestComponentsPresent:
         assert '"base_link"' in modular_urdf
         assert "front_panel" in modular_urdf
         assert "status_led" in modular_urdf
-        assert "arm1_pillar" in modular_urdf
-        assert "arm2_pillar" in modular_urdf
+        assert "left_arm_pillar" in modular_urdf
+        assert "right_arm_pillar" in modular_urdf
 
     def test_wheels_present(self, modular_urdf: str):
         for wheel in ["wheel_fl", "wheel_fr", "wheel_bl", "wheel_br"]:
             assert wheel in modular_urdf, f"Missing wheel: {wheel}"
 
     def test_dual_arms_present(self, modular_urdf: str):
-        for arm in ["arm1", "arm2"]:
+        for arm in ["left_arm", "right_arm"]:
             for joint in ["shoulder_pan_joint", "shoulder_lift_joint",
                           "elbow_joint", "wrist_1_joint", "wrist_2_joint",
                           "wrist_3_joint"]:
@@ -125,15 +125,15 @@ class TestComponentsPresent:
             assert f"{arm}_tool0" in modular_urdf
 
     def test_grippers_present(self, modular_urdf: str):
-        for arm in ["arm1", "arm2"]:
+        for arm in ["left_arm", "right_arm"]:
             assert f"{arm}_robotiq_base_link" in modular_urdf
             assert f"{arm}_robotiq_left_knuckle_joint" in modular_urdf
             assert f"{arm}_robotiq_left_finger_link" in modular_urdf
             assert f"{arm}_robotiq_right_knuckle_link" in modular_urdf
 
     def test_camera_sensor_present(self, modular_urdf: str):
-        assert "arm1_wrist_camera" in modular_urdf
-        assert "arm1_wrist_3_link" in modular_urdf
+        assert "left_arm_wrist_camera" in modular_urdf
+        assert "left_arm_wrist_3_link" in modular_urdf
 
     def test_ros2_control_present(self, modular_urdf: str):
         assert "MultiArmSystem" in modular_urdf

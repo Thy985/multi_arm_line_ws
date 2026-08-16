@@ -136,7 +136,7 @@ class TaskManager:
         """Describe the TaskGoal that would be built."""
         info: dict[str, str] = {}
         info["action_type"] = task_type
-        info["arm_name"] = arm_name if arm_name else "arm1"
+        info["arm_name"] = arm_name if arm_name else "left_arm"
 
         if task_type in ("pick_place", "pick", "grasp"):
             if len(args) >= 1:

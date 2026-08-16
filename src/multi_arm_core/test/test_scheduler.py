@@ -24,7 +24,7 @@ def _make_resource_manager() -> ResourceManager:
     mgr = ResourceManager()
     mgr.register(
         Resource(
-            name="arm1",
+            name="left_arm",
             resource_type=ResourceType.ROBOT,
             capabilities={
                 "payload_kg": 5.0,
@@ -34,7 +34,7 @@ def _make_resource_manager() -> ResourceManager:
     )
     mgr.register(
         Resource(
-            name="arm2",
+            name="right_arm",
             resource_type=ResourceType.ROBOT,
             capabilities={
                 "payload_kg": 5.0,
@@ -56,21 +56,21 @@ class TestAllocationStrategy:
         strategy = AllocationStrategy(CapabilityMatcher())
         task = Task(task_id="t1", zone_name="zone_b")
         candidates = strategy.find_candidate_arms(task, mgr)
-        assert "arm1" in candidates
+        assert "left_arm" in candidates
 
     def test_find_candidate_arms_preferred(self) -> None:
         mgr = _make_resource_manager()
         strategy = AllocationStrategy(CapabilityMatcher())
-        task = Task(task_id="t1", zone_name="zone_a", preferred_arm="arm2")
+        task = Task(task_id="t1", zone_name="zone_a", preferred_arm="right_arm")
         candidates = strategy.find_candidate_arms(task, mgr)
-        assert candidates == ["arm2"]
+        assert candidates == ["right_arm"]
 
     def test_find_candidate_arms_zone_c(self) -> None:
         mgr = _make_resource_manager()
         strategy = AllocationStrategy(CapabilityMatcher())
         task = Task(task_id="t1", zone_name="zone_c")
         candidates = strategy.find_candidate_arms(task, mgr)
-        assert "arm2" in candidates
+        assert "right_arm" in candidates
 
 
 class TestScheduler:
@@ -113,7 +113,7 @@ class TestScheduler:
         scheduler.submit(task)
         plan = scheduler.schedule_all()
         assert len(plan.scheduled) == 1
-        assert plan.scheduled[0].assigned_arm == "arm2"
+        assert plan.scheduled[0].assigned_arm == "right_arm"
 
     def test_get_pending_tasks(self) -> None:
         mgr = _make_resource_manager()

@@ -152,7 +152,7 @@ def env() -> CrossLayerEnvironment:
     e = CrossLayerEnvironment()
 
     e.perception.register_object("red_cube", "cube", [0.5, 0.0, 0.04])
-    e.gripper.register_gripper("arm1")
+    e.gripper.register_gripper("left_arm")
     e.detect_and_sync()
 
     return e
@@ -172,7 +172,7 @@ def make_pick_execution(env: CrossLayerEnvironment):
 
     """
 
-    def execute(object_id: str = "red_cube", arm_name: str = "arm1", **kwargs: Any) -> bool:
+    def execute(object_id: str = "red_cube", arm_name: str = "left_arm", **kwargs: Any) -> bool:
         """Pick object: plan grasp → close gripper → attach → update WorldModel.
 
         Args:
@@ -228,7 +228,7 @@ def make_place_execution(env: CrossLayerEnvironment):
 
     def execute(
         object_id: str = "red_cube",
-        arm_name: str = "arm1",
+        arm_name: str = "left_arm",
         target_position: list | None = None,
         **kwargs: Any,
     ) -> bool:
@@ -344,23 +344,23 @@ class TestSkillDrivesRobot:
             execution_functions={"pick_object": make_pick_execution(env)},
         )
 
-        assert env.gripper.is_open("arm1")
+        assert env.gripper.is_open("left_arm")
         assert not env.relations.is_attached("red_cube")
 
         result = runtime.execute(
             skill_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
         assert result.status == ExecutionStatus.SUCCESS
 
-        assert env.gripper.is_closed("arm1")
-        assert env.gripper.has_object("arm1")
-        assert env.gripper.get_attached_object("arm1") == "red_cube"
+        assert env.gripper.is_closed("left_arm")
+        assert env.gripper.has_object("left_arm")
+        assert env.gripper.get_attached_object("left_arm") == "red_cube"
 
-        assert env.relations.is_attached("red_cube", "arm1_gripper")
-        assert env.relations.has_relation("red_cube", "attached_to", "arm1_gripper")
+        assert env.relations.is_attached("red_cube", "left_arm_gripper")
+        assert env.relations.has_relation("red_cube", "attached_to", "left_arm_gripper")
 
         hist = env.history.get_history("red_cube")
         assert len(hist) >= 2
@@ -388,23 +388,23 @@ class TestSkillDrivesRobot:
 
         pick_result = runtime.execute(
             pick_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         assert pick_result.status == ExecutionStatus.SUCCESS
 
-        assert env.gripper.is_closed("arm1")
-        assert env.relations.is_attached("red_cube", "arm1_gripper")
+        assert env.gripper.is_closed("left_arm")
+        assert env.relations.is_attached("red_cube", "left_arm_gripper")
 
         place_result = runtime.execute(
             place_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         assert place_result.status == ExecutionStatus.SUCCESS
 
-        assert env.gripper.is_open("arm1")
-        assert not env.gripper.has_object("arm1")
+        assert env.gripper.is_open("left_arm")
+        assert not env.gripper.has_object("left_arm")
 
         assert not env.relations.is_attached("red_cube")
 
@@ -442,16 +442,16 @@ class TestSkillDrivesRobot:
 
         result = (
             composer.compose("pick_and_place")
-            .add_step(pick_id, parameters={"object_id": "red_cube", "arm_name": "arm1"})
-            .add_step(place_id, parameters={"object_id": "red_cube", "arm_name": "arm1"})
-            .execute(context={"object_id": "red_cube", "arm_name": "arm1"})
+            .add_step(pick_id, parameters={"object_id": "red_cube", "arm_name": "left_arm"})
+            .add_step(place_id, parameters={"object_id": "red_cube", "arm_name": "left_arm"})
+            .execute(context={"object_id": "red_cube", "arm_name": "left_arm"})
         )
 
         assert result.success
         assert result.completed_steps == 2
 
-        assert env.gripper.is_open("arm1")
-        assert not env.gripper.has_object("arm1")
+        assert env.gripper.is_open("left_arm")
+        assert not env.gripper.has_object("left_arm")
         assert not env.relations.is_attached("red_cube")
 
         hist = env.history.get_history("red_cube")
@@ -488,15 +488,15 @@ class TestSkillFailureWithRealRobot:
 
         result = runtime.execute(
             skill_id,
-            parameters={"object_id": "nonexistent", "arm_name": "arm1"},
-            context={"object_id": "nonexistent", "arm_name": "arm1"},
+            parameters={"object_id": "nonexistent", "arm_name": "left_arm"},
+            context={"object_id": "nonexistent", "arm_name": "left_arm"},
         )
 
         assert result.status == ExecutionStatus.FAILURE
         assert result.failure_reason == "precondition_failed"
 
-        assert env.gripper.is_open("arm1")
-        assert not env.gripper.has_object("arm1")
+        assert env.gripper.is_open("left_arm")
+        assert not env.gripper.has_object("left_arm")
 
     def test_missing_capability_blocks_execution(self, env: CrossLayerEnvironment) -> None:
         """缺少gripper能力 → capability检查失败 → 不执行.
@@ -533,7 +533,7 @@ class TestSkillFailureWithRealRobot:
             recovery_log.append(f"{skill_name}:{failure}")
             return False
 
-        def failing_pick(object_id: str = "red_cube", arm_name: str = "arm1", **kw: Any) -> bool:
+        def failing_pick(object_id: str = "red_cube", arm_name: str = "left_arm", **kw: Any) -> bool:
             return False
 
         runtime = SkillRuntime(
@@ -547,8 +547,8 @@ class TestSkillFailureWithRealRobot:
 
         result = runtime.execute(
             skill_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
         assert result.status == ExecutionStatus.FAILURE
@@ -568,7 +568,7 @@ class TestSkillFailureWithRealRobot:
         call_count: list[int] = [0]
         real_pick = make_pick_execution(env)
 
-        def flaky_pick(object_id: str = "red_cube", arm_name: str = "arm1", **kw: Any) -> bool:
+        def flaky_pick(object_id: str = "red_cube", arm_name: str = "left_arm", **kw: Any) -> bool:
             call_count[0] += 1
             if call_count[0] == 1:
                 return False
@@ -576,7 +576,7 @@ class TestSkillFailureWithRealRobot:
 
         def recovery_handler(skill_name: str, failure: str) -> bool:
             if call_count[0] > 0:
-                return real_pick(object_id="red_cube", arm_name="arm1")
+                return real_pick(object_id="red_cube", arm_name="left_arm")
             return False
 
         runtime = SkillRuntime(
@@ -590,14 +590,14 @@ class TestSkillFailureWithRealRobot:
 
         result = runtime.execute(
             skill_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
         assert result.status == ExecutionStatus.RECOVERED
-        assert env.gripper.is_closed("arm1")
-        assert env.gripper.has_object("arm1")
-        assert env.relations.is_attached("red_cube", "arm1_gripper")
+        assert env.gripper.is_closed("left_arm")
+        assert env.gripper.has_object("left_arm")
+        assert env.relations.is_attached("red_cube", "left_arm_gripper")
 
 
 class TestWorldModelVerification:
@@ -624,13 +624,13 @@ class TestWorldModelVerification:
 
         runtime.execute(
             pick_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         runtime.execute(
             place_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
         hist = env.history.get_history("red_cube")
@@ -658,16 +658,16 @@ class TestWorldModelVerification:
             execution_functions={"pick_object": make_pick_execution(env)},
         )
 
-        assert not env.gripper.has_object("arm1")
+        assert not env.gripper.has_object("left_arm")
         assert not env.relations.is_attached("red_cube")
 
         runtime.execute(
             pick_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
-        assert env.gripper.has_object("arm1")
+        assert env.gripper.has_object("left_arm")
         assert env.relations.is_attached("red_cube")
 
     def test_object_position_updates_after_place(
@@ -694,11 +694,11 @@ class TestWorldModelVerification:
 
         runtime.execute(
             pick_id,
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         runtime.execute(
             place_id,
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
 
         obj = env.db.get_object("red_cube")
@@ -737,7 +737,7 @@ class TestTaskGoalToRobotAction:
         task_goal = {
             "action_type": "pick_place",
             "object_id": "red_cube",
-            "arm_name": "arm1",
+            "arm_name": "left_arm",
         }
 
         required_caps = ["manipulation", "gripper"]
@@ -760,8 +760,8 @@ class TestTaskGoalToRobotAction:
 
         assert result.success
 
-        assert env.gripper.is_open("arm1")
-        assert not env.gripper.has_object("arm1")
+        assert env.gripper.is_open("left_arm")
+        assert not env.gripper.has_object("left_arm")
         assert not env.relations.is_attached("red_cube")
 
         obj = env.db.get_object("red_cube")
@@ -776,7 +776,7 @@ class TestTaskGoalToRobotAction:
         assert place_entry.success_count == 1
 
     def test_multi_object_multi_skill(self) -> None:
-        """多物体多Skill: arm1 picks red_cube, arm2 picks blue_cylinder.
+        """多物体多Skill: left_arm picks red_cube, right_arm picks blue_cylinder.
 
         验证: 两个Skill独立驱动两个Gripper，WorldModel正确反映.
         """
@@ -784,8 +784,8 @@ class TestTaskGoalToRobotAction:
 
         e.perception.register_object("red_cube", "cube", [0.3, 0.0, 0.04])
         e.perception.register_object("blue_cyl", "cylinder", [-0.3, 0.2, 0.04])
-        e.gripper.register_gripper("arm1")
-        e.gripper.register_gripper("arm2")
+        e.gripper.register_gripper("left_arm")
+        e.gripper.register_gripper("right_arm")
         e.detect_and_sync()
 
         pick_id = install_pick_skill(e)
@@ -800,25 +800,25 @@ class TestTaskGoalToRobotAction:
 
         result1 = runtime.execute(
             pick_id,
-            parameters={"object_id": "red_cube", "arm_name": "arm1"},
-            context={"object_id": "red_cube", "arm_name": "arm1"},
+            parameters={"object_id": "red_cube", "arm_name": "left_arm"},
+            context={"object_id": "red_cube", "arm_name": "left_arm"},
         )
         assert result1.status == ExecutionStatus.SUCCESS
 
         result2 = runtime.execute(
             pick_id,
-            parameters={"object_id": "blue_cyl", "arm_name": "arm2"},
-            context={"object_id": "blue_cyl", "arm_name": "arm2"},
+            parameters={"object_id": "blue_cyl", "arm_name": "right_arm"},
+            context={"object_id": "blue_cyl", "arm_name": "right_arm"},
         )
         assert result2.status == ExecutionStatus.SUCCESS
 
-        assert e.gripper.has_object("arm1")
-        assert e.gripper.get_attached_object("arm1") == "red_cube"
-        assert e.gripper.has_object("arm2")
-        assert e.gripper.get_attached_object("arm2") == "blue_cyl"
+        assert e.gripper.has_object("left_arm")
+        assert e.gripper.get_attached_object("left_arm") == "red_cube"
+        assert e.gripper.has_object("right_arm")
+        assert e.gripper.get_attached_object("right_arm") == "blue_cyl"
 
-        assert e.relations.is_attached("red_cube", "arm1_gripper")
-        assert e.relations.is_attached("blue_cyl", "arm2_gripper")
+        assert e.relations.is_attached("red_cube", "left_arm_gripper")
+        assert e.relations.is_attached("blue_cyl", "right_arm_gripper")
 
         entry = e.registry.lifecycle.get_entry(pick_id)
         assert entry.total_executions == 2

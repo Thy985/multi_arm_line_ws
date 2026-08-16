@@ -24,9 +24,9 @@ def test_robot_constants():
     """Test shared robot constants module."""
     from multi_arm_core.robot_constants import ARM_JOINT_NAMES, PRESET_POSITIONS
 
-    assert "arm1" in ARM_JOINT_NAMES, "arm1 not in ARM_JOINT_NAMES"
-    assert "arm2" in ARM_JOINT_NAMES, "arm2 not in ARM_JOINT_NAMES"
-    assert len(ARM_JOINT_NAMES["arm1"]) == 6, "arm1 should have 6 joints"
+    assert "left_arm" in ARM_JOINT_NAMES, "left_arm not in ARM_JOINT_NAMES"
+    assert "right_arm" in ARM_JOINT_NAMES, "right_arm not in ARM_JOINT_NAMES"
+    assert len(ARM_JOINT_NAMES["left_arm"]) == 6, "left_arm should have 6 joints"
     assert "home" in PRESET_POSITIONS, "home not in PRESET_POSITIONS"
     assert "ready" in PRESET_POSITIONS, "ready not in PRESET_POSITIONS"
     assert len(PRESET_POSITIONS["home"]) == 6, "home should have 6 positions"
@@ -48,18 +48,18 @@ def test_coordinator_parse_task():
     """Test Coordinator._parse_task logic."""
     from multi_arm_core.coordinator_node import CoordinatorNode
 
-    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "arm1:zone_a:ready")
-    assert arm == "arm1", f"Expected arm1, got {arm}"
+    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "left_arm:zone_a:ready")
+    assert arm == "left_arm", f"Expected left_arm, got {arm}"
     assert zone == "zone_a", f"Expected zone_a, got {zone}"
     assert pos == "ready", f"Expected ready, got {pos}"
 
-    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "arm2:zone_b:home")
-    assert arm == "arm2", f"Expected arm2, got {arm}"
+    arm, zone, pos = CoordinatorNode._parse_task(None, "move", "right_arm:zone_b:home")
+    assert arm == "right_arm", f"Expected right_arm, got {arm}"
     assert zone == "zone_b", f"Expected zone_b, got {zone}"
     assert pos == "home", f"Expected home, got {pos}"
 
     arm, zone, pos = CoordinatorNode._parse_task(None, "pick_place", "")
-    assert arm == "arm1", f"Default arm should be arm1, got {arm}"
+    assert arm == "left_arm", f"Default arm should be left_arm, got {arm}"
 
     results["3.1_coordinator_parse_task"] = "PASS"
 
@@ -108,7 +108,7 @@ def test_async_plugins_tick():
     )
 
     bb = Blackboard()
-    bb.set("arm_name", "arm1")
+    bb.set("arm_name", "left_arm")
     bb.set("object_id", "red_cube")
     bb.set("target_zone", "zone_a")
 
@@ -212,7 +212,7 @@ def test_task_goal_msg():
 
     goal = TaskGoal()
     goal.action_type = "move"
-    goal.arm_name = "arm1"
+    goal.arm_name = "left_arm"
     goal.zone_name = "zone_a"
     goal.position_name = "ready"
     goal.object_id = "red_cube"
@@ -221,7 +221,7 @@ def test_task_goal_msg():
     goal.constraints.priority = 1
     goal.constraints.allow_recovery = True
     goal.constraints.max_retries = 3
-    assert goal.arm_name == "arm1"
+    assert goal.arm_name == "left_arm"
     assert goal.constraints.priority == 1
 
     results["8.1_task_goal_msg"] = "PASS"
@@ -232,12 +232,12 @@ def test_motion_request_msg():
     from multi_arm_interfaces.msg import MotionRequest
 
     req = MotionRequest()
-    req.arm_name = "arm1"
+    req.arm_name = "left_arm"
     req.target_position = "ready"
     req.use_named_target = True
     req.speed_scale = 0.5
     req.collision_check = True
-    assert req.arm_name == "arm1"
+    assert req.arm_name == "left_arm"
     assert req.use_named_target is True
 
     results["8.2_motion_request_msg"] = "PASS"
@@ -251,13 +251,13 @@ def test_execute_task_with_goal():
     goal = ExecuteTask.Goal()
     goal.task_id = "test_m53"
     goal.task_type = "move"
-    goal.description = "arm1:zone_a:ready"
+    goal.description = "left_arm:zone_a:ready"
     task_goal = TaskGoal()
-    task_goal.arm_name = "arm1"
+    task_goal.arm_name = "left_arm"
     task_goal.zone_name = "zone_a"
     task_goal.position_name = "ready"
     goal.goal = task_goal
-    assert goal.goal.arm_name == "arm1"
+    assert goal.goal.arm_name == "left_arm"
 
     results["8.3_execute_task_with_goal"] = "PASS"
 
@@ -268,11 +268,11 @@ def test_coordinator_parse_task_goal():
     from multi_arm_interfaces.msg import TaskGoal
 
     task_goal = TaskGoal()
-    task_goal.arm_name = "arm2"
+    task_goal.arm_name = "right_arm"
     task_goal.zone_name = "zone_b"
     task_goal.position_name = "home"
     arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
-    assert arm == "arm2", f"Expected arm2, got {arm}"
+    assert arm == "right_arm", f"Expected right_arm, got {arm}"
     assert zone == "zone_b", f"Expected zone_b, got {zone}"
     assert pos == "home", f"Expected home, got {pos}"
 

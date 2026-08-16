@@ -60,7 +60,7 @@ class SafetySupervisor(Node):
             min_clearance=0.10,
         )
 
-        self._arm_names = self.declare_parameter("arm_names", ["arm1", "arm2"]).value
+        self._arm_names = self.declare_parameter("arm_names", ["left_arm", "right_arm"]).value
         self._joint_states: Dict[str, JointState] = {}
 
         self._init_services(cb_group)
@@ -98,10 +98,10 @@ class SafetySupervisor(Node):
             return WorkspaceLimiter.from_yaml_config(config)
 
         limiter = WorkspaceLimiter()
-        limiter.set_bounds("arm1", WorkspaceBounds(
+        limiter.set_bounds("left_arm", WorkspaceBounds(
             x_min=-1.5, x_max=1.5, y_min=-1.5, y_max=1.5, z_min=0.0, z_max=1.5
         ))
-        limiter.set_bounds("arm2", WorkspaceBounds(
+        limiter.set_bounds("right_arm", WorkspaceBounds(
             x_min=-1.5, x_max=1.5, y_min=-1.5, y_max=1.5, z_min=0.0, z_max=1.5
         ))
         return limiter
@@ -110,12 +110,12 @@ class SafetySupervisor(Node):
         """Get arm base offset configurations.
 
         Matches multi_arm_sim.launch.py spawn positions:
-        arm1: x=0, y=0, z=0
-        arm2: x=1.0, y=0, z=0
+        left_arm: x=0, y=0, z=0
+        right_arm: x=1.0, y=0, z=0
         """
         return {
-            "arm1": {"base_offset": (0.0, 0.0, 0.0)},
-            "arm2": {"base_offset": (1.0, 0.0, 0.0)},
+            "left_arm": {"base_offset": (0.0, 0.0, 0.0)},
+            "right_arm": {"base_offset": (1.0, 0.0, 0.0)},
         }
 
     def _init_services(self, cb_group: ReentrantCallbackGroup) -> None:

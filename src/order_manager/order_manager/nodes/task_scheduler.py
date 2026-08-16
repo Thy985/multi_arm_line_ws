@@ -147,7 +147,7 @@ class TaskScheduler:
     5. Execute tasks through Coordinator callback
     
     Usage:
-        scheduler = TaskScheduler(time_manager, ['arm1', 'arm2'])
+        scheduler = TaskScheduler(time_manager, ['left_arm', 'right_arm'])
         
         # Submit tasks
         scheduler.submit(Task(task_id='t1', zone_name='zone_a', priority=TaskPriority.HIGH))
