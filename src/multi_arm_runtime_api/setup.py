@@ -12,6 +12,7 @@ setup(
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name + "/launch", [
             "launch/runtime_api.launch.py",
+            "launch/led_status.launch.py",
         ]),
     ],
     install_requires=["setuptools"],
@@ -24,6 +25,7 @@ setup(
     entry_points={
         "console_scripts": [
             "runtime_api_node = multi_arm_runtime_api.runtime_api_node:main",
+            "led_status_node = multi_arm_runtime_api.led_status_node:main",
         ],
     },
 )

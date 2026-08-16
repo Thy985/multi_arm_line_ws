@@ -228,25 +228,27 @@ base_link                   base_link
 
 ### 5.1 目标
 
-将 `status_led` (base) 和 `head_led_ring_link` 的颜色绑定到 RuntimeManager 状态。
+将 `status_led` (base) 的颜色绑定到系统运行状态。
+注：`head_led_ring_link` 已在 Phase 2.1 中替换为 `head_depth_link`，LED 绑定仅针对 `status_led`。
 
 ### 5.2 实施
 
 **URDF 侧**（已就绪）：
-- `head_led_ring_link` material = `led_ring`（当前绿色）
 - `status_led` material = `led_green`（当前绿色）
+- 新增材质：`led_red`、`led_blue`、`led_off`（Phase 2.5 添加）
 
 **Runtime 侧**（Phase 2.5 实施）：
-- 新建 `led_status_node` 节点
-- 订阅 RuntimeManager 状态 topic
-- 发布 `visual` 更新到 `led_ring` 和 `led_green` material
+- 新建 `led_status_node` 节点（`multi_arm_runtime_api` 包）
+- 检查 `/safety/check` 服务和 `/execute_task` action 可用性
+- 发布 `/led/status`（std_msgs/String）和 `/led/color`（std_msgs/ColorRGBA）
+- 状态：INITIALIZING → READY → FAILED / SAFETY_STOP
 
 **Gazebo 实施选项**：
 - 选项 A：动态材质（Gazebo script plugin + material update）
 - 选项 B：替换 link 颜色通过 ROS topic
 - 选项 C：用 RViz Marker 替代视觉（仅 RViz 中可见）
 
-**推荐**：选项 A（真实 Gazebo 渲染）
+**当前实现**：发布 `/led/color` topic，Gazebo 动态材质留作未来增强
 
 ### 5.3 验证
 

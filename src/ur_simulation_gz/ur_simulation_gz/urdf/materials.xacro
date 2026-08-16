@@ -7,6 +7,9 @@
   <material name="pillar_gray"><color rgba="0.5 0.5 0.5 1.0"/></material>
   <material name="wheel_black"><color rgba="0.05 0.05 0.05 1.0"/></material>
   <material name="led_green"><color rgba="0.0 0.8 0.0 1.0"/></material>
+  <material name="led_red"><color rgba="0.8 0.0 0.0 1.0"/></material>
+  <material name="led_blue"><color rgba="0.0 0.0 0.8 1.0"/></material>
+  <material name="led_off"><color rgba="0.1 0.1 0.1 1.0"/></material>
   <material name="torso_white"><color rgba="0.8 0.8 0.8 1.0"/></material>
   <material name="head_dark"><color rgba="0.15 0.15 0.15 1.0"/></material>
   <material name="camera_lens"><color rgba="0.05 0.05 0.05 1.0"/></material>
