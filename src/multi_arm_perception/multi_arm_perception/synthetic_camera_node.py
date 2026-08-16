@@ -14,7 +14,7 @@ requiring GPU rendering.
 
 Pipeline:
     Gazebo Pose → 3D→2D projection → draw colored rectangle → Image
-    → /head_camera/image_raw/image → ColorDetectorNode → ObjectPose
+    → /head/rgb/image_raw/image → ColorDetectorNode → ObjectPose
 """
 
 from __future__ import annotations
@@ -85,7 +85,7 @@ class SyntheticCameraNode(Node):
         self._use_gazebo_poses = False
 
         image_topic = self.declare_parameter(
-            "image_topic", "/head_camera/image_raw/image"
+            "image_topic", "/head/rgb/image_raw/image"
         ).value
         publish_rate = self.declare_parameter("publish_rate", 10.0).value
 
@@ -185,7 +185,7 @@ class SyntheticCameraNode(Node):
 
         msg = Image()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "head_camera_link"
+        msg.header.frame_id = "head_rgb_link"
         msg.height = self._img_height
         msg.width = self._img_width
         msg.encoding = "bgr8"

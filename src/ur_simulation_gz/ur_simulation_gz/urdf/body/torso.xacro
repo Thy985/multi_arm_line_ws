@@ -38,6 +38,32 @@
       <axis xyz="0 0 1"/>
       <limit lower="-3.14" upper="3.14" effort="50.0" velocity="1.0"/>
     </joint>
+
+    <link name="left_shoulder_mount">
+      <inertial>
+        <mass value="0.5"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" yyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+
+    <joint name="torso_to_left_shoulder" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="torso_link"/>
+      <child link="left_shoulder_mount"/>
+    </joint>
+
+    <link name="right_shoulder_mount">
+      <inertial>
+        <mass value="0.5"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" yyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+
+    <joint name="torso_to_right_shoulder" type="fixed">
+      <origin xyz="1.0 0 0" rpy="0 0 0"/>
+      <parent link="torso_link"/>
+      <child link="right_shoulder_mount"/>
+    </joint>
   </xacro:macro>
 
 </robot>

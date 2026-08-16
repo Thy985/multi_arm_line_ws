@@ -52,7 +52,7 @@ components:
     design_notes:
       - "Arms stay on base pillars (torso rotates independently)"
       - "Head parent is torso_link (head follows torso rotation)"
-      - "IMU on head_link / head_imu_frame (per robot_sensor_layout v1.0)"
+      - "IMU on head_link / head_imu_link (per robot_sensor_layout v1.0)"
       - "torso_controller != head_controller (body != perception attention)"
 
   sensors:
@@ -63,22 +63,29 @@ components:
       rgb: true
       resolution: [640, 480]
       fps: 10
-    - name: head_camera
-      type: rgbd
+    - name: head_rgb
+      type: camera
       parent: head_link
-      topic: /head_camera/image_raw
+      topic: /head/rgb/image_raw
       rgb: true
-      depth: true
-      resolution: [640, 480]
+      resolution: [1280, 720]
       fps: 30
-      depth_range: [0.1, 10.0]
-      description: "M7.1 head RGB-D camera for perception attention"
+      description: "Head RGB camera (Phase 2 sensor split)"
+    - name: head_depth
+      type: depth
+      parent: head_link
+      topic: /head/depth/image_raw
+      depth: true
+      resolution: [1280, 720]
+      fps: 30
+      depth_range: [0.1, 20.0]
+      description: "Head depth camera (Phase 2 sensor split)"
     - name: head_imu
       type: imu
       parent: head_link
       topic: /head/imu
-      frame: head_imu_frame
-      description: "Head IMU per robot_sensor_layout v1.0 (head_imu_frame)"
+      frame: head_imu_link
+      description: "Head IMU on head_imu_link (Phase 2 sensor split)"
 
   end_effectors:
     - name: left_arm_gripper

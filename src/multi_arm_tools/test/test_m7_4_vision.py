@@ -2,7 +2,7 @@
 
 Verifies all 8 acceptance criteria:
 
-    1. Camera data: head_camera topic has data
+    1. Camera data: head_rgb topic has data
     2. Perception output: vision_pose + confidence
     3. Calibration: camera→world TF defined
     4. GT+Vision parallel: WorldModel has both sources
@@ -45,7 +45,7 @@ class TestM74VisionGrounding:
             shutdown_full_stack(launch_proc, aux_procs)
 
     def test_01_camera_data(self) -> None:
-        """head_camera sensor exists (vision_poses publishing proves camera pipeline)."""
+        """head_rgb sensor exists (vision_poses publishing proves camera pipeline)."""
         result = run_cmd(
             ["ros2", "topic", "list"],
             timeout=10.0,
@@ -75,9 +75,9 @@ class TestM74VisionGrounding:
             timeout=10.0,
         )
         assert result.returncode == 0
-        assert "head_camera" in result.stdout or "tf_static" in result.stdout, \
-            f"No head_camera in static TF:\n{result.stdout[:300]}"
-        print("  ✓ static TF for head_camera published")
+        assert "head_rgb" in result.stdout or "tf_static" in result.stdout, \
+            f"No head_rgb in static TF:\n{result.stdout[:300]}"
+        print("  ✓ static TF for head_rgb published")
 
     def test_04_gt_vision_parallel(self) -> None:
         """WorldModel has both GT and vision sources."""

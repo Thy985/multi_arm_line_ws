@@ -109,8 +109,8 @@ class TestComponentsPresent:
         assert '"base_link"' in modular_urdf
         assert "front_panel" in modular_urdf
         assert "status_led" in modular_urdf
-        assert "left_arm_pillar" in modular_urdf
-        assert "right_arm_pillar" in modular_urdf
+        assert "left_shoulder_mount" in modular_urdf
+        assert "right_shoulder_mount" in modular_urdf
 
     def test_wheels_present(self, modular_urdf: str):
         for wheel in ["wheel_fl", "wheel_fr", "wheel_bl", "wheel_br"]:
@@ -145,7 +145,7 @@ class TestComponentsPresent:
 
     def test_revolute_joint_count(self, modular_urdf: str):
         revolute_count = modular_urdf.count('type="revolute"')
-        assert revolute_count == 20, f"Expected 20 revolute joints, got {revolute_count}"
+        assert revolute_count == 22, f"Expected 22 revolute joints, got {revolute_count}"
 
 
 class TestBackwardCompatibility:

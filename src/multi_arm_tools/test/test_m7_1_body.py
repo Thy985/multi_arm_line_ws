@@ -4,8 +4,8 @@ Verifies all 10 acceptance criteria from the M7.1 spec:
 
     1. Torso: torso_yaw_joint (revolute Z)
     2. Head: neck_pitch_joint (revolute Y)
-    3. Head RGB-D: head_camera sensor type=rgbd
-    4. Torso IMU: torso_imu (on torso, not head)
+    3. Head RGB-D: head_rgb sensor type=rgbd
+    4. Torso IMU: head_imu (on torso, not head)
     5. Controller split: torso_controller ≠ head_controller
     6. ros2_control: 16 joints
     7. SRDF torso group: independent
@@ -93,16 +93,16 @@ class TestM71UrdfStructure:
         axis = axis_match.group(1).split()
         assert abs(float(axis[1]) - 1.0) < 0.01, f"Y axis should be 1.0, got {axis[1]}"
 
-    def test_03_head_camera_rgbd(self, urdf: str) -> None:
-        """head_camera sensor exists with type=rgbd."""
-        assert 'name="head_camera" type="rgbd"' in urdf
+    def test_03_head_rgb_rgbd(self, urdf: str) -> None:
+        """head_rgb camera and head_depth depth sensor exist."""
+        assert 'name="head_rgb" type="camera"' in urdf
+        assert 'name="head_depth" type="depth"' in urdf
 
-    def test_04_torso_imu_not_head(self, urdf: str) -> None:
-        """torso_imu sensor exists and is on torso_link, not head."""
-        assert 'name="torso_imu" type="imu"' in urdf
-        imu_section = urdf.split('name="torso_imu"')[0].split('<gazebo reference="')[-1]
-        assert "torso_link" in imu_section, "IMU should be on torso_link"
-        assert "head" not in imu_section, "IMU should NOT be on head"
+    def test_04_head_imu_on_head(self, urdf: str) -> None:
+        """head_imu sensor exists and is on head_imu_link."""
+        assert 'name="head_imu" type="imu"' in urdf
+        imu_section = urdf.split('name="head_imu"')[0].split('<gazebo reference="')[-1]
+        assert "head_imu_link" in imu_section, "IMU should be on head_imu_link"
 
 
 class TestM71Controllers:

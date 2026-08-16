@@ -5,7 +5,7 @@ to simulate real vision detection. Publishes to /perception/vision_poses
 with source="vision" and confidence < 1.0.
 
 In production, this would be replaced by YOLOv8 or similar detector
-that processes head_camera/image_raw. In simulation, we use Gazebo GT
+that processes head/rgb/image_raw. In simulation, we use Gazebo GT
 + noise as a proxy.
 
 Usage:

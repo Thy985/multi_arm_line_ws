@@ -6,8 +6,8 @@ All meshes are exported in ASCII STL (universal, no extra deps).
 Meshes produced:
   torso_shell.stl       — rounded cylinder (M7.1 torso)
   head_shell.stl        — rounded box (M7.1 head)
-  head_camera_lens.stl  — lens barrel + glass
-  head_camera_window.stl — camera front window plate
+  head_rgb_lens.stl  — lens barrel + glass
+  head_rgb_window.stl — camera front window plate
   chassis_shell.stl     — rounded box (mobile base chassis)
   arm_pillar_shell.stl  — rounded cylinder (arm mounting pillar)
   head_display.stl      — screen panel (M7 Stage 3)
@@ -168,7 +168,7 @@ def build_head_shell() -> List:
     return tris
 
 
-def build_head_camera_lens() -> List:
+def build_head_rgb_lens() -> List:
     """Camera lens: short cylinder + front glass disc."""
     tris: List = []
     r = 0.025
@@ -199,7 +199,7 @@ def build_head_camera_lens() -> List:
     return tris
 
 
-def build_head_camera_window() -> List:
+def build_head_rgb_window() -> List:
     """Front camera window - slightly recessed dark plate."""
     return gen_box(0.08, 0.08, 0.005)
 
@@ -241,8 +241,8 @@ def main() -> None:
     items = [
         ("torso_shell.stl", "torso_shell", build_torso_shell),
         ("head_shell.stl", "head_shell", build_head_shell),
-        ("head_camera_lens.stl", "head_camera_lens", build_head_camera_lens),
-        ("head_camera_window.stl", "head_camera_window", build_head_camera_window),
+        ("head_rgb_lens.stl", "head_rgb_lens", build_head_rgb_lens),
+        ("head_rgb_window.stl", "head_rgb_window", build_head_rgb_window),
         ("chassis_shell.stl", "chassis_shell", build_chassis_shell),
         ("arm_pillar_shell.stl", "arm_pillar_shell", build_arm_pillar_shell),
         ("head_display.stl", "head_display", build_head_display),

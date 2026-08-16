@@ -318,7 +318,7 @@ def launch_setup(context, *args, **kwargs):
             {
                 "use_sim_time": True,
                 "objects": "red_cube:cube:red,blue_cylinder:cylinder:blue",
-                "image_topic": "/head_camera/image_raw/image",
+                "image_topic": "/head/rgb/image_raw/image",
                 "camera_x": 0.0,
                 "camera_y": 0.0,
                 "camera_z": 0.5,
@@ -340,7 +340,7 @@ def launch_setup(context, *args, **kwargs):
             {
                 "use_sim_time": True,
                 "objects": "red_cube:cube:red,blue_cylinder:cylinder:blue",
-                "image_topic": "/head_camera/image_raw/image",
+                "image_topic": "/head/rgb/image_raw/image",
                 "camera_x": 0.0,
                 "camera_y": 0.0,
                 "camera_z": 0.5,
@@ -353,14 +353,14 @@ def launch_setup(context, *args, **kwargs):
     )
     nodes.append(TimerAction(period=8.0, actions=[color_detector_node]))
 
-    # === Camera Calibration TF (head_camera_link → world) ===
+    # === Camera Calibration TF (head_rgb_link → world) ===
     camera_tf_node = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
-        name="head_camera_tf",
+        name="head_rgb_tf",
         arguments=[
             "0.5", "0", "0.9", "0", "1.5708", "0",
-            "world", "head_camera_link",
+            "world", "head_rgb_link",
         ],
     )
     nodes.append(TimerAction(period=3.0, actions=[camera_tf_node]))

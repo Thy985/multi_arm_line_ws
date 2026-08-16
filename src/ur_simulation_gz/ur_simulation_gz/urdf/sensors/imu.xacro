@@ -7,13 +7,13 @@
 
   Params:
     parent_link  - link to attach IMU to (default "torso_link")
-    sensor_name  - sensor name (default "torso_imu")
+    sensor_name  - sensor name (default "head_imu")
     rate         - update rate Hz (default 100)
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:macro name="imu_sensor"
-    params="parent_link:='torso_link' sensor_name:='torso_imu' rate:=100">
+    params="parent_link:='torso_link' sensor_name:='head_imu' rate:=100">
     <gazebo reference="${parent_link}">
       <sensor name="${sensor_name}" type="imu">
         <always_on>1</always_on>

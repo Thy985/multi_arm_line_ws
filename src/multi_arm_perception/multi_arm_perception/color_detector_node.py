@@ -1,6 +1,6 @@
 """Color Detector Node — real camera image → object detection → 6DoF pose.
 
-Subscribes to head_camera/image_raw, detects colored objects using OpenCV,
+Subscribes to head/rgb/image_raw, detects colored objects using OpenCV,
 estimates 3D pose via ground plane projection, publishes ObjectPose.
 
 This replaces the GazeboGroundTruthNode + VisionGroundingNode pipeline
@@ -81,7 +81,7 @@ class ColorDetectorNode(Node):
         self._cy = img_height / 2.0
 
         image_topic = self.declare_parameter(
-            "image_topic", "/head_camera/image_raw"
+            "image_topic", "/head/rgb/image_raw"
         ).value
 
         self._publisher = self.create_publisher(

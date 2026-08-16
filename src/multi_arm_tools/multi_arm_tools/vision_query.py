@@ -27,7 +27,7 @@ class VisionQuery:
         """
         poses = self._collect_vision_poses(duration=3.0)
 
-        camera_pub = self._check_topic("/head_camera/image_raw/image")
+        camera_pub = self._check_topic("/head/rgb/image_raw/image")
         vision_pub = self._check_topic("/perception/vision_poses")
 
         high_conf = [p for p in poses if p["confidence"] >= 0.8]
@@ -36,7 +36,7 @@ class VisionQuery:
 
         status_data = {
             "camera": {
-                "topic": "/head_camera/image_raw/image",
+                "topic": "/head/rgb/image_raw/image",
                 "publisher_count": camera_pub,
                 "active": camera_pub > 0,
             },
@@ -60,7 +60,7 @@ class VisionQuery:
         print("-" * 40)
         print()
         print("Camera")
-        print(f"  topic:    /head_camera/image_raw/image")
+        print(f"  topic:    /head/rgb/image_raw/image")
         print(f"  status:   {'● ACTIVE' if camera_pub > 0 else '○ INACTIVE'}")
         print()
         print("Detector")

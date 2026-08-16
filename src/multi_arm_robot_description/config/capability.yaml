@@ -21,9 +21,9 @@ capabilities:
   vision:
     types: ["rgb", "depth"]
     available: true
-    reason: "head_camera RGB-D (M7.1) + left_arm wrist camera"
+    reason: "head_rgb RGB-D (M7.1) + left_arm wrist camera"
     sensors:
-      - name: head_camera
+      - name: head_rgb
         types: ["rgb", "depth"]
         resolution: [640, 480]
         fps: 30
@@ -51,8 +51,8 @@ capabilities:
 
   imu:
     available: true
-    reason: "M7.1 torso_imu on torso_link"
-    sensor: torso_imu
+    reason: "M7.1 head_imu on torso_link"
+    sensor: head_imu
     frame: torso_link
 
   mobile:
@@ -92,7 +92,7 @@ dynamic_capabilities:
     range: [-1.57, 1.57]
 
   torso_orientation:
-    compute: "torso_imu quaternion"
+    compute: "head_imu quaternion"
     default: [0.0, 0.0, 0.0, 1.0]
 
 context_capabilities:
@@ -112,6 +112,6 @@ context_capabilities:
     requires: ["manipulation"]
 
   can_perceive:
-    compute: "head_camera_active and object_in_fov"
+    compute: "head_rgb_active and object_in_fov"
     depends_on: world_model
     requires: ["vision", "body_control"]

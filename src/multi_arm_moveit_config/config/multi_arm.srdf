@@ -139,8 +139,8 @@
   <disable_collisions link1="base_link" link2="wheel_fr" reason="Adjacent"/>
   <disable_collisions link1="base_link" link2="wheel_bl" reason="Adjacent"/>
   <disable_collisions link1="base_link" link2="wheel_br" reason="Adjacent"/>
-  <disable_collisions link1="left_arm_pillar" link2="left_arm_base_link" reason="Adjacent"/>
-  <disable_collisions link1="right_arm_pillar" link2="right_arm_base_link" reason="Adjacent"/>
+  <disable_collisions link1="left_shoulder_mount" link2="left_arm_base_link" reason="Adjacent"/>
+  <disable_collisions link1="right_shoulder_mount" link2="right_arm_base_link" reason="Adjacent"/>
   <disable_collisions link1="base_link" link2="left_arm_base_link" reason="Never"/>
   <disable_collisions link1="base_link" link2="right_arm_base_link" reason="Never"/>
   <disable_collisions link1="left_arm_base_link" link2="left_arm_base_link_inertia" reason="Adjacent"/>
@@ -193,6 +193,10 @@
   <!-- Torso + Head collision exclusions (M7.1) -->
   <disable_collisions link1="base_link" link2="torso_link" reason="Adjacent"/>
   <disable_collisions link1="torso_link" link2="head_link" reason="Adjacent"/>
-  <disable_collisions link1="head_link" link2="head_camera_link" reason="Adjacent"/>
+  <disable_collisions link1="torso_link" link2="left_shoulder_mount" reason="Adjacent"/>
+  <disable_collisions link1="torso_link" link2="right_shoulder_mount" reason="Adjacent"/>
+  <disable_collisions link1="head_link" link2="head_rgb_link" reason="Adjacent"/>
+  <disable_collisions link1="head_link" link2="head_depth_link" reason="Adjacent"/>
+  <disable_collisions link1="head_link" link2="head_imu_link" reason="Adjacent"/>
 
 </robot>

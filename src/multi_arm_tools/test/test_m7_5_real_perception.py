@@ -135,7 +135,7 @@ class TestM75RealPerception:
 
     def test_01_camera_image_published(self) -> None:
         """Gazebo camera publishes real image data through ros_gz_bridge."""
-        pub_count = check_topic_publisher("/head_camera/image_raw/image")
+        pub_count = check_topic_publisher("/head/rgb/image_raw/image")
         assert pub_count > 0, \
             f"Camera image topic has no publisher (count={pub_count})"
         print(f"  ✓ Camera image published (publisher count={pub_count})")
@@ -224,7 +224,7 @@ class TestM75RealPerception:
         assert any("color_detector_node" in n for n in nodes), "ColorDetectorNode not running"
         assert not any("vision_grounding_node" in n for n in nodes), "VisionGroundingNode still running"
 
-        cam_pub = check_topic_publisher("/head_camera/image_raw/image")
+        cam_pub = check_topic_publisher("/head/rgb/image_raw/image")
         vis_pub = check_topic_publisher("/perception/vision_poses")
 
         assert cam_pub > 0, "No camera image publisher"

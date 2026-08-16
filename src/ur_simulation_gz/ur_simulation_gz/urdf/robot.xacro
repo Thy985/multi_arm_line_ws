@@ -71,7 +71,7 @@
     parent_link="left_arm_wrist_3_link"
     sensor_name="left_arm_wrist_camera"
     topic="left_arm/camera/image_raw"/>
-  <xacro:imu_sensor parent_link="torso_link" sensor_name="torso_imu"/>
+  <!-- IMU now in head.xacro (head_imu_link on head_link) -->
 
   <!-- 6. ros2_control (16 joints: 12 arm + 2 gripper + 1 torso + 1 head) -->
   <xacro:multi_arm_ros2_control controllers_file="$(arg simulation_controllers)"/>

@@ -3,7 +3,7 @@
   head.xacro — Head module (M7.1 Robot Body Upgrade).
 
   Adds neck_pitch_joint (revolute Y) between parent_link and head_link,
-  plus head_camera_link with RGB-D camera for perception attention.
+  plus head_rgb_link with RGB-D camera for perception attention.
 
   head_controller is separate from torso_controller.
   Head belongs to Perception Attention System, not manipulation chain.
@@ -41,7 +41,7 @@
       <limit lower="-1.57" upper="1.57" effort="10.0" velocity="0.5"/>
     </joint>
 
-    <link name="head_camera_link">
+    <link name="head_rgb_link">
       <visual>
         <origin xyz="0.05 0 0" rpy="0 1.5708 0"/>
         <geometry>
@@ -51,38 +51,51 @@
       </visual>
       <inertial>
         <mass value="0.2"/>
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" yyz="0" izz="0.001"/>
       </inertial>
     </link>
 
-    <joint name="head_to_camera" type="fixed">
+    <joint name="head_to_rgb" type="fixed">
       <origin xyz="0.06 0 0.05" rpy="0 0 0"/>
       <parent link="head_link"/>
-      <child link="head_camera_link"/>
+      <child link="head_rgb_link"/>
     </joint>
 
-    <link name="head_led_ring_link">
+    <link name="head_depth_link">
       <visual>
-        <origin xyz="0.05 0 0.05" rpy="1.5708 0 0"/>
+        <origin xyz="0.05 0 0" rpy="0 1.5708 0"/>
         <geometry>
-          <cylinder length="0.005" radius="0.03"/>
+          <cylinder length="0.03" radius="0.012"/>
         </geometry>
-        <material name="led_ring"/>
+        <material name="camera_lens"/>
       </visual>
       <inertial>
-        <mass value="0.05"/>
-        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        <mass value="0.2"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" yyz="0" izz="0.001"/>
       </inertial>
     </link>
 
-    <joint name="head_to_led_ring" type="fixed">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+    <joint name="head_to_depth" type="fixed">
+      <origin xyz="0.11 0 0.05" rpy="0 0 0"/>
       <parent link="head_link"/>
-      <child link="head_led_ring_link"/>
+      <child link="head_depth_link"/>
     </joint>
 
-    <gazebo reference="head_camera_link">
-      <sensor name="head_camera" type="rgbd">
+    <link name="head_imu_link">
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" yyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="head_to_imu" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="head_link"/>
+      <child link="head_imu_link"/>
+    </joint>
+
+    <gazebo reference="head_rgb_link">
+      <sensor name="head_rgb" type="camera">
         <camera>
           <horizontal_fov>1.5708</horizontal_fov>
           <image>
@@ -96,7 +109,34 @@
         </camera>
         <always_on>1</always_on>
         <update_rate>30</update_rate>
-        <topic>head_camera/image_raw</topic>
+        <topic>head/rgb/image_raw</topic>
+      </sensor>
+    </gazebo>
+
+    <gazebo reference="head_depth_link">
+      <sensor name="head_depth" type="depth">
+        <camera>
+          <horizontal_fov>1.5708</horizontal_fov>
+          <image>
+            <width>1280</width>
+            <height>720</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>20.0</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+        <topic>head/depth/image_raw</topic>
+      </sensor>
+    </gazebo>
+
+    <gazebo reference="head_imu_link">
+      <sensor name="head_imu" type="imu">
+        <always_on>1</always_on>
+        <update_rate>100</update_rate>
+        <topic>head/imu</topic>
       </sensor>
     </gazebo>
   </xacro:macro>

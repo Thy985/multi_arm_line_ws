@@ -56,7 +56,7 @@ body:
 
 # M7.1 Sensors configuration
 sensors:
-  head_camera:
+  head_rgb:
     type: rgbd
     active: true
     rgb: true
@@ -70,7 +70,7 @@ sensors:
     rgb: true
     resolution: [640, 480]
     fps: 10
-  torso_imu:
+  head_imu:
     type: imu
     active: true
     frame: torso_link
