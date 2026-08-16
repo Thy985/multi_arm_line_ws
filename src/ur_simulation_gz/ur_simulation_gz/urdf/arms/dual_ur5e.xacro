@@ -2,7 +2,7 @@
 <!--
   dual_ur5e.xacro — Dual UR5e arms with Robotiq 2F-85 grippers.
 
-  Instantiates two UR5e arms on arm1_pillar / arm2_pillar,
+  Instantiates two UR5e arms on left_arm_pillar / right_arm_pillar,
   each with a Robotiq 2F-85 gripper on tool0.
 
   Params:
@@ -21,11 +21,11 @@
   <xacro:macro name="dual_ur5e"
     params="name ur_type joint_limit_params kinematics_params physical_params visual_params">
 
-    <!-- arm1: mounted on arm1_pillar -->
+    <!-- left_arm: mounted on left_arm_pillar -->
     <xacro:ur_robot
       name="${name}"
-      tf_prefix="arm1_"
-      parent="arm1_pillar"
+      tf_prefix="left_arm_"
+      parent="left_arm_pillar"
       joint_limits_parameters_file="${joint_limit_params}"
       kinematics_parameters_file="${kinematics_params}"
       physical_parameters_file="${physical_params}"
@@ -37,14 +37,14 @@
       <origin xyz="0 0 0.2" rpy="0 0 0"/>
     </xacro:ur_robot>
 
-    <!-- arm1: Robotiq 2F-85 gripper -->
-    <xacro:robotiq_2f_85 prefix="arm1_" parent="arm1_tool0"/>
+    <!-- left_arm: Robotiq 2F-85 gripper -->
+    <xacro:robotiq_2f_85 prefix="left_arm_" parent="left_arm_tool0"/>
 
-    <!-- arm2: mounted on arm2_pillar -->
+    <!-- right_arm: mounted on right_arm_pillar -->
     <xacro:ur_robot
       name="${name}"
-      tf_prefix="arm2_"
-      parent="arm2_pillar"
+      tf_prefix="right_arm_"
+      parent="right_arm_pillar"
       joint_limits_parameters_file="${joint_limit_params}"
       kinematics_parameters_file="${kinematics_params}"
       physical_parameters_file="${physical_params}"
@@ -56,8 +56,8 @@
       <origin xyz="0 0 0.2" rpy="0 0 0"/>
     </xacro:ur_robot>
 
-    <!-- arm2: Robotiq 2F-85 gripper -->
-    <xacro:robotiq_2f_85 prefix="arm2_" parent="arm2_tool0"/>
+    <!-- right_arm: Robotiq 2F-85 gripper -->
+    <xacro:robotiq_2f_85 prefix="right_arm_" parent="right_arm_tool0"/>
 
   </xacro:macro>
 

@@ -2,7 +2,7 @@
 <!--
   multi_arm_ros2_control.xacro — ros2_control block for dual-arm + grippers + torso + head.
 
-  16 joints: 6 (arm1) + 6 (arm2) + 1 (arm1 gripper) + 1 (arm2 gripper) + 1 (torso) + 1 (head).
+  16 joints: 6 (left_arm) + 6 (right_arm) + 1 (left_arm gripper) + 1 (right_arm gripper) + 1 (torso) + 1 (head).
   GazeboSimSystem hardware plugin for Gazebo simulation.
 
   Params:
@@ -41,92 +41,92 @@
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
 
-      <!-- arm1 joints (6 DOF) -->
-      <joint name="arm1_shoulder_pan_joint">
+      <!-- left_arm joints (6 DOF) -->
+      <joint name="left_arm_shoulder_pan_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm1_shoulder_lift_joint">
+      <joint name="left_arm_shoulder_lift_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">-1.57</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm1_elbow_joint">
+      <joint name="left_arm_elbow_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm1_wrist_1_joint">
+      <joint name="left_arm_wrist_1_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">-1.57</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm1_wrist_2_joint">
+      <joint name="left_arm_wrist_2_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm1_wrist_3_joint">
+      <joint name="left_arm_wrist_3_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
 
-      <!-- arm2 joints (6 DOF) -->
-      <joint name="arm2_shoulder_pan_joint">
+      <!-- right_arm joints (6 DOF) -->
+      <joint name="right_arm_shoulder_pan_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm2_shoulder_lift_joint">
+      <joint name="right_arm_shoulder_lift_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">-1.57</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm2_elbow_joint">
+      <joint name="right_arm_elbow_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm2_wrist_1_joint">
+      <joint name="right_arm_wrist_1_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">-1.57</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm2_wrist_2_joint">
+      <joint name="right_arm_wrist_2_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
-      <joint name="arm2_wrist_3_joint">
+      <joint name="right_arm_wrist_3_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
 
-      <!-- arm1 gripper joint (1 DOF, mimic drives the rest) -->
-      <joint name="arm1_robotiq_left_knuckle_joint">
+      <!-- left_arm gripper joint (1 DOF, mimic drives the rest) -->
+      <joint name="left_arm_robotiq_left_knuckle_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
       </joint>
 
-      <!-- arm2 gripper joint (1 DOF, mimic drives the rest) -->
-      <joint name="arm2_robotiq_left_knuckle_joint">
+      <!-- right_arm gripper joint (1 DOF, mimic drives the rest) -->
+      <joint name="right_arm_robotiq_left_knuckle_joint">
         <command_interface name="position"/>
         <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
         <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
