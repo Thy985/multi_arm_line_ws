@@ -327,18 +327,18 @@ class TestM6SimulationScene:
         print("\n  [Test] Controllers are active...")
 
         assert _wait_for_condition(
-            lambda: _ros2_controller_active("arm1_joint_trajectory_controller"),
+            lambda: _ros2_controller_active("left_arm_joint_trajectory_controller"),
             timeout=30.0,
-            description="arm1_JTC active",
-        ), "arm1_JTC not active"
-        print("  ✓ arm1_joint_trajectory_controller active")
+            description="left_arm_JTC active",
+        ), "left_arm_JTC not active"
+        print("  ✓ left_arm_joint_trajectory_controller active")
 
         assert _wait_for_condition(
-            lambda: _ros2_controller_active("arm2_joint_trajectory_controller"),
+            lambda: _ros2_controller_active("right_arm_joint_trajectory_controller"),
             timeout=10.0,
-            description="arm2_JTC active",
-        ), "arm2_JTC not active"
-        print("  ✓ arm2_joint_trajectory_controller active")
+            description="right_arm_JTC active",
+        ), "right_arm_JTC not active"
+        print("  ✓ right_arm_joint_trajectory_controller active")
 
     def test_ground_truth_node_publishes(self) -> None:
         """GazeboGroundTruthNode publishes ObjectPose messages."""

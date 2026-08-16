@@ -55,7 +55,7 @@ class GripperController:
         """Register a gripper for an arm.
 
         Args:
-            arm_name: Arm name (e.g., "arm1").
+            arm_name: Arm name (e.g., "left_arm").
 
         """
         self._grippers[arm_name] = GripperStatus(

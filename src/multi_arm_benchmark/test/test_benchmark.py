@@ -50,7 +50,7 @@ class TestBenchmarkRecorder:
             recorder = BenchmarkRecorder(db_path=db_path)
             run_id = recorder.start_run("test_scenario")
             record_id = recorder.record_task_start(
-                run_id, "task_001", "arm1", "move", "arm1:zone_a:ready"
+                run_id, "task_001", "left_arm", "move", "left_arm:zone_a:ready"
             )
             assert record_id > 0
             recorder.record_task_end(
@@ -62,7 +62,7 @@ class TestBenchmarkRecorder:
             assert summary["success_count"] == 1
             assert summary["failure_count"] == 0
             assert len(summary["tasks"]) == 1
-            assert summary["tasks"][0]["arm_name"] == "arm1"
+            assert summary["tasks"][0]["arm_name"] == "left_arm"
             assert summary["tasks"][0]["planning_time"] == 0.5
             assert summary["tasks"][0]["execution_time"] == 3.2
             recorder.close()
@@ -77,7 +77,7 @@ class TestBenchmarkRecorder:
             recorder = BenchmarkRecorder(db_path=db_path)
             run_id = recorder.start_run("test_scenario")
             record_id = recorder.record_task_start(
-                run_id, "task_002", "arm2", "move", "arm2:zone_b:home"
+                run_id, "task_002", "right_arm", "move", "right_arm:zone_b:home"
             )
             recorder.record_task_end(
                 record_id, success=False,
@@ -100,11 +100,11 @@ class TestBenchmarkRecorder:
         try:
             recorder = BenchmarkRecorder(db_path=db_path)
             run_id = recorder.start_run("test_scenario")
-            r1 = recorder.record_task_start(run_id, "t1", "arm1", "move", "")
+            r1 = recorder.record_task_start(run_id, "t1", "left_arm", "move", "")
             recorder.record_task_end(r1, success=True)
-            r2 = recorder.record_task_start(run_id, "t2", "arm1", "move", "")
+            r2 = recorder.record_task_start(run_id, "t2", "left_arm", "move", "")
             recorder.record_task_end(r2, success=True)
-            r3 = recorder.record_task_start(run_id, "t3", "arm1", "move", "")
+            r3 = recorder.record_task_start(run_id, "t3", "left_arm", "move", "")
             recorder.record_task_end(r3, success=False)
             recorder.end_run(run_id)
             summary = recorder.get_run_summary(run_id)
@@ -120,9 +120,9 @@ class TestBenchmarkRecorder:
         try:
             recorder = BenchmarkRecorder(db_path=db_path)
             run_id = recorder.start_run("test_scenario")
-            r1 = recorder.record_task_start(run_id, "t1", "arm1", "move", "")
+            r1 = recorder.record_task_start(run_id, "t1", "left_arm", "move", "")
             recorder.record_task_end(r1, success=True, planning_time=1.0, execution_time=5.0)
-            r2 = recorder.record_task_start(run_id, "t2", "arm1", "move", "")
+            r2 = recorder.record_task_start(run_id, "t2", "left_arm", "move", "")
             recorder.record_task_end(r2, success=True, planning_time=2.0, execution_time=6.0)
             recorder.end_run(run_id)
             summary = recorder.get_run_summary(run_id)
@@ -140,7 +140,7 @@ class TestBenchmarkRecorder:
             recorder = BenchmarkRecorder(db_path=db_path)
             for i in range(3):
                 run_id = recorder.start_run("single_arm")
-                r = recorder.record_task_start(run_id, "t1", "arm1", "move", "")
+                r = recorder.record_task_start(run_id, "t1", "left_arm", "move", "")
                 recorder.record_task_end(r, success=True, planning_time=0.5, execution_time=3.0)
                 recorder.end_run(run_id)
             history = recorder.get_scenario_history("single_arm", limit=3)
@@ -171,7 +171,7 @@ class TestBenchmarkRecorder:
         try:
             recorder = BenchmarkRecorder(db_path=db_path)
             run_id = recorder.start_run("test")
-            r = recorder.record_task_start(run_id, "t1", "arm1", "move", "")
+            r = recorder.record_task_start(run_id, "t1", "left_arm", "move", "")
             recorder.record_task_end(
                 r, success=True,
                 resource_wait_time=2.5,
@@ -219,8 +219,8 @@ class TestScenarioRunner:
         scenario = runner.load_scenario("dual_arm")
         assert scenario["name"] == "dual_arm"
         arms = {t["arm_name"] for t in scenario["tasks"]}
-        assert "arm1" in arms
-        assert "arm2" in arms
+        assert "left_arm" in arms
+        assert "right_arm" in arms
 
     def test_load_conflict(self) -> None:
         from multi_arm_benchmark.scenario_runner import ScenarioRunner
@@ -265,7 +265,7 @@ class TestScenarioRunner:
         runner = ScenarioRunner()
         task = {
             "task_id": "bench_001",
-            "arm_name": "arm1",
+            "arm_name": "left_arm",
             "action_type": "move",
             "zone_name": "zone_a",
             "position_name": "ready",
@@ -275,8 +275,8 @@ class TestScenarioRunner:
         }
         goal = runner.build_execute_task_goal(task)
         assert goal["task_id"] == "bench_001"
-        assert goal["arm_name"] == "arm1"
-        assert goal["description"] == "arm1:zone_a:ready"
+        assert goal["arm_name"] == "left_arm"
+        assert goal["description"] == "left_arm:zone_a:ready"
         assert goal["object_id"] == "red_cube"
         assert goal["timeout"] == 30.0
 

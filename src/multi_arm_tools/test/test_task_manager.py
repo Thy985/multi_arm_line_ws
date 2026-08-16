@@ -53,11 +53,11 @@ def test_list_positions(capsys):
 def test_describe_goal_pick_place():
     """Test goal description for pick_place."""
     tm = TaskManager(MagicMock())
-    info = tm._describe_goal("pick_place", ["red_cube", "zone_b"], "arm1")
+    info = tm._describe_goal("pick_place", ["red_cube", "zone_b"], "left_arm")
     assert info["action_type"] == "pick_place"
     assert info["object_id"] == "red_cube"
     assert info["zone_name"] == "zone_b"
-    assert info["arm_name"] == "arm1"
+    assert info["arm_name"] == "left_arm"
 
 
 def test_describe_goal_move():
@@ -66,11 +66,11 @@ def test_describe_goal_move():
     info = tm._describe_goal("move", ["ready"], "")
     assert info["action_type"] == "move"
     assert info["position_name"] == "ready"
-    assert info["arm_name"] == "arm1"
+    assert info["arm_name"] == "left_arm"
 
 
 def test_describe_goal_default_arm():
     """Test default arm assignment."""
     tm = TaskManager(MagicMock())
     info = tm._describe_goal("move", ["home"], "")
-    assert info["arm_name"] == "arm1"
+    assert info["arm_name"] == "left_arm"

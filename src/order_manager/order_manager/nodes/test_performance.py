@@ -115,7 +115,7 @@ def test_cpu_usage(coord, result, timeout):
     # 批量提交任务
     from order_manager.nodes.task_scheduler import TaskScheduler
     tm = TimeManager()
-    scheduler = TaskScheduler(tm, ['arm1', 'arm2'])
+    scheduler = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     for task in tasks:
         scheduler.submit(task)
@@ -148,17 +148,17 @@ def test_cpu_usage(coord, result, timeout):
 def test_concurrent_response_time(coord, result, timeout):
     """并发任务响应时间：响应时间 < 1秒"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     
     # 并发发送多个命令
     start_time = time.time()
     
-    # arm1 -> zone_a
-    success1 = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=2.0)
+    # left_arm -> zone_a
+    success1 = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=2.0)
     
-    # arm2 -> zone_b (不同zone，应该立即成功)
-    success2 = coord.send_to_zone('arm2', 'zone_b', 'ready', duration=2.0)
+    # right_arm -> zone_b (不同zone，应该立即成功)
+    success2 = coord.send_to_zone('right_arm', 'zone_b', 'ready', duration=2.0)
     
     end_time = time.time()
     response_time = end_time - start_time
@@ -171,15 +171,15 @@ def test_concurrent_response_time(coord, result, timeout):
     assert response_time < 1.0, f"响应时间过长: {response_time:.3f}s"
     
     # 验证两个命令都成功
-    assert success1, "arm1命令应该成功"
-    assert success2, "arm2命令应该成功"
+    assert success1, "left_arm命令应该成功"
+    assert success2, "right_arm命令应该成功"
     
     # 等待完成
     time.sleep(3)
     
     # 清理
-    coord.arm_status['arm1'].state = ArmState.IDLE
-    coord.arm_status['arm2'].state = ArmState.IDLE
+    coord.arm_status['left_arm'].state = ArmState.IDLE
+    coord.arm_status['right_arm'].state = ArmState.IDLE
 
 
 def test_long_running_stability(coord, result, timeout):
@@ -194,10 +194,10 @@ def test_long_running_stability(coord, result, timeout):
     while time.time() - start_time < 10:
         # 交替发送命令到两个臂
         if command_count % 2 == 0:
-            arm_name = 'arm1'
+            arm_name = 'left_arm'
             zone_name = 'zone_a'
         else:
-            arm_name = 'arm2'
+            arm_name = 'right_arm'
             zone_name = 'zone_b'
         
         # 检查臂状态
@@ -211,10 +211,10 @@ def test_long_running_stability(coord, result, timeout):
     time.sleep(3)
     
     # 验证系统仍然正常
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1应该是IDLE状态，实际是{coord.arm_status['arm1'].state.name}"
-    assert coord.arm_status['arm2'].state == ArmState.IDLE, \
-        f"arm2应该是IDLE状态，实际是{coord.arm_status['arm2'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm应该是IDLE状态，实际是{coord.arm_status['left_arm'].state.name}"
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE, \
+        f"right_arm应该是IDLE状态，实际是{coord.arm_status['right_arm'].state.name}"
     
     # 记录指标
     elapsed_time = time.time() - start_time
@@ -230,7 +230,7 @@ def test_long_running_stability(coord, result, timeout):
 def test_batch_task_scheduling(result, timeout):
     """大量任务调度：调度100个任务无错误"""
     tm = TimeManager()
-    scheduler = TaskScheduler(tm, ['arm1', 'arm2'])
+    scheduler = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     start_time = time.time()
     

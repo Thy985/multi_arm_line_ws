@@ -88,7 +88,7 @@ class Test1VisionOnlyExecution:
     def test_task_succeeds_with_vision_data(self) -> None:
         """Move task succeeds — vision data is sufficient for execution."""
         result = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=120.0,
         )
         assert result.returncode == 0
@@ -208,7 +208,7 @@ class Test3ExperienceLoop:
 
         analyzer = FailureAnalyzer()
         suggestion = analyzer.analyze(failed_episode)
-        original_params = {"position": "bad_target", "arm": "arm1"}
+        original_params = {"position": "bad_target", "arm": "left_arm"}
         adjusted = analyzer.apply(original_params, suggestion)
 
         assert adjusted["position"] == "home", f"Adjusted position should be 'home': {adjusted}"
@@ -228,7 +228,7 @@ class Test3ExperienceLoop:
 
             print("  Step 1: Submit task with bad params (should fail gracefully)...")
             r1 = robot_cli(
-                ["run", "move", "nonexistent_position", "--arm", "arm1", "--no-trace"],
+                ["run", "move", "nonexistent_position", "--arm", "left_arm", "--no-trace"],
                 timeout=60.0,
             )
             print(f"  result: returncode={r1.returncode}")
@@ -247,9 +247,9 @@ class Test3ExperienceLoop:
             print(f"  Suggestion: {suggestion.adjustment_key}={suggestion.adjustment_value}")
 
             print("  Step 3: Retry with adjusted params...")
-            adjusted_params = {"position": suggestion.adjustment_value, "arm": "arm1"}
+            adjusted_params = {"position": suggestion.adjustment_value, "arm": "left_arm"}
             r2 = robot_cli_with_retry(
-                ["run", "move", adjusted_params["position"], "--arm", "arm1", "--no-trace"],
+                ["run", "move", adjusted_params["position"], "--arm", "left_arm", "--no-trace"],
                 timeout=120.0,
             )
             assert r2.returncode == 0

@@ -63,10 +63,10 @@ def test_empty_string_inputs(coord, result, timeout):
     ret = coord.send_to_position('', 'ready')
     assert ret == False, "空字符串臂名称应该被拒绝"
     
-    ret = coord.send_to_position('arm1', '')
+    ret = coord.send_to_position('left_arm', '')
     assert ret == False, "空字符串位置应该被拒绝"
     
-    ret = coord.send_to_zone('arm1', '')
+    ret = coord.send_to_zone('left_arm', '')
     assert ret == False, "空字符串zone应该被拒绝"
     
     print("    空字符串输入: 正确拒绝")
@@ -84,7 +84,7 @@ def test_none_inputs(coord, result, timeout):
         print("    None臂名称: 抛出异常（可接受）")
     
     try:
-        ret = coord.send_to_position('arm1', None)
+        ret = coord.send_to_position('left_arm', None)
         assert ret == False, "None位置应该被拒绝"
     except (TypeError, AttributeError):
         print("    None位置: 抛出异常（可接受）")
@@ -100,10 +100,10 @@ def test_very_long_strings(coord, result, timeout):
     ret = coord.send_to_position(long_string, 'ready')
     assert ret == False, "超长字符串臂名称应该被拒绝"
     
-    ret = coord.send_to_position('arm1', long_string)
+    ret = coord.send_to_position('left_arm', long_string)
     assert ret == False, "超长字符串位置应该被拒绝"
     
-    ret = coord.send_to_zone('arm1', long_string)
+    ret = coord.send_to_zone('left_arm', long_string)
     assert ret == False, "超长字符串zone应该被拒绝"
     
     print("    超长字符串: 正确拒绝")
@@ -112,7 +112,7 @@ def test_very_long_strings(coord, result, timeout):
 def test_special_characters(coord, result, timeout):
     """特殊字符测试"""
     special_chars = ['!@#$%^&*()', '<script>alert(1)</script>', 
-                     '../etc/passwd', 'arm1; rm -rf /']
+                     '../etc/passwd', 'left_arm; rm -rf /']
     
     for char in special_chars:
         ret = coord.send_to_position(char, 'ready')
@@ -154,19 +154,19 @@ def test_numeric_boundaries(coord, result, timeout):
 def test_ros_node_crash_recovery(coord, result, timeout):
     """ROS节点崩溃恢复测试"""
     # 记录初始状态
-    initial_state = coord.arm_status['arm1'].state
+    initial_state = coord.arm_status['left_arm'].state
     
     # 模拟节点崩溃（通过手动设置状态）
-    coord.arm_status['arm1'].state = ArmState.ERROR
-    coord.arm_status['arm1'].error_message = "Simulated crash"
+    coord.arm_status['left_arm'].state = ArmState.ERROR
+    coord.arm_status['left_arm'].error_message = "Simulated crash"
     
     # 尝试恢复
-    ret = coord.reset_arm('arm1')
+    ret = coord.reset_arm('left_arm')
     assert ret == True, "应该能从ERROR状态恢复"
     
     # 验证状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"恢复后应该是IDLE状态，实际是{coord.arm_status['arm1'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"恢复后应该是IDLE状态，实际是{coord.arm_status['left_arm'].state.name}"
     
     print("    ROS节点崩溃恢复: 成功")
 
@@ -174,16 +174,16 @@ def test_ros_node_crash_recovery(coord, result, timeout):
 def test_concurrent_zone_access(coord, result, timeout):
     """并发Zone访问测试（竞态条件）"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     
     # 并发访问同一个zone
     def access_zone(arm_name):
         return coord.send_to_zone(arm_name, 'zone_a', 'ready', duration=2.0)
     
     with ThreadPoolExecutor(max_workers=2) as executor:
-        future1 = executor.submit(access_zone, 'arm1')
-        future2 = executor.submit(access_zone, 'arm2')
+        future1 = executor.submit(access_zone, 'left_arm')
+        future2 = executor.submit(access_zone, 'right_arm')
         
         result1 = future1.result()
         result2 = future2.result()
@@ -195,29 +195,29 @@ def test_concurrent_zone_access(coord, result, timeout):
     # 等待更长时间完成
     time.sleep(5)
     
-    # 验证最终状态一致（arm1应该回到IDLE，arm2可能还在QUEUED或已回到IDLE）
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1应该是IDLE状态，实际是{coord.arm_status['arm1'].state.name}"
+    # 验证最终状态一致（left_arm应该回到IDLE，right_arm可能还在QUEUED或已回到IDLE）
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm应该是IDLE状态，实际是{coord.arm_status['left_arm'].state.name}"
     
-    # arm2可能在QUEUED或IDLE状态，只要不是ERROR就接受
-    arm2_state = coord.arm_status['arm2'].state
-    assert arm2_state in [ArmState.IDLE, ArmState.QUEUED, ArmState.WORKING], \
-        f"arm2状态异常: {arm2_state.name}"
+    # right_arm可能在QUEUED或IDLE状态，只要不是ERROR就接受
+    right_arm_state = coord.arm_status['right_arm'].state
+    assert right_arm_state in [ArmState.IDLE, ArmState.QUEUED, ArmState.WORKING], \
+        f"right_arm状态异常: {right_arm_state.name}"
     
-    print(f"    并发Zone访问: 成功count={success_count}, arm1={coord.arm_status['arm1'].state.name}, arm2={arm2_state.name}")
+    print(f"    并发Zone访问: 成功count={success_count}, left_arm={coord.arm_status['left_arm'].state.name}, right_arm={right_arm_state.name}")
 
 
 def test_rapid_successive_commands(coord, result, timeout):
     """快速连续命令测试"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # 快速发送10个命令
     command_count = 0
     success_count = 0
     
     for i in range(10):
-        ret = coord.send_to_position('arm1', 'ready', duration=0.1)
+        ret = coord.send_to_position('left_arm', 'ready', duration=0.1)
         command_count += 1
         if ret:
             success_count += 1
@@ -231,7 +231,7 @@ def test_rapid_successive_commands(coord, result, timeout):
     time.sleep(1)
     
     # 验证最终状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     print(f"    快速连续命令: 成功count={success_count}/10")
 
@@ -239,25 +239,25 @@ def test_rapid_successive_commands(coord, result, timeout):
 def test_invalid_state_transitions(coord, result, timeout):
     """无效状态转换测试"""
     # 测试从非IDLE状态发送命令
-    coord.arm_status['arm1'].state = ArmState.WORKING
+    coord.arm_status['left_arm'].state = ArmState.WORKING
     
-    ret = coord.send_to_position('arm1', 'ready')
+    ret = coord.send_to_position('left_arm', 'ready')
     assert ret == False, "WORKING状态应该拒绝命令"
     
-    ret = coord.send_to_zone('arm1', 'zone_a')
+    ret = coord.send_to_zone('left_arm', 'zone_a')
     assert ret == False, "WORKING状态应该拒绝zone请求"
     
     # 测试从ERROR状态发送命令
-    coord.arm_status['arm1'].state = ArmState.ERROR
+    coord.arm_status['left_arm'].state = ArmState.ERROR
     
-    ret = coord.send_to_position('arm1', 'ready')
+    ret = coord.send_to_position('left_arm', 'ready')
     assert ret == False, "ERROR状态应该拒绝命令"
     
-    ret = coord.send_to_zone('arm1', 'zone_a')
+    ret = coord.send_to_zone('left_arm', 'zone_a')
     assert ret == False, "ERROR状态应该拒绝zone请求"
     
     # 恢复状态
-    coord.arm_status['arm1'].state = ArmState.IDLE
+    coord.arm_status['left_arm'].state = ArmState.IDLE
     
     print("    无效状态转换: 正确拒绝")
 
@@ -269,8 +269,8 @@ def test_invalid_state_transitions(coord, result, timeout):
 def test_concurrent_multiple_threads(coord, result, timeout):
     """多线程并发测试"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     
     # 使用多个线程并发操作
     def worker(arm_name, zone_name):
@@ -281,8 +281,8 @@ def test_concurrent_multiple_threads(coord, result, timeout):
     
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [
-            executor.submit(worker, 'arm1', 'zone_a'),
-            executor.submit(worker, 'arm2', 'zone_b'),
+            executor.submit(worker, 'left_arm', 'zone_a'),
+            executor.submit(worker, 'right_arm', 'zone_b'),
         ]
         
         results = [f.result() for f in as_completed(futures)]
@@ -291,8 +291,8 @@ def test_concurrent_multiple_threads(coord, result, timeout):
     time.sleep(3)
     
     # 验证最终状态一致
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
-    assert coord.arm_status['arm2'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE
     
     success_count = sum(results)
     print(f"    多线程并发: 成功count={success_count}/2")
@@ -301,12 +301,12 @@ def test_concurrent_multiple_threads(coord, result, timeout):
 def test_concurrent_same_arm(coord, result, timeout):
     """并发操作同一个臂测试"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
-    # 多个线程同时操作arm1
+    # 多个线程同时操作left_arm
     def worker(zone_name):
         try:
-            return coord.send_to_zone('arm1', zone_name, 'ready', duration=1.0)
+            return coord.send_to_zone('left_arm', zone_name, 'ready', duration=1.0)
         except Exception as e:
             return False
     
@@ -323,7 +323,7 @@ def test_concurrent_same_arm(coord, result, timeout):
     time.sleep(3)
     
     # 验证最终状态一致
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     success_count = sum(results)
     print(f"    并发操作同一个臂: 成功count={success_count}/3")
@@ -347,10 +347,10 @@ def test_long_running_stability(coord, result, timeout):
         try:
             # 交替发送命令到两个臂
             if command_count % 2 == 0:
-                arm_name = 'arm1'
+                arm_name = 'left_arm'
                 zone_name = 'zone_a'
             else:
-                arm_name = 'arm2'
+                arm_name = 'right_arm'
                 zone_name = 'zone_b'
             
             # 检查臂状态
@@ -367,7 +367,7 @@ def test_long_running_stability(coord, result, timeout):
     time.sleep(10)
     
     # 强制重置所有臂到IDLE状态（模拟长时间运行后的清理）
-    for arm_name in ['arm1', 'arm2']:
+    for arm_name in ['left_arm', 'right_arm']:
         if coord.arm_status[arm_name].state != ArmState.IDLE:
             coord.arm_status[arm_name].state = ArmState.IDLE
             coord.arm_status[arm_name].current_zone = None
@@ -383,10 +383,10 @@ def test_long_running_stability(coord, result, timeout):
     memory_growth = final_memory - initial_memory
     
     # 验证系统仍然正常
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1应该是IDLE状态，实际是{coord.arm_status['arm1'].state.name}"
-    assert coord.arm_status['arm2'].state == ArmState.IDLE, \
-        f"arm2应该是IDLE状态，实际是{coord.arm_status['arm2'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm应该是IDLE状态，实际是{coord.arm_status['left_arm'].state.name}"
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE, \
+        f"right_arm应该是IDLE状态，实际是{coord.arm_status['right_arm'].state.name}"
     
     # 记录指标
     elapsed_time = time.time() - start_time
@@ -424,8 +424,8 @@ def test_memory_leak(coord, result, timeout):
     # 执行大量操作
     operations = []
     for i in range(100):
-        operations.append(('arm1', 'zone_a'))
-        operations.append(('arm2', 'zone_b'))
+        operations.append(('left_arm', 'zone_a'))
+        operations.append(('right_arm', 'zone_b'))
     
     for arm_name, zone_name in operations:
         if coord.arm_status[arm_name].state == ArmState.IDLE:
@@ -462,10 +462,10 @@ def test_state_consistency_after_errors(coord, result, timeout):
     """错误后状态一致性测试"""
     # 执行一系列操作，包括错误情况
     operations = [
-        ('arm1', 'zone_a', True),   # 正常
-        ('arm2', 'zone_a', False),  # 冲突（应该排队）
-        ('arm1', 'zone_b', True),   # 正常
-        ('arm2', 'zone_b', True),   # 正常
+        ('left_arm', 'zone_a', True),   # 正常
+        ('right_arm', 'zone_a', False),  # 冲突（应该排队）
+        ('left_arm', 'zone_b', True),   # 正常
+        ('right_arm', 'zone_b', True),   # 正常
     ]
     
     for arm_name, zone_name, should_succeed in operations:
@@ -477,7 +477,7 @@ def test_state_consistency_after_errors(coord, result, timeout):
     time.sleep(10)
     
     # 强制重置所有臂到IDLE状态（模拟错误恢复后的清理）
-    for arm_name in ['arm1', 'arm2']:
+    for arm_name in ['left_arm', 'right_arm']:
         if coord.arm_status[arm_name].state != ArmState.IDLE:
             coord.arm_status[arm_name].state = ArmState.IDLE
             coord.arm_status[arm_name].current_zone = None
@@ -489,10 +489,10 @@ def test_state_consistency_after_errors(coord, result, timeout):
             zone.waiting_queue = []
     
     # 验证最终状态一致
-    assert coord.arm_status['arm1'].state == ArmState.IDLE, \
-        f"arm1应该是IDLE状态，实际是{coord.arm_status['arm1'].state.name}"
-    assert coord.arm_status['arm2'].state == ArmState.IDLE, \
-        f"arm2应该是IDLE状态，实际是{coord.arm_status['arm2'].state.name}"
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
+        f"left_arm应该是IDLE状态，实际是{coord.arm_status['left_arm'].state.name}"
+    assert coord.arm_status['right_arm'].state == ArmState.IDLE, \
+        f"right_arm应该是IDLE状态，实际是{coord.arm_status['right_arm'].state.name}"
     
     # 验证所有zone都已释放
     for zone_name, zone in coord.zones.items():
@@ -504,22 +504,22 @@ def test_state_consistency_after_errors(coord, result, timeout):
 def test_zone_consistency(coord, result, timeout):
     """Zone状态一致性测试"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # 获取zone
     zone = coord.zones['zone_a']
     assert zone.is_free(), "zone_a应该空闲"
     
     # 发送命令
-    ret = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=2.0)
+    ret = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=2.0)
     assert ret == True, "应该成功"
     
     # 验证zone被锁定
     assert not zone.is_free(), "zone_a应该被锁定"
-    assert zone.occupied_by == 'arm1', "zone_a应该被arm1占用"
+    assert zone.occupied_by == 'left_arm', "zone_a应该被left_arm占用"
     
     # 等待完成
-    wait_for_state_change(coord, 'arm1', ArmState.WORKING, timeout=timeout)
+    wait_for_state_change(coord, 'left_arm', ArmState.WORKING, timeout=timeout)
     
     # 等待更长时间确保zone释放
     time.sleep(5)
@@ -539,15 +539,15 @@ def test_consecutive_errors(coord, result, timeout):
     # 模拟连续错误
     for i in range(5):
         # 设置ERROR状态
-        coord.arm_status['arm1'].state = ArmState.ERROR
-        coord.arm_status['arm1'].error_message = f"Error {i}"
+        coord.arm_status['left_arm'].state = ArmState.ERROR
+        coord.arm_status['left_arm'].error_message = f"Error {i}"
         
         # 恢复
-        ret = coord.reset_arm('arm1')
+        ret = coord.reset_arm('left_arm')
         assert ret == True, f"第{i+1}次恢复应该成功"
         
         # 验证状态
-        assert coord.arm_status['arm1'].state == ArmState.IDLE, \
+        assert coord.arm_status['left_arm'].state == ArmState.IDLE, \
             f"第{i+1}次恢复后应该是IDLE状态"
     
     print("    连续错误恢复: 5次成功")
@@ -556,29 +556,29 @@ def test_consecutive_errors(coord, result, timeout):
 def test_error_during_operation(coord, result, timeout):
     """操作中错误恢复测试"""
     # 确保干净状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # 开始操作
-    ret = coord.send_to_zone('arm1', 'zone_a', 'ready', duration=3.0)
+    ret = coord.send_to_zone('left_arm', 'zone_a', 'ready', duration=3.0)
     assert ret == True, "应该成功"
     
     # 等待状态变化
     time.sleep(0.5)
     
     # 模拟操作中错误
-    coord.arm_status['arm1'].state = ArmState.ERROR
+    coord.arm_status['left_arm'].state = ArmState.ERROR
     
     # 释放zone（模拟错误恢复）
     zone = coord.zones['zone_a']
     if not zone.is_free():
-        zone.release('arm1')
+        zone.release('left_arm')
     
     # 恢复
-    ret = coord.reset_arm('arm1')
+    ret = coord.reset_arm('left_arm')
     assert ret == True, "应该能恢复"
     
     # 验证最终状态
-    assert coord.arm_status['arm1'].state == ArmState.IDLE
+    assert coord.arm_status['left_arm'].state == ArmState.IDLE
     
     # 验证zone被释放
     assert zone.is_free(), "zone_a应该已释放"

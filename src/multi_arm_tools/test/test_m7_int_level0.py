@@ -224,7 +224,7 @@ class TestCLIParsing:
         ["task", "list"],
         ["task", "positions"],
         ["run", "pick_place", "red_cube", "zone_b"],
-        ["run", "move", "ready", "--arm", "arm1"],
+        ["run", "move", "ready", "--arm", "left_arm"],
         ["run", "pick_place", "red_cube", "--debug"],
         ["episodes"],
         ["episodes", "--failures-only"],

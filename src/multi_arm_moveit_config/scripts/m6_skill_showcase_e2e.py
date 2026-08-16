@@ -28,7 +28,7 @@ def build_goals(arm: str, action_type: str, position: str) -> list[TaskGoal]:
     """Construct the TaskGoal list for the showcase.
 
     Args:
-        arm: Target arm name (e.g. arm1).
+        arm: Target arm name (e.g. left_arm).
         action_type: Skill action type (move/place/pick).
         position: Destination preset name (e.g. ready).
 
@@ -50,7 +50,7 @@ def build_goals(arm: str, action_type: str, position: str) -> list[TaskGoal]:
 def main(args: list[str] | None = None) -> int:
     """Run the showcase and return 0 on success (all goals completed)."""
     argv = sys.argv[1:]
-    arm = argv[0] if len(argv) > 0 else "arm1"
+    arm = argv[0] if len(argv) > 0 else "left_arm"
     action_type = argv[1] if len(argv) > 1 else "move"
     position = argv[2] if len(argv) > 2 else "ready"
 

@@ -77,7 +77,7 @@ def test_cli_argparse_capability():
 def test_cli_argparse_run():
     """Test 'robot run' command parsing."""
     from multi_arm_tools.cli import main
-    with patch.object(sys, "argv", ["robot", "run", "pick_place", "red_cube", "zone_b", "--arm", "arm1"]):
+    with patch.object(sys, "argv", ["robot", "run", "pick_place", "red_cube", "zone_b", "--arm", "left_arm"]):
         with patch("multi_arm_tools.cli._dispatch", return_value=0) as mock_dispatch:
             with pytest.raises(SystemExit):
                 main()
@@ -85,7 +85,7 @@ def test_cli_argparse_run():
             assert args.command == "run"
             assert args.task_type == "pick_place"
             assert args.args == ["red_cube", "zone_b"]
-            assert args.arm == "arm1"
+            assert args.arm == "left_arm"
             assert args.no_trace is False
 
 
@@ -240,7 +240,7 @@ def test_cli_argparse_safety_stop():
 def test_cli_argparse_task_run():
     """Test 'robot task run' command parsing."""
     from multi_arm_tools.cli import main
-    with patch.object(sys, "argv", ["robot", "task", "run", "move", "ready", "--arm", "arm1"]):
+    with patch.object(sys, "argv", ["robot", "task", "run", "move", "ready", "--arm", "left_arm"]):
         with patch("multi_arm_tools.cli._dispatch", return_value=0) as mock_dispatch:
             with pytest.raises(SystemExit):
                 main()
@@ -249,7 +249,7 @@ def test_cli_argparse_task_run():
             assert args.task_command == "run"
             assert args.task_type == "move"
             assert args.args == ["ready"]
-            assert args.arm == "arm1"
+            assert args.arm == "left_arm"
 
 
 def test_cli_argparse_json_flag():

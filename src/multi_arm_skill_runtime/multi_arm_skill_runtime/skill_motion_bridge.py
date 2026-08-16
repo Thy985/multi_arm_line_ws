@@ -131,7 +131,7 @@ def normalize_target(
     if not out.get("position_name"):
         out["position_name"] = SKILL_DEFAULT_POSITION.get(skill_name, "ready")
     if not out.get("arm_name"):
-        out["arm_name"] = "arm1"
+        out["arm_name"] = "left_arm"
     return out
 
 

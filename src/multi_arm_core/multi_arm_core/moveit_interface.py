@@ -82,7 +82,7 @@ class MoveItInterface:
         """Plan and execute a motion via MoveIt2.
 
         Args:
-            group_name: MoveIt planning group name (e.g. 'arm1', 'arm2').
+            group_name: MoveIt planning group name (e.g. 'left_arm', 'right_arm').
             target_joints: Dict of joint_name -> target_position.
             label: Human-readable label for logging.
             max_velocity_scaling: Velocity scaling factor (0-1).
@@ -196,7 +196,7 @@ class MoveItInterface:
         """Move arm to a preset position via MoveIt2.
 
         Args:
-            arm_name: Arm name (e.g. 'arm1', 'arm2').
+            arm_name: Arm name (e.g. 'left_arm', 'right_arm').
             position_name: Preset position name (e.g. 'home', 'ready').
             timeout: Execution timeout.
 

@@ -2,7 +2,7 @@
 
 Starts:
 1. Single UR5e in Gazebo with ros2_control
-2. MoveIt2 move_group for arm1
+2. MoveIt2 move_group for left_arm
 3. WorldModel node
 4. SafetySupervisor node
 
@@ -47,8 +47,8 @@ def launch_setup(context, *args, **kwargs):
             "ur_type": ur_type,
             "gazebo_gui": gazebo_gui,
             "launch_rviz": "false",
-            "tf_prefix": "arm1_",
-            "controllers_file": "arm1_controllers.yaml",
+            "tf_prefix": "left_arm_",
+            "controllers_file": "left_arm_controllers.yaml",
         }.items(),
     )
     nodes_to_start.append(gz_sim)
@@ -56,7 +56,7 @@ def launch_setup(context, *args, **kwargs):
     # ---- Build robot_description for MoveIt ----
     description_file = os.path.join(ur_simulation_dir, "urdf", "ur_gz.urdf.xacro")
     joint_limits_file = os.path.join(ur_simulation_dir, "config", "joint_limits_custom.yaml")
-    arm1_controllers = os.path.join(ur_simulation_dir, "config", "arm1_controllers.yaml")
+    left_arm_controllers = os.path.join(ur_simulation_dir, "config", "left_arm_controllers.yaml")
 
     robot_description_content = Command([
         FindExecutable(name="xacro"), " ",
@@ -67,12 +67,12 @@ def launch_setup(context, *args, **kwargs):
         " safety_k_position:=20",
         " name:=ur",
         " ur_type:=", ur_type,
-        " tf_prefix:=arm1_",
-        " ros_namespace:=arm1",
-        " simulation_controllers:=", arm1_controllers,
+        " tf_prefix:=left_arm_",
+        " ros_namespace:=left_arm",
+        " simulation_controllers:=", left_arm_controllers,
     ])
 
-    # SRDF for single arm (reuse multi_arm.srdf, arm1 group only)
+    # SRDF for single arm (reuse multi_arm.srdf, left_arm group only)
     srdf_file = os.path.join(moveit_config_dir, "config", "multi_arm.srdf")
     with open(srdf_file, "r") as f:
         srdf_content = f.read()
@@ -124,7 +124,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             {"use_sim_time": True},
-            {"arm_names": ["arm1"]},
+            {"arm_names": ["left_arm"]},
         ],
     )
     nodes_to_start.append(TimerAction(period=5.0, actions=[world_model_node]))
@@ -136,7 +136,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             {"use_sim_time": True},
-            {"arm_names": ["arm1"]},
+            {"arm_names": ["left_arm"]},
         ],
     )
     nodes_to_start.append(TimerAction(period=5.0, actions=[safety_node]))

@@ -47,7 +47,7 @@ class ManipulationNode(Node):
 
         cb_group = ReentrantCallbackGroup()
 
-        self.declare_parameter("arm_names", ["arm1", "arm2"])
+        self.declare_parameter("arm_names", ["left_arm", "right_arm"])
 
         arm_names = list(self.get_parameter("arm_names").value)
         self._gripper = GripperController()

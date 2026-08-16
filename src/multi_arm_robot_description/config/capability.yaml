@@ -21,13 +21,13 @@ capabilities:
   vision:
     types: ["rgb", "depth"]
     available: true
-    reason: "head_camera RGB-D (M7.1) + arm1 wrist camera"
+    reason: "head_camera RGB-D (M7.1) + left_arm wrist camera"
     sensors:
       - name: head_camera
         types: ["rgb", "depth"]
         resolution: [640, 480]
         fps: 30
-      - name: arm1_wrist_camera
+      - name: left_arm_wrist_camera
         types: ["rgb"]
         resolution: [640, 480]
         fps: 10

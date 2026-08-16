@@ -28,16 +28,16 @@ def recorder_with_data() -> ExperienceRecorder:
     """Fixture for recorder with sample data."""
     recorder = ExperienceRecorder()
 
-    ep1 = recorder.start_episode("pick_place", "pick_object", "arm1")
+    ep1 = recorder.start_episode("pick_place", "pick_object", "left_arm")
     recorder.record_step(ep1, "grasp", success=True, duration=1.0)
     recorder.finish_episode(ep1, result="success", duration=2.0)
 
-    ep2 = recorder.start_episode("pick_place", "pick_object", "arm2")
+    ep2 = recorder.start_episode("pick_place", "pick_object", "right_arm")
     recorder.record_step(ep2, "grasp", success=False, duration=1.0)
     recorder.record_recovery(ep2, "grasp_failed", "retry", True)
     recorder.finish_episode(ep2, result="recovered", duration=3.0)
 
-    ep3 = recorder.start_episode("move", "move_object", "arm1")
+    ep3 = recorder.start_episode("move", "move_object", "left_arm")
     recorder.record_step(ep3, "plan", success=True, duration=0.5)
     recorder.finish_episode(ep3, result="failure", duration=1.0)
 
@@ -73,7 +73,7 @@ class TestDatasetExporter:
             episode_id="test_ep_001",
             task_type="pick_place",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
             result="success",
             duration=2.5,
         )
@@ -188,7 +188,7 @@ class TestDatasetExporter:
             episode_id="ep_001",
             task_type="pick_place",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
         )
         ep.add_step("grasp", success=True, duration=1.0)
         ep.initial_world = WorldStateSnapshot(objects={"cube": {"pos": [0, 0, 0]}})

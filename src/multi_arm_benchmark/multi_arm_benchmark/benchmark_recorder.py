@@ -21,7 +21,7 @@ class BenchmarkRecorder:
     Usage:
         recorder = BenchmarkRecorder(db_path="/tmp/benchmark.db")
         run_id = recorder.start_run("single_arm")
-        record_id = recorder.record_task_start(run_id, "arm1", "move", "arm1:zone_a:ready")
+        record_id = recorder.record_task_start(run_id, "left_arm", "move", "left_arm:zone_a:ready")
         recorder.record_task_end(record_id, success=True, planning_time=0.5, execution_time=3.2)
         recorder.end_run(run_id)
     """

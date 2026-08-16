@@ -121,23 +121,23 @@ def launch_setup(context, *args, **kwargs):
     )
     nodes.append(jsb_spawner)
 
-    arm1_jtc_spawner = Node(
+    left_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["arm1_joint_trajectory_controller", "-c", "/controller_manager"],
+        arguments=["left_arm_joint_trajectory_controller", "-c", "/controller_manager"],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
-    arm2_jtc_spawner = Node(
+    right_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["arm2_joint_trajectory_controller", "-c", "/controller_manager"],
+        arguments=["right_arm_joint_trajectory_controller", "-c", "/controller_manager"],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=jsb_spawner, on_exit=[arm1_jtc_spawner])
+        OnProcessExit(target_action=jsb_spawner, on_exit=[left_arm_jtc_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm1_jtc_spawner, on_exit=[arm2_jtc_spawner])
+        OnProcessExit(target_action=left_arm_jtc_spawner, on_exit=[right_arm_jtc_spawner])
     ))
 
     srdf_file = os.path.join(moveit_dir, "config", "multi_arm.srdf")
@@ -203,7 +203,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[move_group_params],
     )
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm2_jtc_spawner, on_exit=[move_group])
+        OnProcessExit(target_action=right_arm_jtc_spawner, on_exit=[move_group])
     ))
 
     system_nodes = [

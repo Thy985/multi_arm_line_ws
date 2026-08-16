@@ -228,7 +228,7 @@ class RuntimeClient:
         """
         goal = TaskGoal()
         goal.action_type = task_type
-        goal.arm_name = arm_name if arm_name else "arm1"
+        goal.arm_name = arm_name if arm_name else "left_arm"
         goal.constraints = TaskConstraint()
         goal.constraints.allow_recovery = True
         goal.constraints.max_retries = 3

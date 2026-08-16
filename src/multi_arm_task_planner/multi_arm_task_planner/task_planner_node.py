@@ -200,12 +200,12 @@ class TaskPlannerNode(Node):
 
         self._bt.blackboard.set("task_id", goal.task_id)
         self._bt.blackboard.set("task_type", goal.task_type)
-        self._bt.blackboard.set("arm_name", "arm1")
+        self._bt.blackboard.set("arm_name", "left_arm")
         self._bt.blackboard.set("target_zone", "zone_a")
         self._bt.blackboard.set("target_position", "ready")
         self._bt.blackboard.set("object_id", "red_cube")
-        self._bt.blackboard.set("target_goal", "arm1:zone_a:ready")
-        self._bt.blackboard.set("place_goal", "arm1:zone_b:ready")
+        self._bt.blackboard.set("target_goal", "left_arm:zone_a:ready")
+        self._bt.blackboard.set("place_goal", "left_arm:zone_b:ready")
 
         task_goal = getattr(goal, 'goal', None)
         if task_goal is not None and task_goal.arm_name:

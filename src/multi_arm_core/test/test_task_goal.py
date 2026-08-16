@@ -19,13 +19,13 @@ class TestTaskGoalMsg:
         from multi_arm_interfaces.msg import TaskGoal
         goal = TaskGoal()
         goal.action_type = "move"
-        goal.arm_name = "arm1"
+        goal.arm_name = "left_arm"
         goal.zone_name = "zone_a"
         goal.position_name = "ready"
         goal.object_id = "red_cube"
         goal.approach = "top"
         assert goal.action_type == "move"
-        assert goal.arm_name == "arm1"
+        assert goal.arm_name == "left_arm"
         assert goal.zone_name == "zone_a"
         assert goal.position_name == "ready"
         assert goal.object_id == "red_cube"
@@ -45,7 +45,7 @@ class TestTaskGoalMsg:
         from multi_arm_interfaces.msg import TaskGoal, TaskConstraint
         goal = TaskGoal()
         goal.action_type = "pick_place"
-        goal.arm_name = "arm2"
+        goal.arm_name = "right_arm"
         goal.constraints = TaskConstraint()
         goal.constraints.max_time = 30.0
         goal.constraints.safety_level = 1
@@ -102,12 +102,12 @@ class TestMotionRequestMsg:
     def test_motion_request_named_target(self) -> None:
         from multi_arm_interfaces.msg import MotionRequest
         req = MotionRequest()
-        req.arm_name = "arm1"
+        req.arm_name = "left_arm"
         req.target_position = "ready"
         req.use_named_target = True
         req.speed_scale = 0.5
         req.collision_check = True
-        assert req.arm_name == "arm1"
+        assert req.arm_name == "left_arm"
         assert req.target_position == "ready"
         assert req.use_named_target is True
         assert req.speed_scale == 0.5
@@ -116,7 +116,7 @@ class TestMotionRequestMsg:
     def test_motion_request_joint_positions(self) -> None:
         from multi_arm_interfaces.msg import MotionRequest
         req = MotionRequest()
-        req.arm_name = "arm2"
+        req.arm_name = "right_arm"
         req.use_named_target = False
         req.joint_positions = [0.0, -1.57, 1.57, 0.0, 1.57, 0.0]
         req.speed_scale = 0.3
@@ -135,7 +135,7 @@ class TestExecuteTaskWithGoal:
         goal = ExecuteTask.Goal()
         goal.task_id = "test_001"
         goal.task_type = "move"
-        goal.description = "arm1:zone_a:ready"
+        goal.description = "left_arm:zone_a:ready"
         assert hasattr(goal, 'goal'), "ExecuteTask.Goal should have 'goal' field"
 
     def test_execute_task_with_structured_goal(self) -> None:
@@ -144,10 +144,10 @@ class TestExecuteTaskWithGoal:
         goal = ExecuteTask.Goal()
         goal.task_id = "test_002"
         goal.task_type = "pick_place"
-        goal.description = "arm2:zone_b:ready"
+        goal.description = "right_arm:zone_b:ready"
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm2"
+        task_goal.arm_name = "right_arm"
         task_goal.zone_name = "zone_b"
         task_goal.position_name = "ready"
         task_goal.object_id = "blue_box"
@@ -155,7 +155,7 @@ class TestExecuteTaskWithGoal:
         task_goal.constraints = TaskConstraint()
         task_goal.constraints.priority = 2
         goal.goal = task_goal
-        assert goal.goal.arm_name == "arm2"
+        assert goal.goal.arm_name == "right_arm"
         assert goal.goal.zone_name == "zone_b"
         assert goal.goal.object_id == "blue_box"
         assert goal.goal.constraints.priority == 2
@@ -165,8 +165,8 @@ class TestExecuteTaskWithGoal:
         goal = ExecuteTask.Goal()
         goal.task_id = "test_003"
         goal.task_type = "move"
-        goal.description = "arm1:zone_a:ready"
-        assert goal.description == "arm1:zone_a:ready"
+        goal.description = "left_arm:zone_a:ready"
+        assert goal.description == "left_arm:zone_a:ready"
 
 
 class TestCoordinatorParseTaskGoal:
@@ -176,23 +176,23 @@ class TestCoordinatorParseTaskGoal:
         from multi_arm_core.coordinator_node import CoordinatorNode
         from multi_arm_interfaces.msg import TaskGoal
         task_goal = TaskGoal()
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.zone_name = "zone_a"
         task_goal.position_name = "ready"
         arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
-        assert arm == "arm1"
+        assert arm == "left_arm"
         assert zone == "zone_a"
         assert pos == "ready"
 
-    def test_parse_task_goal_arm2(self) -> None:
+    def test_parse_task_goal_right_arm(self) -> None:
         from multi_arm_core.coordinator_node import CoordinatorNode
         from multi_arm_interfaces.msg import TaskGoal
         task_goal = TaskGoal()
-        task_goal.arm_name = "arm2"
+        task_goal.arm_name = "right_arm"
         task_goal.zone_name = "zone_b"
         task_goal.position_name = "home"
         arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
-        assert arm == "arm2"
+        assert arm == "right_arm"
         assert zone == "zone_b"
         assert pos == "home"
 
@@ -200,7 +200,7 @@ class TestCoordinatorParseTaskGoal:
         from multi_arm_core.coordinator_node import CoordinatorNode
         from multi_arm_interfaces.msg import TaskGoal
         task_goal = TaskGoal()
-        task_goal.arm_name = "arm1"
+        task_goal.arm_name = "left_arm"
         task_goal.zone_name = "zone_a"
         arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
         assert pos == "ready"
@@ -215,8 +215,8 @@ class TestCoordinatorParseTaskGoal:
 
     def test_parse_task_backward_compat(self) -> None:
         from multi_arm_core.coordinator_node import CoordinatorNode
-        arm, zone, pos = CoordinatorNode._parse_task(None, "move", "arm1:zone_a:ready")
-        assert arm == "arm1"
+        arm, zone, pos = CoordinatorNode._parse_task(None, "move", "left_arm:zone_a:ready")
+        assert arm == "left_arm"
         assert zone == "zone_a"
         assert pos == "ready"
 
@@ -225,13 +225,13 @@ class TestCoordinatorParseTaskGoal:
         from multi_arm_interfaces.msg import TaskGoal
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm2"
+        task_goal.arm_name = "right_arm"
         task_goal.zone_name = "zone_b"
         task_goal.position_name = "ready"
         task_goal.object_id = "red_cube"
         task_goal.approach = "top"
         arm, zone, pos = CoordinatorNode._parse_task_goal(None, task_goal)
-        assert arm == "arm2"
+        assert arm == "right_arm"
         assert zone == "zone_b"
         assert pos == "ready"
 
@@ -245,7 +245,7 @@ class TestTaskGoalBlackboardIntegration:
         bb = Blackboard()
         task_goal = TaskGoal()
         task_goal.action_type = "pick_place"
-        task_goal.arm_name = "arm2"
+        task_goal.arm_name = "right_arm"
         task_goal.zone_name = "zone_b"
         task_goal.position_name = "scan"
         task_goal.object_id = "blue_box"
@@ -255,7 +255,7 @@ class TestTaskGoalBlackboardIntegration:
         bb.set("target_position", task_goal.position_name)
         bb.set("object_id", task_goal.object_id)
         bb.set("approach", task_goal.approach)
-        assert bb.get("arm_name") == "arm2"
+        assert bb.get("arm_name") == "right_arm"
         assert bb.get("target_zone") == "zone_b"
         assert bb.get("target_position") == "scan"
         assert bb.get("object_id") == "blue_box"
@@ -264,10 +264,10 @@ class TestTaskGoalBlackboardIntegration:
     def test_blackboard_fallback_without_task_goal(self) -> None:
         from multi_arm_task_planner.behavior_tree import Blackboard
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("target_zone", "zone_a")
         bb.set("target_position", "ready")
         bb.set("object_id", "red_cube")
-        assert bb.get("arm_name") == "arm1"
+        assert bb.get("arm_name") == "left_arm"
         assert bb.get("target_zone") == "zone_a"
         assert bb.get("target_position") == "ready"

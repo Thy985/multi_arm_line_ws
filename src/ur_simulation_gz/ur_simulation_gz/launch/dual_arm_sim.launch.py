@@ -4,7 +4,7 @@
 # 架构：
 #   - 单一 Gazebo robot entity（dual_arm_robot.xacro）
 #   - 一个 gz_ros2_control plugin 实例
-#   - 一个 /controller_manager（不是 /arm1/cm 或 /arm2/cm）
+#   - 一个 /controller_manager（不是 /left_arm/cm 或 /right_arm/cm）
 #   - joint_state_broadcaster + left_arm_controller + right_arm_controller
 
 from launch import LaunchDescription
@@ -119,7 +119,7 @@ def launch_setup(context, *args, **kwargs):
     # ============================================================
     # Controller Manager Spawner（单一，指向 /controller_manager）
     # ============================================================
-    # 注意：-c 参数是 /controller_manager，不是 /arm1/controller_manager
+    # 注意：-c 参数是 /controller_manager，不是 /left_arm/controller_manager
     # 所有控制器（JSB + left + right）通过同一个 --param-file 加载
     cm_spawner = Node(
         package="controller_manager",

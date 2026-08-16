@@ -115,13 +115,13 @@ class TestBenchmarkRegressionIntegration:
 
             run1 = recorder.start_run("single_arm")
             for i in range(5):
-                r = recorder.record_task_start(run1, f"t{i}", "arm1", "move", "")
+                r = recorder.record_task_start(run1, f"t{i}", "left_arm", "move", "")
                 recorder.record_task_end(r, success=True, planning_time=0.5, execution_time=3.0)
             recorder.end_run(run1)
 
             run2 = recorder.start_run("single_arm")
             for i in range(5):
-                r = recorder.record_task_start(run2, f"t{i}", "arm1", "move", "")
+                r = recorder.record_task_start(run2, f"t{i}", "left_arm", "move", "")
                 recorder.record_task_end(r, success=True, planning_time=0.8, execution_time=3.5)
             recorder.end_run(run2)
 

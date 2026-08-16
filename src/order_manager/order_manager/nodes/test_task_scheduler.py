@@ -85,7 +85,7 @@ def test_task_deadline_ordering():
 def test_submit():
     """Submit adds task to scheduler."""
     tm = MockTimeManager()
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     tid = sched.submit(Task(task_id='t1', zone_name='zone_a'))
     assert tid == 't1'
@@ -98,7 +98,7 @@ def test_submit():
 def test_submit_batch():
     """Submit multiple tasks."""
     tm = MockTimeManager()
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     tasks = [
         Task(task_id='t1', zone_name='zone_a'),
@@ -113,7 +113,7 @@ def test_submit_batch():
 def test_cancel():
     """Cancel removes task from active set."""
     tm = MockTimeManager()
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     sched.submit(Task(task_id='t1', zone_name='zone_a'))
     assert sched.cancel('t1')
@@ -126,7 +126,7 @@ def test_cancel():
 def test_schedule_single_no_conflict():
     """Schedule single task to different zone — should succeed."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     plan = sched.schedule_single(
         Task(task_id='t1', zone_name='zone_a', position_name='ready')
@@ -134,13 +134,13 @@ def test_schedule_single_no_conflict():
     
     assert plan.all_scheduled, f"Should schedule successfully: {plan.summary()}"
     assert len(plan.scheduled) == 1
-    assert plan.scheduled[0].assigned_arm == 'arm1'  # first arm tried
+    assert plan.scheduled[0].assigned_arm == 'left_arm'  # first arm tried
 
 
 def test_schedule_multiple_no_conflict():
     """Schedule multiple tasks to different zones — all should succeed."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     sched.submit(Task(task_id='t1', zone_name='zone_a'))
     sched.submit(Task(task_id='t2', zone_name='zone_b'))
@@ -155,7 +155,7 @@ def test_schedule_multiple_no_conflict():
 def test_schedule_conflict_different_arms():
     """Schedule two tasks to same zone — both can go to same arm with delay (zone lock ensures safety)."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     sched.submit(Task(task_id='t1', zone_name='zone_a', duration=5.0))
     sched.submit(Task(task_id='t2', zone_name='zone_a', duration=3.0))
@@ -180,21 +180,21 @@ def test_schedule_conflict_different_arms():
 def test_schedule_conflict_same_arm():
     """Schedule two tasks to same zone with same arm — both scheduled with delay."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
-    sched.submit(Task(task_id='t1', zone_name='zone_a', preferred_arm='arm1', duration=5.0))
-    sched.submit(Task(task_id='t2', zone_name='zone_a', preferred_arm='arm1', duration=3.0))
+    sched.submit(Task(task_id='t1', zone_name='zone_a', preferred_arm='left_arm', duration=5.0))
+    sched.submit(Task(task_id='t2', zone_name='zone_a', preferred_arm='left_arm', duration=3.0))
     
     plan = sched.schedule_all()
     
-    # Both should be scheduled on arm1 with proper delays
+    # Both should be scheduled on left_arm with proper delays
     assert len(plan.scheduled) == 2, f"Expected 2 scheduled: {plan.summary()}"
     
     t1 = next(t for t in plan.scheduled if t.task_id == 't1')
     t2 = next(t for t in plan.scheduled if t.task_id == 't2')
     
-    assert t1.assigned_arm == 'arm1'
-    assert t2.assigned_arm == 'arm1'
+    assert t1.assigned_arm == 'left_arm'
+    assert t2.assigned_arm == 'left_arm'
     assert t2.start_delay >= 5.0, \
         f"t2 should be delayed >= 5s, got {t2.start_delay:.1f}s"
     
@@ -205,7 +205,7 @@ def test_schedule_conflict_same_arm():
 def test_priority_ordering_in_schedule():
     """Higher priority tasks are scheduled first."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1'])
+    sched = TaskScheduler(tm, ['left_arm'])
     
     # Submit low priority first, then high
     sched.submit(Task(task_id='low', zone_name='zone_a', priority=TaskPriority.LOW, duration=5.0))
@@ -213,7 +213,7 @@ def test_priority_ordering_in_schedule():
     
     plan = sched.schedule_all()
     
-    # High priority should be scheduled (arm1 is limited, only one gets it)
+    # High priority should be scheduled (left_arm is limited, only one gets it)
     scheduled_ids = [t.task_id for t in plan.scheduled]
     assert 'high' in scheduled_ids, f"High priority should be scheduled: {plan.summary()}"
 
@@ -221,20 +221,20 @@ def test_priority_ordering_in_schedule():
 def test_preferred_arm():
     """Task with preferred_arm goes to that arm."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm'])
     
     plan = sched.schedule_single(
-        Task(task_id='t1', zone_name='zone_a', preferred_arm='arm2')
+        Task(task_id='t1', zone_name='zone_a', preferred_arm='right_arm')
     )
     
     assert plan.all_scheduled
-    assert plan.scheduled[0].assigned_arm == 'arm2'
+    assert plan.scheduled[0].assigned_arm == 'right_arm'
 
 
 def test_custom_duration():
     """Task with custom duration overrides prediction."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1'])
+    sched = TaskScheduler(tm, ['left_arm'])
     
     plan = sched.schedule_single(
         Task(task_id='t1', zone_name='zone_a', duration=10.0)
@@ -247,7 +247,7 @@ def test_custom_duration():
 def test_clear_completed():
     """clear_completed removes old completed tasks."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1'])
+    sched = TaskScheduler(tm, ['left_arm'])
     
     sched.submit(Task(task_id='t1', zone_name='zone_a'))
     plan = sched.schedule_all()
@@ -264,7 +264,7 @@ def test_clear_completed():
 def test_empty_schedule():
     """Schedule with no pending tasks returns empty plan."""
     tm = MockTimeManager()
-    sched = TaskScheduler(tm, ['arm1'])
+    sched = TaskScheduler(tm, ['left_arm'])
     
     plan = sched.schedule_all()
     assert len(plan.scheduled) == 0
@@ -274,7 +274,7 @@ def test_empty_schedule():
 def test_plan_summary():
     """SchedulePlan summary produces readable output."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1'])
+    sched = TaskScheduler(tm, ['left_arm'])
     
     plan = sched.schedule_single(
         Task(task_id='t1', zone_name='zone_a', priority=TaskPriority.HIGH)
@@ -282,16 +282,16 @@ def test_plan_summary():
     
     summary = plan.summary()
     assert 't1' in summary
-    assert 'arm1' in summary
+    assert 'left_arm' in summary
     assert 'HIGH' in summary
 
 
 def test_arm_availability():
     """Auto-assign tries arms in order when same arm can't handle all tasks."""
     tm = MockTimeManager(start_time=100.0)
-    sched = TaskScheduler(tm, ['arm1', 'arm2', 'arm3'])
+    sched = TaskScheduler(tm, ['left_arm', 'right_arm', 'arm3'])
     
-    # All three tasks to zone_a — arm1 handles them all with delays
+    # All three tasks to zone_a — left_arm handles them all with delays
     # (zone lock ensures mutual exclusion, so no need for different arms)
     sched.submit(Task(task_id='t1', zone_name='zone_a', duration=5.0))
     sched.submit(Task(task_id='t2', zone_name='zone_a', duration=5.0))
@@ -299,7 +299,7 @@ def test_arm_availability():
     
     plan = sched.schedule_all()
     
-    # All three should be scheduled on arm1 with increasing delays
+    # All three should be scheduled on left_arm with increasing delays
     assert len(plan.scheduled) == 3, f"Expected 3 scheduled: {plan.summary()}"
     
     t1 = next(t for t in plan.scheduled if t.task_id == 't1')

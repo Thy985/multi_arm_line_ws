@@ -1,32 +1,32 @@
 robots:
-  - name: arm1
+  - name: left_arm
     type: ur5e
-    namespace: /arm1
+    namespace: /left_arm
     capabilities:
       payload_kg: 5.0
       gripper: robotiq_2f85
       precision_mm: 0.1
       reachable_zones: [zone_a, zone_b, home]
     controllers:
-      joint_trajectory: /arm1/joint_trajectory_controller
-      joint_state_broadcaster: /arm1/joint_state_broadcaster
-      gripper: /arm1/gripper_controller
+      joint_trajectory: /left_arm/joint_trajectory_controller
+      joint_state_broadcaster: /left_arm/joint_state_broadcaster
+      gripper: /left_arm/gripper_controller
     safety:
       max_velocity_scale: 1.0
       workspace_bounds: [[-0.8, 0.8], [-0.8, 0.8], [0.0, 1.2]]
 
-  - name: arm2
+  - name: right_arm
     type: ur5e
-    namespace: /arm2
+    namespace: /right_arm
     capabilities:
       payload_kg: 5.0
       gripper: robotiq_2f85
       precision_mm: 0.02
       reachable_zones: [zone_a, zone_c, home]
     controllers:
-      joint_trajectory: /arm2/joint_trajectory_controller
-      joint_state_broadcaster: /arm2/joint_state_broadcaster
-      gripper: /arm2/gripper_controller
+      joint_trajectory: /right_arm/joint_trajectory_controller
+      joint_state_broadcaster: /right_arm/joint_state_broadcaster
+      gripper: /right_arm/gripper_controller
     safety:
       max_velocity_scale: 1.0
       workspace_bounds: [[-0.8, 0.8], [-0.8, 0.8], [0.0, 1.2]]

@@ -82,7 +82,7 @@ class TestAsyncGraspNode:
 
     def test_immediate_success(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         node = AsyncGraspNode(name="grasp", blackboard=bb)
         status1 = node.tick()
         assert status1 == NodeStatus.RUNNING
@@ -101,7 +101,7 @@ class TestAsyncPlaceNode:
 
     def test_immediate_success(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("target_zone", "zone_a")
         node = AsyncPlaceNode(name="place", blackboard=bb)
         node.tick()
@@ -114,7 +114,7 @@ class TestAsyncLiftNode:
 
     def test_immediate_success(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         node = AsyncLiftNode(name="lift", blackboard=bb)
         node.tick()
         status = node.tick()
@@ -126,7 +126,7 @@ class TestAsyncRecoverNode:
 
     def test_immediate_success(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("failure_type", "planning")
         node = AsyncRecoverNode(name="recover", blackboard=bb)
         node.tick()
@@ -139,7 +139,7 @@ class TestAsyncCheckSafetyNode:
 
     def test_no_ros2_node_defaults_success(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         node = AsyncCheckSafetyNode(name="safety", blackboard=bb)
         status = node.tick()
         assert status == NodeStatus.SUCCESS
@@ -190,7 +190,7 @@ class TestAsyncMoveToNodeWithMock:
 
     def test_no_ros2_node_returns_failure(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         node = AsyncMoveToNode(name="move", blackboard=bb)
         status = node.tick()
         assert status == NodeStatus.FAILURE
@@ -214,7 +214,7 @@ class TestAsyncRetractNodeWithMock:
 
     def test_no_ros2_node_returns_failure(self):
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         node = AsyncRetractNode(name="retract", blackboard=bb)
         status = node.tick()
         assert status == NodeStatus.FAILURE

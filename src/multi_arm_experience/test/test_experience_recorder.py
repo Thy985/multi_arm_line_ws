@@ -19,12 +19,12 @@ class TestExperienceRecorder:
     def test_start_episode(self) -> None:
         """Test starting an episode."""
         recorder = ExperienceRecorder()
-        ep = recorder.start_episode("pick_place", "pick_object", "arm1")
+        ep = recorder.start_episode("pick_place", "pick_object", "left_arm")
 
         assert ep.episode_id == "episode_00001"
         assert ep.task_type == "pick_place"
         assert ep.skill_name == "pick_object"
-        assert ep.robot_id == "arm1"
+        assert ep.robot_id == "left_arm"
         assert recorder.episode_count == 1
 
     def test_start_episode_auto_increment(self) -> None:
@@ -202,7 +202,7 @@ class TestExperienceRecorder:
         ep = recorder.start_episode(
             "pick_place",
             "pick_object",
-            "arm1",
+            "left_arm",
             initial_world=initial_world,
         )
 

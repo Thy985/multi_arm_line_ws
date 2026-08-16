@@ -158,7 +158,7 @@ class TestBehaviorTreeXML:
             bt.load_xml(xml_path)
             assert bt.root is not None
 
-            bt.blackboard.set("arm_name", "arm1")
+            bt.blackboard.set("arm_name", "left_arm")
             bt.blackboard.set("target_position", "zone_a")
             bt.blackboard.set("object_id", "box1")
 
@@ -174,7 +174,7 @@ class TestPlugins:
     def test_move_to_plugin(self) -> None:
         from multi_arm_task_planner.bt_plugins.pick_place_plugins import MoveToNode
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("target_position", "zone_a")
         node = MoveToNode(name="test", blackboard=bb)
         assert node.tick() == NodeStatus.SUCCESS
@@ -182,7 +182,7 @@ class TestPlugins:
     def test_grasp_plugin(self) -> None:
         from multi_arm_task_planner.bt_plugins.pick_place_plugins import GraspNode
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("object_id", "box1")
         node = GraspNode(name="test", blackboard=bb)
         assert node.tick() == NodeStatus.SUCCESS
@@ -190,7 +190,7 @@ class TestPlugins:
     def test_place_plugin(self) -> None:
         from multi_arm_task_planner.bt_plugins.pick_place_plugins import PlaceNode
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("target_zone", "zone_b")
         node = PlaceNode(name="test", blackboard=bb)
         assert node.tick() == NodeStatus.SUCCESS
@@ -198,7 +198,7 @@ class TestPlugins:
     def test_check_safety_plugin(self) -> None:
         from multi_arm_task_planner.bt_plugins.pick_place_plugins import CheckSafetyNode
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("safety_approved", True)
         node = CheckSafetyNode(name="test", blackboard=bb)
         assert node.tick() == NodeStatus.SUCCESS
@@ -206,7 +206,7 @@ class TestPlugins:
     def test_check_safety_rejects(self) -> None:
         from multi_arm_task_planner.bt_plugins.pick_place_plugins import CheckSafetyNode
         bb = Blackboard()
-        bb.set("arm_name", "arm1")
+        bb.set("arm_name", "left_arm")
         bb.set("safety_approved", False)
         node = CheckSafetyNode(name="test", blackboard=bb)
         assert node.tick() == NodeStatus.FAILURE

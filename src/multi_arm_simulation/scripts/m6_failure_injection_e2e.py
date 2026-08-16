@@ -184,7 +184,7 @@ class M6FailureInjectionE2E(Node):
 
         result = self._send_task(
             task_id="fail_inject_planning",
-            arm_name="arm1",
+            arm_name="left_arm",
             zone_name="zone_invalid",
             position_name="unreachable_pose",
             timeout=30.0,
@@ -224,7 +224,7 @@ class M6FailureInjectionE2E(Node):
             return {"scenario": 2, "success": False, "reason": "safety_service_unavailable"}
 
         request = SafetyCheck.Request()
-        request.arm_names = ["arm1"]
+        request.arm_names = ["left_arm"]
         request.trajectory_joint_names = []
         request.trajectory_positions = []
         request.trajectory_duration = 3.0
@@ -280,7 +280,7 @@ class M6FailureInjectionE2E(Node):
 
         task_result = self._send_task(
             task_id="fail_inject_estop",
-            arm_name="arm1",
+            arm_name="left_arm",
             zone_name="zone_a",
             position_name="ready",
             timeout=10.0,
@@ -321,7 +321,7 @@ class M6FailureInjectionE2E(Node):
 
         result = self._send_task(
             task_id="recovery_after_failure",
-            arm_name="arm1",
+            arm_name="left_arm",
             zone_name="zone_a",
             position_name="ready",
             timeout=30.0,

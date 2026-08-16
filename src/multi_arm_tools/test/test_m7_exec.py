@@ -44,7 +44,7 @@ class TestM7Exec001SingleSkill:
         """`robot run move ready` returns Success=True."""
         print("\n  [Test] robot run move ready --no-trace...")
         result = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=120.0,
         )
         print(f"  stdout:\n{result.stdout[:500]}")
@@ -53,17 +53,17 @@ class TestM7Exec001SingleSkill:
         assert "1/1" in result.stdout
         print("  ✓ move task succeeded!")
 
-    def test_move_task_arm2_succeeds(self) -> None:
-        """`robot run move ready --arm arm2` returns Success=True."""
-        print("\n  [Test] robot run move ready --arm arm2...")
+    def test_move_task_right_arm_succeeds(self) -> None:
+        """`robot run move ready --arm right_arm` returns Success=True."""
+        print("\n  [Test] robot run move ready --arm right_arm...")
         result = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm2", "--no-trace"],
+            ["run", "move", "ready", "--arm", "right_arm", "--no-trace"],
             timeout=120.0,
         )
         print(f"  stdout:\n{result.stdout[:500]}")
         assert result.returncode == 0
         assert "Success: True" in result.stdout, f"Task failed: {result.stdout}"
-        print("  ✓ arm2 move task succeeded!")
+        print("  ✓ right_arm move task succeeded!")
 
 
 class TestM7Exec002CombinedTask:
@@ -94,7 +94,7 @@ class TestM7Exec002CombinedTask:
         """Two sequential move tasks both succeed."""
         print("\n  [Test] Sequential move tasks...")
         r1 = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         assert r1.returncode == 0
@@ -102,7 +102,7 @@ class TestM7Exec002CombinedTask:
         print("  ✓ first move succeeded")
 
         r2 = robot_cli_with_retry(
-            ["run", "move", "home", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "home", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         assert r2.returncode == 0
@@ -128,7 +128,7 @@ class TestM7Exec003Recovery:
         """Invalid target fails without crashing."""
         print("\n  [Test] robot run move invalid_position...")
         result = robot_cli(
-            ["run", "move", "nonexistent_position", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "nonexistent_position", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         print(f"  stdout:\n{result.stdout[:500]}")
@@ -142,7 +142,7 @@ class TestM7Exec003Recovery:
             timeout=60.0,
         )
         result = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         print(f"  retry stdout:\n{result.stdout[:500]}")

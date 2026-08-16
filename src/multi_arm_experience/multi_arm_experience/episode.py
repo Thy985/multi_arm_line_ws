@@ -87,7 +87,7 @@ class Episode:
         episode_id: Unique identifier (episode_00001 format).
         task_type: Type of task ("pick_place", "move", etc).
         skill_name: Name of skill executed.
-        robot_id: Robot identifier ("embodied_robot", "arm1", etc).
+        robot_id: Robot identifier ("embodied_robot", "left_arm", etc).
         initial_world: World state before execution.
         final_world: World state after execution.
         execution_steps: Ordered list of skill trace steps.

@@ -7,7 +7,7 @@ verifies the full chain:
 
 Verification steps:
     1. WorldModel receives object poses from Gazebo (QueryWorld service)
-    2. Send ExecuteTask to Coordinator (arm1 move to ready)
+    2. Send ExecuteTask to Coordinator (left_arm move to ready)
     3. Task executes successfully (real Gazebo motion)
     4. Robot joint positions changed from home
     5. WorldModel caches robot state from /joint_states
@@ -121,8 +121,8 @@ class M6PickPlaceSimE2E(Node):
     def get_initial_joint_positions(self) -> dict[str, float]:
         """Capture initial joint positions before task."""
         rclpy.spin_once(self, timeout_sec=1.0)
-        arm1_joints = {k: v for k, v in self._js_data.items() if "arm1" in k}
-        self.get_logger().info(f"  Initial arm1 joints: {arm1_joints}")
+        left_arm_joints = {k: v for k, v in self._js_data.items() if "left_arm" in k}
+        self.get_logger().info(f"  Initial left_arm joints: {left_arm_joints}")
         return dict(self._js_data)
 
     def execute_task(self, arm_name: str, position_name: str) -> dict:
@@ -218,8 +218,8 @@ class M6PickPlaceSimE2E(Node):
         time.sleep(3.0)
         rclpy.spin_once(self, timeout_sec=1.0)
 
-        final_arm1 = {k: v for k, v in self._js_data.items() if arm_name in k}
-        self.get_logger().info(f"  Final {arm_name} joints: {final_arm1}")
+        final_left_arm = {k: v for k, v in self._js_data.items() if arm_name in k}
+        self.get_logger().info(f"  Final {arm_name} joints: {final_left_arm}")
 
         moved_joints = []
         max_delta = 0.0
@@ -405,10 +405,10 @@ class M6PickPlaceSimE2E(Node):
             f"Initial joints: {len(initial_joints)} captured"
         )
 
-        results["task_execution"] = self.execute_task("arm1", "ready")
+        results["task_execution"] = self.execute_task("left_arm", "ready")
 
         results["robot_moved"] = self.verify_robot_moved(
-            initial_joints, "arm1"
+            initial_joints, "left_arm"
         )
 
         if not results["robot_moved"]["success"]:
@@ -418,7 +418,7 @@ class M6PickPlaceSimE2E(Node):
             from multi_arm_core.robot_constants import PRESET_POSITIONS
 
             ready_pos = PRESET_POSITIONS["ready"]
-            jtc_result = self.send_direct_jtc_trajectory("arm1", ready_pos)
+            jtc_result = self.send_direct_jtc_trajectory("left_arm", ready_pos)
 
             time.sleep(5.0)
             rclpy.spin_once(self, timeout_sec=1.0)
@@ -426,7 +426,7 @@ class M6PickPlaceSimE2E(Node):
             moved_joints = []
             max_delta = 0.0
             for jname, initial_val in initial_joints.items():
-                if "arm1" in jname:
+                if "left_arm" in jname:
                     current_val = self._js_data.get(jname)
                     if current_val is not None:
                         delta = abs(current_val - initial_val)

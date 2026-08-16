@@ -94,26 +94,26 @@ def main():
         rclpy.shutdown()
         sys.exit(1)
 
-    arm1_home = {
-        "arm1_shoulder_pan_joint": 0.0, "arm1_shoulder_lift_joint": 0.0,
-        "arm1_elbow_joint": 0.0, "arm1_wrist_1_joint": 0.0,
-        "arm1_wrist_2_joint": 0.0, "arm1_wrist_3_joint": 0.0,
+    left_arm_home = {
+        "left_arm_shoulder_pan_joint": 0.0, "left_arm_shoulder_lift_joint": 0.0,
+        "left_arm_elbow_joint": 0.0, "left_arm_wrist_1_joint": 0.0,
+        "left_arm_wrist_2_joint": 0.0, "left_arm_wrist_3_joint": 0.0,
     }
-    arm2_home = {
-        "arm2_shoulder_pan_joint": 0.0, "arm2_shoulder_lift_joint": 0.0,
-        "arm2_elbow_joint": 0.0, "arm2_wrist_1_joint": 0.0,
-        "arm2_wrist_2_joint": 0.0, "arm2_wrist_3_joint": 0.0,
+    right_arm_home = {
+        "right_arm_shoulder_pan_joint": 0.0, "right_arm_shoulder_lift_joint": 0.0,
+        "right_arm_elbow_joint": 0.0, "right_arm_wrist_1_joint": 0.0,
+        "right_arm_wrist_2_joint": 0.0, "right_arm_wrist_3_joint": 0.0,
     }
 
-    ok, msg = node.plan_only("arm1", arm1_home)
-    results["2.1_arm1_plan"] = "PASS" if ok else "FAIL"
-    node.get_logger().info(f"arm1 plan: {msg}")
+    ok, msg = node.plan_only("left_arm", left_arm_home)
+    results["2.1_left_arm_plan"] = "PASS" if ok else "FAIL"
+    node.get_logger().info(f"left_arm plan: {msg}")
 
-    ok2, msg2 = node.plan_only("arm2", arm2_home)
-    results["2.2_arm2_plan"] = "PASS" if ok2 else "FAIL"
-    node.get_logger().info(f"arm2 plan: {msg2}")
+    ok2, msg2 = node.plan_only("right_arm", right_arm_home)
+    results["2.2_right_arm_plan"] = "PASS" if ok2 else "FAIL"
+    node.get_logger().info(f"right_arm plan: {msg2}")
 
-    dual_home = {**arm1_home, **arm2_home}
+    dual_home = {**left_arm_home, **right_arm_home}
     ok3, msg3 = node.plan_only("dual_arm", dual_home)
     results["2.3_dual_arm_plan"] = "PASS" if ok3 else "FAIL"
     node.get_logger().info(f"dual_arm plan: {msg3}")
@@ -124,14 +124,14 @@ def main():
         from multi_arm_interfaces.srv import SafetyCheck, ResourceRequest
         ok_s, msg_s = node.check_service(
             SafetyCheck, "/safety/safety_check",
-            SafetyCheck.Request(arm_id="arm1", velocity_scale=0.5)
+            SafetyCheck.Request(arm_id="left_arm", velocity_scale=0.5)
         )
         results["3.1_safety_check"] = "PASS" if ok_s else "FAIL"
         node.get_logger().info(f"SafetyCheck: {msg_s}")
 
         ok_r, msg_r = node.check_service(
             ResourceRequest, "/coordinator/resource_request",
-            ResourceRequest.Request(arm_id="arm1", resource_id="zone_a", action="acquire")
+            ResourceRequest.Request(arm_id="left_arm", resource_id="zone_a", action="acquire")
         )
         results["3.2_resource_request"] = "PASS" if ok_r else "FAIL"
         node.get_logger().info(f"ResourceRequest: {msg_r}")

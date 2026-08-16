@@ -2,7 +2,7 @@
 
 Tests whether the BT + Coordinator + MoveIt pipeline generalizes
 across different objects, locations, and approaches, not just
-hardcoded "arm1:zone_a:ready".
+hardcoded "left_arm:zone_a:ready".
 """
 
 import random
@@ -21,7 +21,7 @@ ZONES: List[str] = ["zone_a", "zone_b", "zone_c"]
 
 POSITIONS: List[str] = ["home", "ready", "scan", "inspect", "place_high", "place_low"]
 
-ARMS: List[str] = ["arm1", "arm2"]
+ARMS: List[str] = ["left_arm", "right_arm"]
 
 APPROACHES: List[str] = ["top", "side", "front"]
 
@@ -35,7 +35,7 @@ class RandomTaskGenerator:
         gen = RandomTaskGenerator(seed=42)
         for _ in range(100):
             task = gen.generate()
-            # task = {"arm_name": "arm2", "action_type": "pick_place", ...}
+            # task = {"arm_name": "right_arm", "action_type": "pick_place", ...}
     """
 
     def __init__(self, seed: Optional[int] = None) -> None:
@@ -98,7 +98,7 @@ class RandomTaskGenerator:
             "object_type": "",
             "approach": "top",
             "place_zone": "",
-            "description": "arm1:zone_invalid:unreachable_pose",
+            "description": "left_arm:zone_invalid:unreachable_pose",
             "timeout": 10.0,
             "inject_failure": "planning_failure",
         }
@@ -119,7 +119,7 @@ class RandomTaskGenerator:
             "object_type": "",
             "approach": "top",
             "place_zone": "",
-            "description": f"arm1:{self._rng.choice(ZONES)}:ready",
+            "description": f"left_arm:{self._rng.choice(ZONES)}:ready",
             "timeout": 10.0,
             "inject_failure": "safety_violation",
             "velocity_scale": 2.0,

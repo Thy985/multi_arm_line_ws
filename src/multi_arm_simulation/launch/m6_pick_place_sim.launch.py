@@ -151,41 +151,41 @@ def launch_setup(context, *args, **kwargs):
     )
     nodes.append(jsb_spawner)
 
-    arm1_jtc_spawner = Node(
+    left_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm1_joint_trajectory_controller",
+            "left_arm_joint_trajectory_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
 
-    arm2_jtc_spawner = Node(
+    right_arm_jtc_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm2_joint_trajectory_controller",
+            "right_arm_joint_trajectory_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
 
-    arm1_gripper_spawner = Node(
+    left_arm_gripper_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm1_gripper_controller",
+            "left_arm_gripper_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
     )
 
-    arm2_gripper_spawner = Node(
+    right_arm_gripper_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "arm2_gripper_controller",
+            "right_arm_gripper_controller",
             "-c", "/controller_manager",
         ],
         parameters=[ParameterFile(controllers_config, allow_substs=True)],
@@ -212,19 +212,19 @@ def launch_setup(context, *args, **kwargs):
     )
 
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=jsb_spawner, on_exit=[arm1_jtc_spawner])
+        OnProcessExit(target_action=jsb_spawner, on_exit=[left_arm_jtc_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm1_jtc_spawner, on_exit=[arm2_jtc_spawner])
+        OnProcessExit(target_action=left_arm_jtc_spawner, on_exit=[right_arm_jtc_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm2_jtc_spawner, on_exit=[arm1_gripper_spawner])
+        OnProcessExit(target_action=right_arm_jtc_spawner, on_exit=[left_arm_gripper_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm1_gripper_spawner, on_exit=[arm2_gripper_spawner])
+        OnProcessExit(target_action=left_arm_gripper_spawner, on_exit=[right_arm_gripper_spawner])
     ))
     nodes.append(RegisterEventHandler(
-        OnProcessExit(target_action=arm2_gripper_spawner, on_exit=[torso_spawner])
+        OnProcessExit(target_action=right_arm_gripper_spawner, on_exit=[torso_spawner])
     ))
     nodes.append(RegisterEventHandler(
         OnProcessExit(target_action=torso_spawner, on_exit=[head_spawner])
@@ -438,7 +438,7 @@ def generate_launch_description():
     declared.append(DeclareLaunchArgument("ur_type", default_value="ur5e"))
     declared.append(DeclareLaunchArgument("gazebo_gui", default_value="false"))
     declared.append(DeclareLaunchArgument(
-        "safety_arm_names", default_value="arm1,arm2",
+        "safety_arm_names", default_value="left_arm,right_arm",
         description="Comma-separated arm names for SafetySupervisor to monitor",
     ))
     return LaunchDescription(declared + [OpaqueFunction(function=launch_setup)])

@@ -73,7 +73,7 @@ class TestM7IntLevel1SingleSkill:
         """`robot run move ready` executes a move task via Runtime API."""
         print("\n  [Test] robot run move ready --no-trace...")
         result = robot_cli(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=120.0,
         )
         print(f"  exit: {result.returncode}")

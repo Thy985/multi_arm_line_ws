@@ -48,7 +48,7 @@ class TestM7IntLevel3FailureRecovery:
         """Task with unreachable position returns result."""
         print("\n  [Test] robot run move unreachable_pos...")
         result = robot_cli(
-            ["run", "move", "nonexistent_position", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "nonexistent_position", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         print(f"  exit: {result.returncode}")

@@ -5,7 +5,7 @@ after execution captures final world, during execution records steps.
 
 Usage:
     recorder = ExperienceRecorder()
-    episode = recorder.start_episode("pick_place", "pick_object", "arm1")
+    episode = recorder.start_episode("pick_place", "pick_object", "left_arm")
 
     recorder.record_step(episode, "perceive", success=True)
     recorder.record_step(episode, "grasp", success=True)

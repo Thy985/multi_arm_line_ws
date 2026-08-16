@@ -1,9 +1,9 @@
 """Single-arm M4.1 validation launch with namespace support.
 
 Starts single UR5e in Gazebo with:
-- /arm1 namespace for robot_state_publisher
-- /arm1/joint_states (namespaced JSB)
-- /arm1/joint_trajectory_controller (namespaced JTC)
+- /left_arm namespace for robot_state_publisher
+- /left_arm/joint_states (namespaced JSB)
+- /left_arm/joint_trajectory_controller (namespaced JTC)
 - WorldModel node
 - SafetySupervisor node
 
@@ -42,8 +42,8 @@ def launch_setup(context, *args, **kwargs):
         "multi_arm_moveit_config"
     )
 
-    arm_name = "arm1"
-    prefix = "arm1_"
+    arm_name = "left_arm"
+    prefix = "left_arm_"
 
     controllers_config = PathJoinSubstitution(
         [FindPackageShare("ur_simulation_gz"), "config", f"{arm_name}_controllers.yaml"]

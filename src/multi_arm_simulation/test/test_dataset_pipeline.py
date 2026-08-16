@@ -25,7 +25,7 @@ class TestDatasetPipeline:
 
     def test_record_sample(self, pipeline: DatasetPipeline) -> None:
         sample_id = pipeline.record_sample(
-            joint_states={"arm1": [0.0, -1.57, 1.57, 0.0, 0.0, 0.0]},
+            joint_states={"left_arm": [0.0, -1.57, 1.57, 0.0, 0.0, 0.0]},
             scene_name="test",
         )
         assert sample_id == 0
@@ -88,7 +88,7 @@ class TestDataSample:
         sample = DataSample(
             sample_id=0,
             timestamp=1.0,
-            joint_states={"arm1": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]},
+            joint_states={"left_arm": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]},
         )
         d = sample.to_dict()
         assert d["sample_id"] == 0

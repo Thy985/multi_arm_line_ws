@@ -43,11 +43,11 @@ class TestCachedRobotState:
     """Tests for CachedRobotState."""
 
     def test_default_stale_check(self) -> None:
-        state = CachedRobotState(arm_name="arm1", last_updated=time.time())
+        state = CachedRobotState(arm_name="left_arm", last_updated=time.time())
         assert not state.is_stale()
 
     def test_stale_state(self) -> None:
-        state = CachedRobotState(arm_name="arm1", last_updated=time.time() - 2.0)
+        state = CachedRobotState(arm_name="left_arm", last_updated=time.time() - 2.0)
         assert state.is_stale(max_age=1.0)
 
 
@@ -97,17 +97,17 @@ class TestStateDatabase:
 
     def test_robot_state_cache(self) -> None:
         db = StateDatabase()
-        db.update_robot_state("arm1", [0.0] * 6, [0.1] * 6)
-        state = db.get_robot_state("arm1")
+        db.update_robot_state("left_arm", [0.0] * 6, [0.1] * 6)
+        state = db.get_robot_state("left_arm")
         assert state is not None
-        assert state.arm_name == "arm1"
+        assert state.arm_name == "left_arm"
         assert not state.is_stale()
 
     def test_ownership_boundary(self) -> None:
         """Verify 500Hz joint_states do NOT enter WorldModel."""
         db = StateDatabase()
-        db.update_robot_state("arm1", [0.0] * 6)
-        state = db.get_robot_state("arm1")
+        db.update_robot_state("left_arm", [0.0] * 6)
+        state = db.get_robot_state("left_arm")
         assert state is not None
         assert state.last_updated > 0
         assert not state.is_stale(max_age=1.0)
@@ -122,7 +122,7 @@ class TestStateDatabase:
 
     def test_get_all_robot_states(self) -> None:
         db = StateDatabase()
-        db.update_robot_state("arm1", [0.0] * 6)
-        db.update_robot_state("arm2", [1.0] * 6)
+        db.update_robot_state("left_arm", [0.0] * 6)
+        db.update_robot_state("right_arm", [1.0] * 6)
         states = db.get_all_robot_states()
         assert len(states) == 2

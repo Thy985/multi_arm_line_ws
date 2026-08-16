@@ -52,7 +52,7 @@ class M46TaskLoopTest(Node):
             rclpy.spin_once(self, timeout_sec=0.1)
         return future.done()
 
-    def test_coordinator_execute_task(self, arm_name="arm1", position="ready"):
+    def test_coordinator_execute_task(self, arm_name="left_arm", position="ready"):
         """Test Coordinator ExecuteTask action."""
         from multi_arm_interfaces.action import ExecuteTask
 
@@ -112,7 +112,7 @@ class M46TaskLoopTest(Node):
             return True, "service_skipped"
 
         request = SafetyCheck.Request()
-        request.arm_names = ["arm1"]
+        request.arm_names = ["left_arm"]
         request.trajectory_joint_names = []
         request.trajectory_positions = []
         request.trajectory_duration = 3.0
@@ -170,7 +170,7 @@ class M46TaskLoopTest(Node):
         goal = ExecuteTask.Goal()
         goal.task_id = f"m46_pick_{time.time():.0f}"
         goal.task_type = "pick_place"
-        goal.description = "arm1:zone_a:ready"
+        goal.description = "left_arm:zone_a:ready"
 
         self.get_logger().info(f"Sending TaskPlanner ExecuteTask: {goal.task_type}")
 
@@ -242,38 +242,38 @@ def main():
     results["3.1_world_model_query"] = "PASS" if ok else "FAIL"
     node.get_logger().info(f"WorldModel: {msg}")
 
-    arm1_ready = {
-        "arm1_shoulder_pan_joint": 0.0,
-        "arm1_shoulder_lift_joint": -1.57,
-        "arm1_elbow_joint": 1.57,
-        "arm1_wrist_1_joint": 0.0,
-        "arm1_wrist_2_joint": 0.0,
-        "arm1_wrist_3_joint": 0.0,
+    left_arm_ready = {
+        "left_arm_shoulder_pan_joint": 0.0,
+        "left_arm_shoulder_lift_joint": -1.57,
+        "left_arm_elbow_joint": 1.57,
+        "left_arm_wrist_1_joint": 0.0,
+        "left_arm_wrist_2_joint": 0.0,
+        "left_arm_wrist_3_joint": 0.0,
     }
 
-    ok, msg = node.test_coordinator_execute_task("arm1", "ready")
+    ok, msg = node.test_coordinator_execute_task("left_arm", "ready")
     results["4.1_coordinator_move"] = "PASS" if ok else "FAIL"
     node.get_logger().info(f"Coordinator move: {msg}")
 
     if ok:
-        vok = node.verify_position(arm1_ready)
+        vok = node.verify_position(left_arm_ready)
         results["4.2_position_verify"] = "PASS" if vok else "FAIL"
 
-    arm1_home = {
-        "arm1_shoulder_pan_joint": 0.0,
-        "arm1_shoulder_lift_joint": 0.0,
-        "arm1_elbow_joint": 0.0,
-        "arm1_wrist_1_joint": 0.0,
-        "arm1_wrist_2_joint": 0.0,
-        "arm1_wrist_3_joint": 0.0,
+    left_arm_home = {
+        "left_arm_shoulder_pan_joint": 0.0,
+        "left_arm_shoulder_lift_joint": 0.0,
+        "left_arm_elbow_joint": 0.0,
+        "left_arm_wrist_1_joint": 0.0,
+        "left_arm_wrist_2_joint": 0.0,
+        "left_arm_wrist_3_joint": 0.0,
     }
 
-    ok, msg = node.test_coordinator_execute_task("arm1", "home")
+    ok, msg = node.test_coordinator_execute_task("left_arm", "home")
     results["4.3_coordinator_home"] = "PASS" if ok else "FAIL"
     node.get_logger().info(f"Coordinator home: {msg}")
 
     if ok:
-        vok = node.verify_position(arm1_home)
+        vok = node.verify_position(left_arm_home)
         results["4.4_home_verify"] = "PASS" if vok else "FAIL"
 
     ok, msg = node.test_task_planner_execute()

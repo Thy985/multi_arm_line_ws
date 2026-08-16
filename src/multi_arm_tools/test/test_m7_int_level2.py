@@ -69,12 +69,12 @@ class TestM7IntLevel2CombinedSkill:
         """Sequential tasks: move ready then pick red_cube."""
         print("\n  [Test] Sequential: move ready + pick red_cube...")
         r1 = robot_cli(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         assert r1.returncode == 0
         r2 = robot_cli(
-            ["run", "pick", "red_cube", "--arm", "arm1", "--no-trace"],
+            ["run", "pick", "red_cube", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         assert r2.returncode == 0

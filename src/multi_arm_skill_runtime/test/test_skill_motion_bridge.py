@@ -24,14 +24,14 @@ class TestExtractExecutionParams:
     def test_prefers_structured_task_goal(self) -> None:
         """A populated TaskGoal takes precedence over string params."""
         task_goal = SimpleNamespace(
-            arm_name="arm2",
+            arm_name="right_arm",
             zone_name="zone_b",
             position_name="place_low",
             object_id="blue_box",
             action_type="place",
         )
-        params = extract_execution_params(task_goal, ("arm1", "zone_a"))
-        assert params["arm_name"] == "arm2"
+        params = extract_execution_params(task_goal, ("left_arm", "zone_a"))
+        assert params["arm_name"] == "right_arm"
         assert params["zone_name"] == "zone_b"
         assert params["position_name"] == "place_low"
         assert params["object_id"] == "blue_box"
@@ -41,16 +41,16 @@ class TestExtractExecutionParams:
         """An unpopulated TaskGoal falls back to the legacy string protocol."""
         empty = SimpleNamespace(arm_name="", zone_name="", position_name="",
                                 object_id="", action_type="")
-        params = extract_execution_params(empty, ("arm1:zone_a:ready:red_cube",))
-        assert params["arm_name"] == "arm1"
+        params = extract_execution_params(empty, ("left_arm:zone_a:ready:red_cube",))
+        assert params["arm_name"] == "left_arm"
         assert params["zone_name"] == "zone_a"
         assert params["position_name"] == "ready"
         assert params["object_id"] == "red_cube"
 
     def test_string_params_multiple_elements(self) -> None:
         """String list with 3 elements maps arm/zone/position."""
-        params = extract_execution_params(None, ("arm1", "zone_a", "scan"))
-        assert params["arm_name"] == "arm1"
+        params = extract_execution_params(None, ("left_arm", "zone_a", "scan"))
+        assert params["arm_name"] == "left_arm"
         assert params["zone_name"] == "zone_a"
         assert params["position_name"] == "scan"
 
@@ -66,21 +66,21 @@ class TestNormalizeTarget:
 
     def test_fills_default_position_by_skill(self) -> None:
         """Missing position is filled from the skill default."""
-        out = normalize_target({"arm_name": "arm1"}, "pick_object")
+        out = normalize_target({"arm_name": "left_arm"}, "pick_object")
         assert out["position_name"] == SKILL_DEFAULT_POSITION["pick_object"]
 
     def test_fills_default_arm(self) -> None:
-        """Missing arm defaults to arm1."""
+        """Missing arm defaults to left_arm."""
         out = normalize_target({}, "move_object")
-        assert out["arm_name"] == "arm1"
+        assert out["arm_name"] == "left_arm"
         assert out["position_name"] == SKILL_DEFAULT_POSITION["move_object"]
 
     def test_preserves_explicit_target(self) -> None:
         """Explicit values are never overwritten."""
         out = normalize_target(
-            {"arm_name": "arm2", "position_name": "home"}, "place_object"
+            {"arm_name": "right_arm", "position_name": "home"}, "place_object"
         )
-        assert out["arm_name"] == "arm2"
+        assert out["arm_name"] == "right_arm"
         assert out["position_name"] == "home"
 
 
@@ -91,7 +91,7 @@ class TestBuildTaskGoal:
         """Normalized dict maps onto TaskGoal fields."""
         params = normalize_target(
             {
-                "arm_name": "arm2",
+                "arm_name": "right_arm",
                 "zone_name": "zone_b",
                 "position_name": "place_low",
                 "object_id": "blue_box",
@@ -101,7 +101,7 @@ class TestBuildTaskGoal:
             "place_object",
         )
         goal = build_task_goal(params)
-        assert goal.arm_name == "arm2"
+        assert goal.arm_name == "right_arm"
         assert goal.zone_name == "zone_b"
         assert goal.position_name == "place_low"
         assert goal.object_id == "blue_box"
@@ -114,7 +114,7 @@ class TestBuildTaskGoal:
         In the real flow extract_execution_params never emits an ``approach``
         key, so build_task_goal's ``get("approach", "top")`` resolves to "top".
         """
-        params = normalize_target({"arm_name": "arm1"}, "pick_object")
+        params = normalize_target({"arm_name": "left_arm"}, "pick_object")
         assert "approach" not in params
         goal = build_task_goal(params)
         assert goal.approach == "top"

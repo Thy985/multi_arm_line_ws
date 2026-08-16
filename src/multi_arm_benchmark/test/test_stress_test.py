@@ -16,7 +16,7 @@ class TestRandomTaskGenerator:
         from multi_arm_benchmark.random_task_generator import RandomTaskGenerator
         gen = RandomTaskGenerator(seed=42)
         task = gen.generate()
-        assert task["arm_name"] in ["arm1", "arm2"]
+        assert task["arm_name"] in ["left_arm", "right_arm"]
         assert task["action_type"] in ["move", "pick_place", "inspect"]
         assert task["zone_name"] in ["zone_a", "zone_b", "zone_c"]
         assert task["object_id"] != ""
@@ -107,8 +107,8 @@ class TestRandomTaskGenerator:
         gen = RandomTaskGenerator(seed=42)
         tasks = gen.generate_batch(100)
         arms = {t["arm_name"] for t in tasks}
-        assert "arm1" in arms
-        assert "arm2" in arms
+        assert "left_arm" in arms
+        assert "right_arm" in arms
 
 
 class TestFailureInjector:

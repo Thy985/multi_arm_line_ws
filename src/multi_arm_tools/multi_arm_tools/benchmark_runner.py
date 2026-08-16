@@ -36,7 +36,7 @@ class BenchmarkRunner:
             self._print_progress(i, count)
 
             start_time = time.time()
-            result = self._client.submit_task(task_type, [], "arm1")
+            result = self._client.submit_task(task_type, [], "left_arm")
             elapsed = time.time() - start_time
 
             if result is not None and result.success:

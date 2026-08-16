@@ -5,28 +5,28 @@ repetitions: 10
 tasks:
   - task_id: pick_place_a
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     zone_name: zone_a
     object_id: red_cube
     approach: top
     timeout: 60.0
   - task_id: pick_place_b
     action_type: pick_place
-    arm_name: arm1
+    arm_name: left_arm
     zone_name: zone_b
     object_id: blue_cylinder
     approach: side
     timeout: 60.0
   - task_id: pick_place_c
     action_type: pick_place
-    arm_name: arm2
+    arm_name: right_arm
     zone_name: zone_c
     object_id: green_box
     approach: top
     timeout: 60.0
   - task_id: inspect
     action_type: move
-    arm_name: arm1
+    arm_name: left_arm
     zone_name: zone_a
     position_name: ready
     timeout: 15.0

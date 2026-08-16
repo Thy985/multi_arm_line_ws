@@ -177,7 +177,7 @@ class TestFinalPurePython:
         episode = recorder.start_episode(
             task_type="pick_place",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
             initial_world=initial_world,
         )
 
@@ -486,7 +486,7 @@ class TestFinalFullStackExecution:
         Task fails → Episode recorded → FailureAnalyzer → adjustment → retry.
         """
         r1 = robot_cli(
-            ["run", "move", "nonexistent_position", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "nonexistent_position", "--arm", "left_arm", "--no-trace"],
             timeout=60.0,
         )
         print(f"  Step 1: Invalid task returncode={r1.returncode}")
@@ -506,14 +506,14 @@ class TestFinalFullStackExecution:
         print(f"  Step 2: Analysis → {suggestion.failure_type} → {suggestion.adjustment_key}={suggestion.adjustment_value}")
 
         adjusted = analyzer.apply(
-            {"position": "nonexistent_position", "arm": "arm1"},
+            {"position": "nonexistent_position", "arm": "left_arm"},
             suggestion,
         )
         assert adjusted["position"] == suggestion.adjustment_value
         print(f"  Step 3: Adjusted params: {adjusted}")
 
         r2 = robot_cli_with_retry(
-            ["run", "move", adjusted["position"], "--arm", "arm1", "--no-trace"],
+            ["run", "move", adjusted["position"], "--arm", "left_arm", "--no-trace"],
             timeout=120.0,
         )
         assert "Success: True" in r2.stdout, f"Retry failed: {r2.stdout[:300]}"
@@ -528,7 +528,7 @@ class TestFinalFullStackExecution:
         )
 
         result = robot_cli_with_retry(
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
             timeout=120.0,
         )
         assert "Success: True" in result.stdout, f"Retry failed: {result.stdout[:300]}"
@@ -540,16 +540,16 @@ class TestFinalFullStackExecution:
         Verifies: success rate, episode integrity, WorldModel consistency.
         """
         tasks = [
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
-            ["run", "move", "home", "--arm", "arm1", "--no-trace"],
-            ["run", "move", "ready", "--arm", "arm2", "--no-trace"],
-            ["run", "move", "home", "--arm", "arm2", "--no-trace"],
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
-            ["run", "move", "home", "--arm", "arm1", "--no-trace"],
-            ["run", "move", "ready", "--arm", "arm2", "--no-trace"],
-            ["run", "move", "home", "--arm", "arm2", "--no-trace"],
-            ["run", "move", "ready", "--arm", "arm1", "--no-trace"],
-            ["run", "move", "home", "--arm", "arm1", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
+            ["run", "move", "home", "--arm", "left_arm", "--no-trace"],
+            ["run", "move", "ready", "--arm", "right_arm", "--no-trace"],
+            ["run", "move", "home", "--arm", "right_arm", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
+            ["run", "move", "home", "--arm", "left_arm", "--no-trace"],
+            ["run", "move", "ready", "--arm", "right_arm", "--no-trace"],
+            ["run", "move", "home", "--arm", "right_arm", "--no-trace"],
+            ["run", "move", "ready", "--arm", "left_arm", "--no-trace"],
+            ["run", "move", "home", "--arm", "left_arm", "--no-trace"],
         ]
 
         successes = 0
@@ -695,7 +695,7 @@ class TestFinalFullStackPerception:
         safety_result = run_cmd(
             ["ros2", "service", "call", "/safety/safety_check",
              "multi_arm_interfaces/srv/SafetyCheck",
-             "{velocity_scale: 2.0, arm_name: arm1}"],
+             "{velocity_scale: 2.0, arm_name: left_arm}"],
             timeout=10.0,
         )
         print(f"  Safety check result: returncode={safety_result.returncode}")

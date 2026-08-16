@@ -53,9 +53,9 @@ def launch_setup(context, *args, **kwargs):
     # ---- Build combined URDF for MoveIt (dual arm) ----
     description_file = os.path.join(ur_simulation_dir, "urdf", "ur_gz.urdf.xacro")
     joint_limits_file = os.path.join(ur_simulation_dir, "config", "joint_limits_custom.yaml")
-    arm1_controllers = os.path.join(ur_simulation_dir, "config", "arm1_controllers.yaml")
+    left_arm_controllers = os.path.join(ur_simulation_dir, "config", "left_arm_controllers.yaml")
 
-    # Generate arm1 URDF (used as robot_description for MoveIt)
+    # Generate left_arm URDF (used as robot_description for MoveIt)
     # MoveIt needs a single robot_description with all joints
     # We use a combined xacro approach
     robot_description_content = Command([
@@ -67,9 +67,9 @@ def launch_setup(context, *args, **kwargs):
         " safety_k_position:=20",
         " name:=ur",
         " ur_type:=", ur_type,
-        " tf_prefix:=arm1_",
-        " ros_namespace:=arm1",
-        " simulation_controllers:=", arm1_controllers,
+        " tf_prefix:=left_arm_",
+        " ros_namespace:=left_arm",
+        " simulation_controllers:=", left_arm_controllers,
     ])
 
     # For MoveIt, we need a combined robot description with both arms

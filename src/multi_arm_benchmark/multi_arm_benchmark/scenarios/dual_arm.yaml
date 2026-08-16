@@ -1,26 +1,26 @@
 name: dual_arm
 description: Dual arm independent task benchmark
 tasks:
-  - task_id: dual_arm1_ready
-    arm_name: arm1
+  - task_id: dual_left_arm_ready
+    arm_name: left_arm
     action_type: move
     zone_name: zone_a
     position_name: ready
     timeout: 30.0
-  - task_id: dual_arm2_ready
-    arm_name: arm2
+  - task_id: dual_right_arm_ready
+    arm_name: right_arm
     action_type: move
     zone_name: zone_b
     position_name: ready
     timeout: 30.0
-  - task_id: dual_arm1_home
-    arm_name: arm1
+  - task_id: dual_left_arm_home
+    arm_name: left_arm
     action_type: move
     zone_name: zone_a
     position_name: home
     timeout: 30.0
-  - task_id: dual_arm2_home
-    arm_name: arm2
+  - task_id: dual_right_arm_home
+    arm_name: right_arm
     action_type: move
     zone_name: zone_b
     position_name: home

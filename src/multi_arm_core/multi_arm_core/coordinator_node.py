@@ -471,7 +471,7 @@ class CoordinatorNode(Node):
 
         Args:
             task_type: Task type string (e.g. 'pick_place', 'move').
-            description: Description string (e.g. 'arm1:zone_a:ready').
+            description: Description string (e.g. 'left_arm:zone_a:ready').
 
         Returns:
             Tuple of (arm_name, zone_name, position_name).
@@ -483,7 +483,7 @@ class CoordinatorNode(Node):
             position_name = parts[2] if len(parts) > 2 else "ready"
             return arm_name, zone_name, position_name
 
-        arm_name = "arm1"
+        arm_name = "left_arm"
         zone_name = "zone_a"
         position_name = "ready"
 
@@ -585,7 +585,7 @@ class CoordinatorNode(Node):
             f"Config not found at {config_path}, using default resources"
         )
         manager = ResourceManager()
-        for name in ["arm1", "arm2"]:
+        for name in ["left_arm", "right_arm"]:
             manager.register(
                 Resource(
                     name=name,

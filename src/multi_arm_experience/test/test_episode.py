@@ -163,7 +163,7 @@ class TestEpisode:
             episode_id="ep_001",
             task_type="pick_place",
             skill_name="pick_object",
-            robot_id="arm1",
+            robot_id="left_arm",
             result="success",
             duration=2.5,
         )
@@ -174,7 +174,7 @@ class TestEpisode:
         assert d["episode_id"] == "ep_001"
         assert d["task"] == "pick_place"
         assert d["skill"] == "pick_object"
-        assert d["robot"] == "arm1"
+        assert d["robot"] == "left_arm"
         assert d["result"] == "success"
         assert d["duration"] == 2.5
         assert len(d["execution"]["steps"]) == 1
@@ -194,7 +194,7 @@ class TestEpisode:
             episode_id="ep_1",
             task_type="pick_place",
             skill_name="pick",
-            robot_id="arm1",
+            robot_id="left_arm",
         )
         ep.add_step("step1", success=True, duration=0.5)
         ep.add_recovery("fail", "retry", True)

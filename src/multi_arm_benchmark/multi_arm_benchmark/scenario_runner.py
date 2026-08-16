@@ -19,13 +19,13 @@ class ScenarioRunner:
         description: Single arm pick-and-place benchmark
         tasks:
           - task_id: task_001
-            arm_name: arm1
+            arm_name: left_arm
             action_type: move
             zone_name: zone_a
             position_name: ready
             timeout: 30.0
           - task_id: task_002
-            arm_name: arm1
+            arm_name: left_arm
             action_type: move
             zone_name: zone_a
             position_name: home
@@ -130,7 +130,7 @@ class ScenarioRunner:
         Returns:
             Dict with goal fields for ExecuteTask action.
         """
-        arm = task.get("arm_name", "arm1")
+        arm = task.get("arm_name", "left_arm")
         zone = task.get("zone_name", "zone_a")
         position = task.get("position_name", "ready")
         action_type = task.get("action_type", "move")

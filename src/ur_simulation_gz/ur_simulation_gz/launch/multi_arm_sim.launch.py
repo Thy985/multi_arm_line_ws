@@ -37,8 +37,8 @@ def launch_setup(context, *args, **kwargs):
 
     # 机械臂配置
     arms = [
-        {"name": "arm1", "prefix": "arm1_", "pos": ["0", "0", "0"]},
-        {"name": "arm2", "prefix": "arm2_", "pos": ["1.0", "0", "0"]},
+        {"name": "left_arm", "prefix": "left_arm_", "pos": ["0", "0", "0"]},
+        {"name": "right_arm", "prefix": "right_arm_", "pos": ["1.0", "0", "0"]},
     ]
 
     nodes_to_start = []
@@ -164,27 +164,27 @@ def launch_setup(context, *args, **kwargs):
         )
 
     # 为每个 arm 准备 yaml 路径
-    arm1_yaml = PathJoinSubstitution(
-        [FindPackageShare("ur_simulation_gz"), "config", "arm1_controllers.yaml"]
+    left_arm_yaml = PathJoinSubstitution(
+        [FindPackageShare("ur_simulation_gz"), "config", "left_arm_controllers.yaml"]
     ).perform(context)
-    arm2_yaml = PathJoinSubstitution(
-        [FindPackageShare("ur_simulation_gz"), "config", "arm2_controllers.yaml"]
+    right_arm_yaml = PathJoinSubstitution(
+        [FindPackageShare("ur_simulation_gz"), "config", "right_arm_controllers.yaml"]
     ).perform(context)
 
-    arm1_jsb = make_spawner_node("joint_state_broadcaster", "arm1", arm1_yaml)
-    arm1_jtc = make_spawner_node("joint_trajectory_controller", "arm1", arm1_yaml)
-    arm2_jsb = make_spawner_node("joint_state_broadcaster", "arm2", arm2_yaml)
-    arm2_jtc = make_spawner_node("joint_trajectory_controller", "arm2", arm2_yaml)
+    left_arm_jsb = make_spawner_node("joint_state_broadcaster", "left_arm", left_arm_yaml)
+    left_arm_jtc = make_spawner_node("joint_trajectory_controller", "left_arm", left_arm_yaml)
+    right_arm_jsb = make_spawner_node("joint_state_broadcaster", "right_arm", right_arm_yaml)
+    right_arm_jtc = make_spawner_node("joint_trajectory_controller", "right_arm", right_arm_yaml)
 
     # 启动顺序：
-    # t=30:  arm1 jsb
-    # t=35:  arm1 jtc
-    # t=50:  arm2 jsb
-    # t=55:  arm2 jtc
-    nodes_to_start.append(TimerAction(period=30.0, actions=[arm1_jsb]))
-    nodes_to_start.append(TimerAction(period=35.0, actions=[arm1_jtc]))
-    nodes_to_start.append(TimerAction(period=50.0, actions=[arm2_jsb]))
-    nodes_to_start.append(TimerAction(period=55.0, actions=[arm2_jtc]))
+    # t=30:  left_arm jsb
+    # t=35:  left_arm jtc
+    # t=50:  right_arm jsb
+    # t=55:  right_arm jtc
+    nodes_to_start.append(TimerAction(period=30.0, actions=[left_arm_jsb]))
+    nodes_to_start.append(TimerAction(period=35.0, actions=[left_arm_jtc]))
+    nodes_to_start.append(TimerAction(period=50.0, actions=[right_arm_jsb]))
+    nodes_to_start.append(TimerAction(period=55.0, actions=[right_arm_jtc]))
 
     return nodes_to_start
 

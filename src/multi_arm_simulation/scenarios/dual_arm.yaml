@@ -5,7 +5,7 @@ scene:
   object_types: ["cube", "cylinder", "box"]
 
 robot:
-  arms: ["arm1", "arm2"]
+  arms: ["left_arm", "right_arm"]
   initial_position: ready
 
 randomization:

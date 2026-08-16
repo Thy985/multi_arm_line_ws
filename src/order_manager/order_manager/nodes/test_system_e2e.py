@@ -80,31 +80,31 @@ def test_gazebo_simulation(result):
 
 
 def test_controller_loading(result):
-    """控制器加载：arm1/arm2控制器active"""
-    # 检查arm1控制器
+    """控制器加载：left_arm/right_arm控制器active"""
+    # 检查left_arm控制器
     stdout, stderr, returncode = run_command(
         "source /opt/ros/jazzy/setup.bash && source ~/multi_arm_line_ws/install/setup.bash && "
-        "ros2 control list_controllers -c /arm1/controller_manager"
+        "ros2 control list_controllers -c /left_arm/controller_manager"
     )
     
-    arm1_active = 'active' in stdout.lower() and 'joint_trajectory_controller' in stdout
+    left_arm_active = 'active' in stdout.lower() and 'joint_trajectory_controller' in stdout
     
-    # 检查arm2控制器
+    # 检查right_arm控制器
     stdout, stderr, returncode = run_command(
         "source /opt/ros/jazzy/setup.bash && source ~/multi_arm_line_ws/install/setup.bash && "
-        "ros2 control list_controllers -c /arm2/controller_manager"
+        "ros2 control list_controllers -c /right_arm/controller_manager"
     )
     
-    arm2_active = 'active' in stdout.lower() and 'joint_trajectory_controller' in stdout
+    right_arm_active = 'active' in stdout.lower() and 'joint_trajectory_controller' in stdout
     
-    result.metrics['arm1_active'] = arm1_active
-    result.metrics['arm2_active'] = arm2_active
+    result.metrics['left_arm_active'] = left_arm_active
+    result.metrics['right_arm_active'] = right_arm_active
     
-    assert arm1_active, "arm1控制器未激活"
-    assert arm2_active, "arm2控制器未激活"
+    assert left_arm_active, "left_arm控制器未激活"
+    assert right_arm_active, "right_arm控制器未激活"
     
-    print(f"    arm1控制器: {'active' if arm1_active else 'inactive'}")
-    print(f"    arm2控制器: {'active' if arm2_active else 'inactive'}")
+    print(f"    left_arm控制器: {'active' if left_arm_active else 'inactive'}")
+    print(f"    right_arm控制器: {'active' if right_arm_active else 'inactive'}")
 
 
 def test_rviz_visualization(result):
@@ -133,12 +133,12 @@ def test_rviz_visualization(result):
 
 def test_trajectory_execution(result):
     """轨迹执行：机械臂按预期运动"""
-    # 发送轨迹命令到arm1
+    # 发送轨迹命令到left_arm
     cmd = (
         "source /opt/ros/jazzy/setup.bash && source ~/multi_arm_line_ws/install/setup.bash && "
-        "timeout 10 ros2 action send_goal /arm1/joint_trajectory_controller/follow_joint_trajectory "
+        "timeout 10 ros2 action send_goal /left_arm/joint_trajectory_controller/follow_joint_trajectory "
         "control_msgs/action/FollowJointTrajectory "
-        "'{trajectory: {joint_names: [arm1_shoulder_pan_joint, arm1_shoulder_lift_joint, arm1_elbow_joint, arm1_wrist_1_joint, arm1_wrist_2_joint, arm1_wrist_3_joint], "
+        "'{trajectory: {joint_names: [left_arm_shoulder_pan_joint, left_arm_shoulder_lift_joint, left_arm_elbow_joint, left_arm_wrist_1_joint, left_arm_wrist_2_joint, left_arm_wrist_3_joint], "
         "points: [{positions: [0.0, -1.57, 0.0, -1.57, 0.0, 0.0], time_from_start: {sec: 3, nanosec: 0}}]}}'"
     )
     
