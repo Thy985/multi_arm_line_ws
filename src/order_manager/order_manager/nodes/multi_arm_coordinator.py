@@ -42,7 +42,7 @@ class EnhancedMultiArmCoordinator(Node):
         super().__init__('enhanced_multi_arm_coordinator')
         
         # === Configuration ===
-        self.arm_names = ['arm1', 'arm2']
+        self.arm_names = ['left_arm', 'right_arm']
         self.num_arms = len(self.arm_names)
         
         # === State machine per arm ===
@@ -149,7 +149,7 @@ class EnhancedMultiArmCoordinator(Node):
         Send arm to a preset position (e.g. 'home', 'ready', 'left', 'right').
         
         Args:
-            arm_name: 'arm1' or 'arm2'
+            arm_name: 'left_arm' or 'right_arm'
             position_name: key in PRESET_POSITIONS
             duration: seconds for trajectory
         """
@@ -190,7 +190,7 @@ class EnhancedMultiArmCoordinator(Node):
         4. If busy or time conflict: queue arm, return False
         
         Args:
-            arm_name: 'arm1' or 'arm2'
+            arm_name: 'left_arm' or 'right_arm'
             zone_name: key in self.zones (e.g. 'zone_a', 'home')
             position_name: preset position to move to
             duration: trajectory duration
